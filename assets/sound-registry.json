@@ -1,1 +1,58 @@
-{"schemaVersion":"1.0.0","registryVersion":"0.1.0","project":"the-infected","sounds":[],"technicalPlaceholders":[],"notes":"No canonical audio has been approved yet. Voice, ambience, music, and sound effects require provenance and approval before registry entry."}
+{
+  "schemaVersion": "1.0.0",
+  "registryVersion": "0.1.0",
+  "project": "the-infected",
+  "sounds": [
+    {
+      "id": "audio.ambient.hero.temp.v1",
+      "name": "Temporary Ambient Hero Loop",
+      "type": "ambient.loop",
+      "status": "internal-review",
+      "canonical": false,
+      "temporary": true,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/audio/temporary-ambient-loop-noncanonical.webm",
+      "source": "procedural-generated-audio-web-delivery",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; non-canonical temporary prototype asset",
+        "notes": "Procedural low drone/crackle loop encoded as WebM Opus for browser delivery. Replace before canonical audio approval."
+      },
+      "usedIn": [
+        "landing-page-hero-v1"
+      ],
+      "sha256": "600be80b2b530054ff0a8baa706dcf095825911b10f9e2754e2c3cd886287536"
+    },
+    {
+      "id": "audio.narration.hero.temp.v1",
+      "name": "Temporary Prerecorded Hero Narration",
+      "type": "narration.prerecorded",
+      "status": "internal-review",
+      "canonical": false,
+      "temporary": true,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/audio/temporary-narration-noncanonical.mp3",
+      "source": "temporary-voice-generation",
+      "spokenText": "The world went quiet before it fell. Out of the smoke, the survivors learned one rule. Stay together, or become one of the infected.",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; non-canonical prototype narration",
+        "notes": "Controlled prerecorded narration file for prototype. Replace later with approved Voicebox output. Text is prototype copy only and not lore canon."
+      },
+      "usedIn": [
+        "landing-page-hero-v1"
+      ],
+      "sha256": "951d721d4fbb0113a561b575bc89bfed17fde815cffd1252dc917769d1a65f2c"
+    }
+  ],
+  "notes": "No canonical audio has been approved yet. Voice, ambience, music, and sound effects require provenance and approval before canonical or released status.",
+  "statusModel": [
+    "concept",
+    "generated",
+    "internal-review",
+    "approved",
+    "canonical",
+    "released",
+    "deprecated"
+  ]
+}

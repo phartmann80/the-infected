@@ -14,7 +14,8 @@ for (const asset of registry.assets ?? []) {
   if (ids.has(asset.id)) errors.push(`duplicate asset id ${asset.id}`);
   ids.add(asset.id);
   if (!registry.statusModel.includes(asset.status)) errors.push(`asset ${asset.id} has invalid status ${asset.status}`);
-  if (asset.canonical && !['approved', 'canonical'].includes(asset.status)) errors.push(`canonical asset ${asset.id} must be approved or canonical`);
+  if (asset.temporary && asset.canonical) errors.push(`temporary asset ${asset.id} cannot be canonical`);
+  if (asset.canonical && !['approved', 'canonical', 'released'].includes(asset.status)) errors.push(`canonical asset ${asset.id} must be approved, canonical, or released`);
   if (asset.path && !existsSync(asset.path)) errors.push(`asset path missing: ${asset.path}`);
   if (asset.path && asset.sha256 && existsSync(asset.path)) {
     const digest = createHash('sha256').update(readFileSync(asset.path)).digest('hex');
@@ -30,6 +31,16 @@ for (const asset of registry.assets ?? []) {
     }
   }
 }
-for (const sound of soundRegistry.sounds ?? []) if (!sound.id || !sound.path || !sound.provenance) errors.push(`sound entry missing required fields: ${sound.id ?? '<unknown>'}`);
+for (const sound of soundRegistry.sounds ?? []) {
+  if (!sound.id || !sound.path || !sound.provenance) errors.push(`sound entry missing required fields: ${sound.id ?? '<unknown>'}`);
+  if (sound.path && !sound.path.startsWith('runtime-') && !existsSync(sound.path)) errors.push(`sound path missing: ${sound.path}`);
+  if (sound.path && sound.sha256 && existsSync(sound.path)) {
+    const digest = createHash('sha256').update(readFileSync(sound.path)).digest('hex');
+    if (digest !== sound.sha256) errors.push(`sound ${sound.id} sha256 mismatch`);
+  }
+  if (!soundRegistry.statusModel?.includes(sound.status)) errors.push(`sound ${sound.id} has invalid status ${sound.status}`);
+  if (sound.temporary && sound.canonical) errors.push(`temporary sound ${sound.id} cannot be canonical`);
+  if (sound.canonical && !['approved', 'canonical', 'released'].includes(sound.status)) errors.push(`canonical sound ${sound.id} must be approved, canonical, or released`);
+}
 if (errors.length) { console.error('Registry validation failed:'); errors.forEach((e) => console.error(`- ${e}`)); process.exit(1); }
 console.log(`Registry validation passed: ${registry.assets.length} asset(s), ${soundRegistry.sounds.length} sound(s).`);

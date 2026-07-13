@@ -3,11 +3,12 @@
   "registryVersion": "0.1.0",
   "project": "the-infected",
   "statusModel": [
-    "technical-placeholder",
-    "draft",
-    "review",
+    "concept",
+    "generated",
+    "internal-review",
     "approved",
     "canonical",
+    "released",
     "deprecated"
   ],
   "approvalRequiredForCanonical": true,
@@ -46,15 +47,66 @@
           "notes": "Canonical source remains assets/branding/the-infected-logo.png. Web public copy is a delivery derivative and must not drift."
         }
       ]
-    }
-  ],
-  "technicalPlaceholders": [
+    },
     {
-      "id": "web.hero.background.gradient.tech.v0",
-      "name": "Hero technical gradient background",
-      "status": "technical-placeholder",
+      "id": "cinematic.hero.video.temp.v1",
+      "name": "Temporary Cinematic Hero Loop",
+      "type": "cinematic.video",
+      "status": "internal-review",
       "canonical": false,
-      "notes": "CSS-only temporary layout/testing background. Not game IP and not approved as a permanent asset."
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/temporary-cinematic-loop-noncanonical.mp4",
+      "source": "procedural-technical-vertical-slice",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; non-canonical temporary prototype asset",
+        "notes": "Procedural neutral environment video for layout and motion validation. Non-canonical and replaceable."
+      },
+      "usedIn": [
+        "landing-page-hero-v1"
+      ],
+      "sha256": "f8c52429373978fb1358277f75dd0b3cf76fd83460f4cd084033d7cbdcfccf5b",
+      "temporary": true
+    },
+    {
+      "id": "cinematic.hero.poster.temp.v1",
+      "name": "Temporary Cinematic Hero Poster",
+      "type": "cinematic.poster",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg",
+      "source": "procedural-technical-vertical-slice",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; non-canonical temporary prototype asset",
+        "notes": "Procedural poster fallback for hero video. Non-canonical and replaceable."
+      },
+      "usedIn": [
+        "landing-page-hero-v1"
+      ],
+      "sha256": "713434b11bc94889d64a8b76d6ee559dd8dd1b7cb3d633b23fed74de5a23cd1f",
+      "temporary": true
+    },
+    {
+      "id": "cinematic.hero.r3f.environment.temp.v1",
+      "name": "Temporary Neutral Environmental 3D Scene",
+      "type": "interactive.3d.environment",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/src/components/hero/EnvironmentalScene.tsx",
+      "source": "procedural-technical-vertical-slice",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; non-canonical temporary prototype asset",
+        "notes": "React Three Fiber neutral lighting/fog/ruined-signal test scene. No character canon established."
+      },
+      "usedIn": [
+        "landing-page-hero-v1"
+      ],
+      "sha256": "57504a4983ccb45227e7ed2e526eef07ecb4e35afed9623f8aa2d10b59c27d23",
+      "temporary": true
     }
   ]
 }
