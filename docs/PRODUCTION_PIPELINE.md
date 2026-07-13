@@ -14,3 +14,7 @@ All production assets require provenance, versioning, approval status, and canon
 ## Android prototype gate
 
 Before heavy content production, deliver a small Android technical prototype proving asset loading, telemetry abstraction, save-file versioning, performance budget, and build/signing workflow.
+
+## Large binary asset gate
+
+Do not add generated GLBs, cinematic videos, source audio, or other large binary assets until `docs/BINARY_STORAGE_POLICY.md` is approved and an ADR selects Git LFS, external object storage/CDN, or a hybrid policy.

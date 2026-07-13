@@ -21,6 +21,14 @@ for (const asset of registry.assets ?? []) {
     if (digest !== asset.sha256) errors.push(`asset ${asset.id} sha256 mismatch`);
   }
   if (asset.publicWebPath && !existsSync(asset.publicWebPath)) errors.push(`public web path missing: ${asset.publicWebPath}`);
+  for (const derivative of asset.deliveryDerivatives ?? []) {
+    if (!derivative.path || !existsSync(derivative.path)) errors.push(`delivery derivative missing: ${derivative.path ?? '<unknown>'}`);
+    if (derivative.path && derivative.mustMatchSha256 && existsSync(derivative.path)) {
+      const derivativeDigest = createHash('sha256').update(readFileSync(derivative.path)).digest('hex');
+      if (derivativeDigest !== derivative.mustMatchSha256) errors.push(`delivery derivative ${derivative.path} sha256 mismatch`);
+      if (asset.sha256 && derivativeDigest !== asset.sha256) errors.push(`delivery derivative ${derivative.path} drifted from canonical ${asset.path}`);
+    }
+  }
 }
 for (const sound of soundRegistry.sounds ?? []) if (!sound.id || !sound.path || !sound.provenance) errors.push(`sound entry missing required fields: ${sound.id ?? '<unknown>'}`);
 if (errors.length) { console.error('Registry validation failed:'); errors.forEach((e) => console.error(`- ${e}`)); process.exit(1); }

@@ -1,1 +1,25 @@
-{"name":"the-infected","version":"0.1.0","private":true,"description":"Foundation v2 game-first monorepo for The Infected.","workspaces":["apps/*","packages/*"],"scripts":{"build":"npm run build --workspaces --if-present","lint":"npm run lint --workspace @the-infected/web","typecheck":"npm run typecheck --workspaces --if-present","validate:registry":"node scripts/validate-registry.mjs","ci":"npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build","secrets:scan":"node scripts/scan-secrets.mjs"},"engines":{"node":">=20"},"overrides":{"postcss":"8.5.10"}}
+{
+  "name": "the-infected",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Foundation v2 game-first monorepo for The Infected.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspace @the-infected/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "validate:registry": "node scripts/validate-registry.mjs",
+    "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
+    "secrets:scan": "node scripts/scan-secrets.mjs"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
+  },
+  "packageManager": "npm@11.17.0"
+}

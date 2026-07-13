@@ -1,1 +1,60 @@
-{"schemaVersion":"1.0.0","registryVersion":"0.1.0","project":"the-infected","statusModel":["technical-placeholder","draft","review","approved","canonical","deprecated"],"approvalRequiredForCanonical":true,"assets":[{"id":"branding.logo.official.v1","name":"The Infected Official Logo","type":"branding.logo","status":"approved","canonical":true,"version":"1.0.0","path":"assets/branding/the-infected-logo.png","publicWebPath":"apps/web/public/assets/branding/the-infected-logo.png","source":"initial-project-package","sha256":"725b06699152dbbe7efef7dc82f27ca4356e22a1e55a0ae771d0f6dabb313362","dimensions":{"width":1024,"height":1024},"provenance":{"owner":"The Infected project","approval":"initial approved brand seed","notes":"Only existing approved visual asset imported from seed package."},"usedIn":["landing-page","android-game"]}],"technicalPlaceholders":[{"id":"web.hero.background.gradient.tech.v0","name":"Hero technical gradient background","status":"technical-placeholder","canonical":false,"notes":"CSS-only temporary layout/testing background. Not game IP and not approved as a permanent asset."}]}
+{
+  "schemaVersion": "1.0.0",
+  "registryVersion": "0.1.0",
+  "project": "the-infected",
+  "statusModel": [
+    "technical-placeholder",
+    "draft",
+    "review",
+    "approved",
+    "canonical",
+    "deprecated"
+  ],
+  "approvalRequiredForCanonical": true,
+  "assets": [
+    {
+      "id": "branding.logo.official.v1",
+      "name": "The Infected Official Logo",
+      "type": "branding.logo",
+      "status": "approved",
+      "canonical": true,
+      "version": "1.0.0",
+      "path": "assets/branding/the-infected-logo.png",
+      "publicWebPath": "apps/web/public/assets/branding/the-infected-logo.png",
+      "source": "initial-project-package",
+      "sha256": "725b06699152dbbe7efef7dc82f27ca4356e22a1e55a0ae771d0f6dabb313362",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "initial approved brand seed",
+        "notes": "Only existing approved visual asset imported from seed package.",
+        "canonicalSourcePolicy": "assets/branding/the-infected-logo.png is the canonical source; public app copies are delivery derivatives validated by SHA-256."
+      },
+      "usedIn": [
+        "landing-page",
+        "android-game"
+      ],
+      "deliveryDerivatives": [
+        {
+          "surface": "web",
+          "path": "apps/web/public/assets/branding/the-infected-logo.png",
+          "relationship": "delivery-copy-of-canonical-source",
+          "mustMatchSha256": "725b06699152dbbe7efef7dc82f27ca4356e22a1e55a0ae771d0f6dabb313362",
+          "notes": "Canonical source remains assets/branding/the-infected-logo.png. Web public copy is a delivery derivative and must not drift."
+        }
+      ]
+    }
+  ],
+  "technicalPlaceholders": [
+    {
+      "id": "web.hero.background.gradient.tech.v0",
+      "name": "Hero technical gradient background",
+      "status": "technical-placeholder",
+      "canonical": false,
+      "notes": "CSS-only temporary layout/testing background. Not game IP and not approved as a permanent asset."
+    }
+  ]
+}
