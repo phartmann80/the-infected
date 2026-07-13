@@ -60,12 +60,12 @@
       "provenance": {
         "owner": "The Infected project",
         "approval": "internal review only; non-canonical temporary prototype asset",
-        "notes": "Procedural neutral environment video for layout and motion validation. Non-canonical and replaceable."
+        "notes": "Procedural temporary cinematic city scene with ambiguous non-canonical silhouettes, destroyed skyline, ruined vehicle/checkpoint, fog, ash, and fire flicker. Internal review only; replace with approved cinematic media."
       },
       "usedIn": [
         "landing-page-hero-v1"
       ],
-      "sha256": "f8c52429373978fb1358277f75dd0b3cf76fd83460f4cd084033d7cbdcfccf5b",
+      "sha256": "6df48af1671bd1dfce285f67b9583717fffe7ed1b5dacc06564a983830d100ba",
       "temporary": true
     },
     {
@@ -80,12 +80,12 @@
       "provenance": {
         "owner": "The Infected project",
         "approval": "internal review only; non-canonical temporary prototype asset",
-        "notes": "Procedural poster fallback for hero video. Non-canonical and replaceable."
+        "notes": "Poster frame from procedural temporary cinematic city scene. Internal review only; replace with approved poster/key art."
       },
       "usedIn": [
         "landing-page-hero-v1"
       ],
-      "sha256": "713434b11bc94889d64a8b76d6ee559dd8dd1b7cb3d633b23fed74de5a23cd1f",
+      "sha256": "f12fb02f945b6f9a338bc6bf92e773fce108697b8d7b7455df8a54ed09e9d435",
       "temporary": true
     },
     {

@@ -16,12 +16,12 @@
       "provenance": {
         "owner": "The Infected project",
         "approval": "internal review only; non-canonical temporary prototype asset",
-        "notes": "Procedural low drone/crackle loop encoded as WebM Opus for browser delivery. Replace before canonical audio approval."
+        "notes": "Evolving WebM Opus ambient bed: wind 0-3s, metal creaks 3-6s, distant scream texture 6-10s, ambience after 10s. Internal review only."
       },
       "usedIn": [
         "landing-page-hero-v1"
       ],
-      "sha256": "600be80b2b530054ff0a8baa706dcf095825911b10f9e2754e2c3cd886287536"
+      "sha256": "4b3008bc0848758294d7d26de787bd61415f672e3a286ab9e6ec73612c597438"
     },
     {
       "id": "audio.narration.hero.temp.v1",
