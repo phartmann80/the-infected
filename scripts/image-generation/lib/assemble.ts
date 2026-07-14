@@ -1,23 +1,39 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const LAYERS_DIR = path.join(__dirname, '..', 'prompts');
 
-export function readLayer(name: string): string {
-  try {
-    return fs.readFileSync(path.join(LAYERS_DIR, name + '.txt'), 'utf8').trim();
-  } catch (e:any) {
-    return '';
-  }
+function readLayerRequired(name: string): string {
+  const p = path.join(LAYERS_DIR, name + '.txt');
+  if (!fs.existsSync(p)) throw new Error(`Missing required prompt layer: ${name}`);
+  return fs.readFileSync(p, 'utf8').trim();
 }
 
-export function assemblePrompt(brief: string, reference: string, extras: Record<string,string> = {}): string {
-  const global = readLayer('golden_prompt');
-  const camera = readLayer('camera_default');
-  const lighting = readLayer('lighting_default');
-  const atmosphere = readLayer('atmosphere_default');
-  const material = readLayer('material_default');
-  const character = readLayer(brief) || '';
-  const scene = extras.scene || '';
-  return [global, camera, lighting, atmosphere, material, character, scene].filter(Boolean).join('\n\n');
+function readLayerOptional(name: string): string {
+  const p = path.join(LAYERS_DIR, name + '.txt');
+  if (!fs.existsSync(p)) return '';
+  return fs.readFileSync(p, 'utf8').trim();
+}
+
+export function assemblePrompt(brief: string, reference?: string, extras: Record<string,string> = {}): string {
+  // Required layers
+  const global = readLayerRequired('golden_prompt');
+  const camera = readLayerRequired('camera_default');
+  const lighting = readLayerRequired('lighting_default');
+  const atmosphere = readLayerRequired('atmosphere_default');
+  const material = readLayerRequired('material_default');
+
+  // Brief-specific (treated as required for production prompts)
+  const character = readLayerRequired(brief || '');
+
+  // Optional scene layer
+  const scene = readLayerOptional('scene') || extras.scene || '';
+
+  const parts = [global, camera, lighting, atmosphere, material, character];
+  if (scene) parts.push(scene);
+  if (reference) parts.push(`Reference: ${reference}`);
+  return parts.join('\n\n');
 }

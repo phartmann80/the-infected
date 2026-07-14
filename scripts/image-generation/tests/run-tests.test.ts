@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { assemblePrompt } from '../generate';
-import { run } from '../generate';
+import { assemblePrompt, run } from '../generate';
 
 describe('prompt assembly', () => {
   it('includes golden prompt and layers', () => {
