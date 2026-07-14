@@ -20,6 +20,7 @@ interface ProvenanceRecord {
   aspect_ratio: string | undefined;
   input_file_hashes: Record<string, string | null>;
   output_file_hash: string | null;
+  output_directory: string;
   provider_request_id: string | null;
   seed: string | number | null;
   estimated_cost: number | null;
@@ -51,6 +52,21 @@ function writeProvenance(outputDir: string, meta: ProvenanceRecord): string {
   const p = path.join(outputDir, id + '.provenance.json');
   fs.writeFileSync(p, JSON.stringify(meta, null, 2));
   return p;
+}
+
+function isPathInsideDirectory(candidate: string, directory: string): boolean {
+  const resolvedCandidate = path.resolve(candidate);
+  const resolvedDirectory = path.resolve(directory);
+  const relative = path.relative(resolvedDirectory, resolvedCandidate);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function assertReturnedImagesStayInsideOutputDirectory(imagePaths: string[], outputDirectory: string): void {
+  for (const imagePath of imagePaths) {
+    if (!isPathInsideDirectory(imagePath, outputDirectory)) {
+      throw new Error('Provider returned an image path outside the requested output directory');
+    }
+  }
 }
 
 async function resolveProvider(name: string): Promise<ImageProvider> {
@@ -85,10 +101,17 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
   const providerName = options.provider || config.defaultProvider || 'mock';
   const brief = options.brief || 'hero-key-art-001';
   const reference = options.reference || '';
-  const output = options.output || 'assets/generated/internal-review';
   const dryRun = !!options.dryRun;
   const confirm = !!options.confirm;
   const maxCost = typeof options.maxCost === 'number' ? options.maxCost : null;
+  const hasExplicitOutput = typeof options.output === 'string' && options.output.trim().length > 0;
+
+  if (!dryRun && providerName !== 'mock' && !hasExplicitOutput) {
+    throw new Error('Live generation requires an explicit --output directory.');
+  }
+
+  const output = hasExplicitOutput ? options.output as string : path.join('.tmp', 'image-generation', 'internal-review');
+  ensureDir(output);
 
   const prompt = assemblePrompt(brief, reference);
   const negative = readLayerOptional('negative_prompt');
@@ -104,6 +127,7 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
     aspect_ratio: '16:9',
     count: 1,
     intended_use: 'internal-review',
+    output_directory: output,
   };
 
   const provider: ImageProvider = await resolveProvider(providerName);
@@ -123,6 +147,7 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
       throw new Error('Estimated cost exceeds max-cost limit: ' + est);
     }
     const result = await provider.generate(request);
+    assertReturnedImagesStayInsideOutputDirectory(result.returned_images.map(r => r.path), output);
     const metaLive: ProvenanceRecord = {
       asset_id: result.asset_id || ('asset_' + Date.now()),
       provider: providerName,
@@ -137,6 +162,7 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
       aspect_ratio: request.aspect_ratio,
       input_file_hashes: reference ? { reference: inputHash } : {},
       output_file_hash: result.returned_images.map(r => r.hash).join(','),
+      output_directory: output,
       provider_request_id: result.provider_request_id || null,
       seed: result.seed || null,
       estimated_cost: est,
@@ -166,6 +192,7 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
     aspect_ratio: request.aspect_ratio,
     input_file_hashes: reference ? { reference: inputHash } : {},
     output_file_hash: null,
+    output_directory: output,
     provider_request_id: null,
     seed: null,
     estimated_cost: null,
