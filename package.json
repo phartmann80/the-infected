@@ -13,7 +13,10 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "validate:registry": "node scripts/validate-registry.mjs",
     "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
-    "secrets:scan": "node scripts/scan-secrets.mjs"
+    "secrets:scan": "node scripts/scan-secrets.mjs",
+    "test:image-generation": "vitest run scripts/image-generation/tests",
+    "image:generate:self-check": "tsx scripts/image-generation/generate.ts --provider mock --brief hero-key-art-001 --reference assets/visual_benchmarks/Visual_Benchmark_Candidate_001.png --output .tmp/image-generation-self-check --dry-run",
+    "image:generate": "tsx scripts/image-generation/generate.ts"
   },
   "engines": {
     "node": ">=20.9.0"
