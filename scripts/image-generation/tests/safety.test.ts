@@ -37,35 +37,37 @@ describe('safety gates', () => {
     });
   });
 
-  it('dry-run without --output uses .tmp', async () => {
-    try {
-      const res = await run({
-        provider: 'mock',
-        brief: 'hero-key-art-001',
-        dryRun: true,
-      });
-      const content = JSON.parse(fs.readFileSync(res.provenance, 'utf8'));
-      expect(path.resolve(content.output_directory)).toBe(path.resolve(defaultImageGenerationOutputPath));
-      expect(path.resolve(res.provenance).startsWith(path.resolve(defaultImageGenerationOutputPath))).toBe(true);
-    } finally {
-      cleanupDefaultImageGenerationOutput();
-    }
-  });
+  describe.sequential('default .tmp output selection', () => {
+    it('dry-run without --output uses .tmp', async () => {
+      try {
+        const res = await run({
+          provider: 'mock',
+          brief: 'hero-key-art-001',
+          dryRun: true,
+        });
+        const content = JSON.parse(fs.readFileSync(res.provenance, 'utf8'));
+        expect(path.resolve(content.output_directory)).toBe(path.resolve(defaultImageGenerationOutputPath));
+        expect(path.resolve(res.provenance).startsWith(path.resolve(defaultImageGenerationOutputPath))).toBe(true);
+      } finally {
+        cleanupDefaultImageGenerationOutput();
+      }
+    });
 
-  it('mock execution without --output uses .tmp', async () => {
-    try {
-      const res = await run({
-        provider: 'mock',
-        brief: 'hero-key-art-001',
-        dryRun: false,
-        confirm: true,
-      });
-      const content = JSON.parse(fs.readFileSync(res.provenance, 'utf8'));
-      expect(path.resolve(content.output_directory)).toBe(path.resolve(defaultImageGenerationOutputPath));
-      expect(path.resolve(res.provenance).startsWith(path.resolve(defaultImageGenerationOutputPath))).toBe(true);
-    } finally {
-      cleanupDefaultImageGenerationOutput();
-    }
+    it('mock execution without --output uses .tmp', async () => {
+      try {
+        const res = await run({
+          provider: 'mock',
+          brief: 'hero-key-art-001',
+          dryRun: false,
+          confirm: true,
+        });
+        const content = JSON.parse(fs.readFileSync(res.provenance, 'utf8'));
+        expect(path.resolve(content.output_directory)).toBe(path.resolve(defaultImageGenerationOutputPath));
+        expect(path.resolve(res.provenance).startsWith(path.resolve(defaultImageGenerationOutputPath))).toBe(true);
+      } finally {
+        cleanupDefaultImageGenerationOutput();
+      }
+    });
   });
 
   it('non-mock live execution without --output is blocked before provider calls', async () => {

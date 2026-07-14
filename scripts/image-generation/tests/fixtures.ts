@@ -6,14 +6,6 @@ export const imageGenerationTempRoot = path.join(process.cwd(), '.tmp', 'image-g
 export const defaultImageGenerationOutputPath = path.join(imageGenerationTempRoot, 'internal-review');
 export const productionGeneratedAssetsPath = path.join(process.cwd(), 'assets', 'generated');
 
-function cleanupEmptyImageGenerationParents(): void {
-  removeIfEmpty(imageGenerationTempRoot);
-  removeIfEmpty(path.join(process.cwd(), '.tmp'));
-}
-
-process.once('beforeExit', cleanupEmptyImageGenerationParents);
-process.once('exit', cleanupEmptyImageGenerationParents);
-
 export function createRequest(overrides: Partial<ImageGenerationRequest> = {}): ImageGenerationRequest {
   return {
     provider: 'mock',

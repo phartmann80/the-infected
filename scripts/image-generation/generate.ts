@@ -62,6 +62,10 @@ function isPathInsideDirectory(candidate: string, directory: string): boolean {
 }
 
 function assertReturnedImagesStayInsideOutputDirectory(imagePaths: string[], outputDirectory: string): void {
+  // This lexical containment check is sufficient for the controlled mock provider because
+  // mock filenames are generated internally. Before enabling any live provider, harden this
+  // check with fs.realpathSync() after files exist so symlinks inside outputDirectory cannot
+  // escape the requested directory.
   for (const imagePath of imagePaths) {
     if (!isPathInsideDirectory(imagePath, outputDirectory)) {
       throw new Error('Provider returned an image path outside the requested output directory');
