@@ -9,11 +9,16 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspace @the-infected/web",
+    "lint:web": "npm run lint --workspace @the-infected/web",
+    "lint:image-generation": "eslint -c apps/web/eslint.config.mjs scripts/image-generation --max-warnings=0",
+    "lint": "npm run lint:web && npm run lint:image-generation",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "validate:registry": "node scripts/validate-registry.mjs",
     "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
-    "secrets:scan": "node scripts/scan-secrets.mjs"
+    "secrets:scan": "node scripts/scan-secrets.mjs",
+    "test:image-generation": "vitest run scripts/image-generation/tests",
+    "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
+    "image:generate": "tsx scripts/image-generation/generate.ts"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -21,5 +26,11 @@
   "overrides": {
     "postcss": "8.5.10"
   },
-  "packageManager": "npm@11.17.0"
+  "packageManager": "npm@11.17.0",
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "tsx": "4.23.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
 }
