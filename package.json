@@ -9,13 +9,15 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspace @the-infected/web",
+    "lint:web": "npm run lint --workspace @the-infected/web",
+    "lint:image-generation": "eslint -c apps/web/eslint.config.mjs scripts/image-generation --max-warnings=0",
+    "lint": "npm run lint:web && npm run lint:image-generation",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "validate:registry": "node scripts/validate-registry.mjs",
     "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
     "secrets:scan": "node scripts/scan-secrets.mjs",
     "test:image-generation": "vitest run scripts/image-generation/tests",
-    "image:generate:self-check": "tsx scripts/image-generation/generate.ts --provider mock --brief hero-key-art-001 --reference assets/visual_benchmarks/Visual_Benchmark_Candidate_001.png --output .tmp/image-generation-self-check --dry-run",
+    "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
     "image:generate": "tsx scripts/image-generation/generate.ts"
   },
   "engines": {

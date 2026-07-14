@@ -1,4 +1,6 @@
-function createRequest(overrides = {}){
+import { ImageGenerationRequest } from '../providers/types';
+
+export function createRequest(overrides: Partial<ImageGenerationRequest> = {}): ImageGenerationRequest {
   return {
     provider: 'mock',
     model: 'mock-model',
@@ -9,8 +11,6 @@ function createRequest(overrides = {}){
     aspect_ratio: '16:9',
     count: 1,
     intended_use: 'internal-review',
-    ...overrides
+    ...overrides,
   };
 }
-
-export { createRequest };

@@ -21,7 +21,10 @@ export interface ImageGenerationResult {
 }
 
 export interface ImageProvider {
-  generate(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
+  readonly id: string;
+  readonly model: string;
+
   validateConfiguration(): Promise<void>;
-  estimateCost?(request: ImageGenerationRequest): Promise<number | null>;
+  estimateCost(request: ImageGenerationRequest): Promise<number | null>;
+  generate(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
 }

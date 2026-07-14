@@ -12,7 +12,7 @@ function readLayerRequired(name: string): string {
   return fs.readFileSync(p, 'utf8').trim();
 }
 
-function readLayerOptional(name: string): string {
+export function readLayerOptional(name: string): string {
   const p = path.join(LAYERS_DIR, name + '.txt');
   if (!fs.existsSync(p)) return '';
   return fs.readFileSync(p, 'utf8').trim();
@@ -27,7 +27,8 @@ export function assemblePrompt(brief: string, reference?: string, extras: Record
   const material = readLayerRequired('material_default');
 
   // Brief-specific (treated as required for production prompts)
-  const character = readLayerRequired(brief || '');
+  if (!brief) throw new Error('Missing creative brief');
+  const character = readLayerRequired(brief);
 
   // Optional scene layer
   const scene = readLayerOptional('scene') || extras.scene || '';
