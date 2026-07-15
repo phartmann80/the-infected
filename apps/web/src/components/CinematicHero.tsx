@@ -44,7 +44,7 @@ export function CinematicHero() {
   const [isMobile, setIsMobile] = useState(false);
 
   const sceneActive = Boolean(!reduceMotion && webglAvailable && heroVisible && pageVisible);
-  const videoActive = Boolean(!reduceMotion && heroVisible && pageVisible);
+  const videoActive = Boolean(!reduceMotion && !isMobile && heroVisible && pageVisible);
 
   useEffect(() => {
     setWebglAvailable(hasWebGLSupport());
@@ -69,6 +69,15 @@ export function CinematicHero() {
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
+
+  useEffect(() => {
+    if (!signupOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSignupOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [signupOpen]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -144,7 +153,7 @@ export function CinematicHero() {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload={reduceMotion || isMobile ? 'none' : 'metadata'}
           poster="/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg"
           aria-hidden
         >
@@ -289,7 +298,7 @@ export function CinematicHero() {
         </main>
 
         {signupOpen && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="signup-title">
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="signup-title" aria-describedby="signup-description">
             <form
               className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0b0b0a] p-6 shadow-2xl"
               onSubmit={(event) => {
@@ -298,7 +307,7 @@ export function CinematicHero() {
               }}
             >
               <h2 id="signup-title" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Join the Survivors</h2>
-              <p className="mt-3 text-sm leading-6 text-stone-300">Enter an email to reserve early access updates. Prototype only; Supabase submission follows after review.</p>
+              <p id="signup-description" className="mt-3 text-sm leading-6 text-stone-300">Enter an email to test the early-access flow. This prototype does not send or store submissions yet.</p>
               <label className="mt-5 block text-xs font-bold uppercase tracking-[0.2em] text-stone-400" htmlFor="survivor-email">Email</label>
               <input
                 id="survivor-email"
@@ -308,11 +317,11 @@ export function CinematicHero() {
                 placeholder="survivor@example.com"
                 className="mt-2 min-h-12 w-full rounded-2xl border border-white/14 bg-white/8 px-4 text-white outline-none focus:ring-2 focus:ring-orange-300"
               />
-              {signupStatus === 'success' && <p className="mt-4 text-sm text-orange-200" role="status">You are on the early-access prototype list.</p>}
+              {signupStatus === 'success' && <p className="mt-4 text-sm text-orange-200" role="status">Email validation passed. No subscription was sent.</p>}
               {signupStatus === 'error' && <p className="mt-4 text-sm text-red-300" role="alert">Enter a valid email address.</p>}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button type="submit" className="min-h-11 rounded-full bg-orange-500 px-5 text-sm font-black uppercase tracking-[0.16em] text-black">Submit</button>
-                <button type="button" onClick={() => setSignupOpen(false)} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white">Close</button>
+                <button type="button" onClick={() => setSignupOpen(false)} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white" aria-label="Close early access dialog">Close</button>
               </div>
             </form>
           </div>
