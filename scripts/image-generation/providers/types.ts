@@ -8,6 +8,7 @@ export interface ImageGenerationRequest {
   aspect_ratio?: string;
   count?: number;
   intended_use?: string;
+  output_directory?: string;
 }
 
 export interface ImageGenerationResult {

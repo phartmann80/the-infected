@@ -17,7 +17,10 @@ export default class MockProvider implements ImageProvider {
   }
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
-    const outDir = path.join(process.cwd(), 'assets', 'generated', 'mock');
+    if (!request.output_directory) {
+      throw new Error('Mock provider requires request.output_directory');
+    }
+    const outDir = request.output_directory;
     if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
     const filename = 'mock_' + Date.now() + '.bin';
     const p = path.join(outDir, filename);

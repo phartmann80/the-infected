@@ -3,7 +3,7 @@ import path from 'path';
 import { run } from './generate';
 
 async function selfCheck(): Promise<void> {
-  const tmpRoot = path.join(process.cwd(), '.tmp', 'image-generation-self-check-' + Date.now());
+  const tmpRoot = path.join(process.cwd(), '.tmp', 'image-generation', 'self-check-' + Date.now());
   try {
     const res = await run({
       provider: 'mock',
@@ -100,7 +100,14 @@ async function selfCheck(): Promise<void> {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
       console.log('Cleaned up:', tmpRoot);
     }
+    removeIfEmpty(path.join(process.cwd(), '.tmp', 'image-generation'));
+    removeIfEmpty(path.join(process.cwd(), '.tmp'));
   }
+}
+
+function removeIfEmpty(dir: string): void {
+  if (!fs.existsSync(dir)) return;
+  if (fs.readdirSync(dir).length === 0) fs.rmSync(dir, { recursive: true, force: true });
 }
 
 selfCheck().then(() => {
