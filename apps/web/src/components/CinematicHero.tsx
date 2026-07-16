@@ -195,12 +195,22 @@ export function CinematicHero() {
           loop
           playsInline
           preload={reduceMotion || lowBandwidth || isMobile ? 'none' : 'metadata'}
-          poster="/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg"
+          poster="/assets/cinematic/hero-production-candidate-internal-review.png"
           aria-hidden
         >
           <source src="/assets/cinematic/temporary-cinematic-loop-noncanonical.mp4" type="video/mp4" />
         </video>
-        {(reduceMotion || lowBandwidth) && <div aria-hidden className="absolute inset-0 bg-[url('/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg')] bg-cover bg-center" />}
+        {(reduceMotion || lowBandwidth) && (
+          <Image
+            src="/assets/cinematic/hero-production-candidate-internal-review.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+            aria-hidden
+          />
+        )}
         <audio ref={ambientRef} src="/assets/audio/temporary-ambient-loop-noncanonical.webm" loop preload="none" />
         <audio
           ref={narrationRef}
@@ -335,7 +345,7 @@ export function CinematicHero() {
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 border-t border-white/10 pb-2 pt-4 text-xs uppercase tracking-[0.22em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
             <span>Descend into the city</span>
             <span id="audio-status" role="status" aria-live="polite">{audioStatus}</span>
-            <span>{lowBandwidth ? 'Media paused to protect your connection' : 'Android reveal in production'}</span>
+            <span>{lowBandwidth ? 'Media paused to protect your connection' : 'Hero composition in internal review'}</span>
           </div>
         </main>
 
