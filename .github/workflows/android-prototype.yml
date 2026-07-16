@@ -59,15 +59,15 @@ jobs:
 
       - name: Import and export debug APK
         run: |
-          mkdir -p artifacts
+          mkdir -p apps/android/artifacts
           GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
           "$GODOT" --headless --path apps/android --editor --quit
           "$GODOT" --headless --path apps/android --export-debug "Android Debug" artifacts/the-infected-debug.apk
-          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging artifacts/the-infected-debug.apk | grep -F "name='app.theinfected.game'"
-          sha256sum artifacts/the-infected-debug.apk | tee artifacts/the-infected-debug.apk.sha256
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging apps/android/artifacts/the-infected-debug.apk | grep -F "name='app.theinfected.game'"
+          sha256sum apps/android/artifacts/the-infected-debug.apk | tee apps/android/artifacts/the-infected-debug.apk.sha256
 
       - name: Upload unsigned debug artifact and hash
         uses: actions/upload-artifact@v4
         with:
           name: the-infected-android-debug
-          path: artifacts/
+          path: apps/android/artifacts/
