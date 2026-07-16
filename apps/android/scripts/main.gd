@@ -9,6 +9,9 @@ const INFECTED_SPEED := 1.15
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const ATTACK_SWING_DURATION := 0.22
+const SIDEARM_RANGE := 12.0
+const SIDEARM_DAMAGE := 35
+const SIDEARM_COOLDOWN := 0.65
 const HIT_FLASH_DURATION := 0.16
 const INFECTED_KNOCKBACK_SPEED := 4.0
 const INFECTED_KNOCKBACK_DURATION := 0.2
@@ -27,9 +30,11 @@ var health := STARTING_HEALTH
 var infected_health := 100
 var damage_timer := 0.0
 var attack_cooldown := 0.0
+var fire_cooldown := 0.0
 var save_timer := 0.0
 var camera_yaw := 0.0
 var attack_was_down := false
+var fire_was_down := false
 var medkit_was_down := false
 var restart_was_down := false
 var save_was_down := false
@@ -51,6 +56,7 @@ var feedback_label: Label
 var health_bar: ProgressBar
 var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
+var player_sidearm: MeshInstance3D
 var infected_material: StandardMaterial3D
 var hit_flash_timer := 0.0
 var signal_beacon: Node3D
@@ -100,6 +106,7 @@ func _physics_process(delta: float) -> void:
 		_move_infected(delta)
 	_collect_pickups()
 	_handle_attack_input()
+	_handle_fire_input()
 	_handle_medkit_input()
 	_handle_save_load_input()
 	_handle_restart_input()
@@ -110,6 +117,7 @@ func _physics_process(delta: float) -> void:
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
+	fire_cooldown = maxf(fire_cooldown - delta, 0.0)
 	save_timer += delta
 	if save_timer >= 2.0:
 		_save_game()
@@ -315,6 +323,7 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 		infected_material = material
 	else:
 		player_weapon = _build_weapon(actor)
+		player_sidearm = _build_sidearm(actor)
 	return actor
 
 
@@ -328,6 +337,18 @@ func _build_weapon(parent: Node3D) -> MeshInstance3D:
 	weapon.rotation_degrees = Vector3(0.0, -25.0, 35.0)
 	parent.add_child(weapon)
 	return weapon
+
+
+func _build_sidearm(parent: Node3D) -> MeshInstance3D:
+	var sidearm := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.18, 0.18, 0.58)
+	sidearm.mesh = mesh
+	sidearm.material_override = _material(Color("78858b"))
+	sidearm.position = Vector3(-0.42, 0.18, -0.35)
+	sidearm.rotation_degrees = Vector3(0.0, 18.0, -18.0)
+	parent.add_child(sidearm)
+	return sidearm
 
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -418,6 +439,13 @@ func _handle_attack_input() -> void:
 	attack_was_down = attack_down
 
 
+func _handle_fire_input() -> void:
+	var fire_down := Input.is_key_pressed(KEY_E) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) or bool(held_actions.get("fire", false))
+	if fire_down and not fire_was_down:
+		_try_fire()
+	fire_was_down = fire_down
+
+
 func _handle_medkit_input() -> void:
 	var medkit_down := Input.is_key_pressed(KEY_H) or bool(held_actions.get("medkit", false))
 	if medkit_down and not medkit_was_down:
@@ -484,11 +512,14 @@ func _restart_run() -> void:
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
 	damage_timer = 0.0
 	attack_cooldown = 0.0
+	fire_cooldown = 0.0
 	save_timer = 0.0
 	beacon_reached = false
 	run_complete = false
 	infected_knockback_timer = 0.0
 	infected_knockback_velocity = Vector3.ZERO
+	attack_was_down = false
+	fire_was_down = false
 	save_was_down = false
 	load_was_down = false
 	pause_was_down = false
@@ -550,16 +581,49 @@ func _try_attack() -> void:
 	if distance > ATTACK_RANGE:
 		_set_feedback("Too far away.", 0.75)
 		return
-	infected_health = maxi(infected_health - ATTACK_DAMAGE, 0)
+	_damage_infected(ATTACK_DAMAGE, "Hit confirmed. Threat staggered.")
+
+
+func _try_fire() -> void:
+	if infected == null or fire_cooldown > 0.0:
+		return
+	var ammo := int(inventory.get("ammo", 0))
+	if ammo <= 0:
+		_set_feedback("Sidearm empty. Find ammunition.", 1.0)
+		return
+	fire_cooldown = SIDEARM_COOLDOWN
+	inventory["ammo"] = ammo - 1
+	_play_fire_feedback()
+	var distance := player.global_position.distance_to(infected.global_position)
+	if distance > SIDEARM_RANGE:
+		_set_feedback("Shot missed. Target out of range. Ammo: %d" % inventory["ammo"], 1.0)
+		_save_game()
+		return
+	_damage_infected(SIDEARM_DAMAGE, "Sidearm hit. Threat staggered.")
+
+
+func _damage_infected(damage: int, feedback: String) -> void:
+	if infected == null:
+		return
+	infected_health = maxi(infected_health - damage, 0)
 	var knockback_direction := infected.global_position - player.global_position
 	knockback_direction.y = 0.0
 	if knockback_direction.length_squared() > 0.001:
 		infected_knockback_velocity = knockback_direction.normalized() * INFECTED_KNOCKBACK_SPEED
 		infected_knockback_timer = INFECTED_KNOCKBACK_DURATION
 	hit_flash_timer = HIT_FLASH_DURATION
-	_set_feedback("Hit confirmed. Threat staggered. Infected health: %d" % infected_health, 0.9)
+	_set_feedback("%s Infected health: %d" % [feedback, infected_health], 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
+
+
+func _play_fire_feedback() -> void:
+	if player_sidearm == null:
+		return
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(player_sidearm, "position", Vector3(-0.42, 0.18, 0.02), 0.08)
+	tween.tween_property(player_sidearm, "position", Vector3(-0.42, 0.18, -0.35), 0.12)
 
 
 func _play_attack_feedback() -> void:
@@ -662,10 +726,11 @@ func _build_touch_controls() -> void:
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
-	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 300.0)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 366.0)
 	hud_root.add_child(action_panel)
 	_add_touch_button(action_panel, "MEDKIT", "medkit", Vector2(224.0, 48.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
+	_add_touch_button(action_panel, "FIRE", "fire", Vector2(224.0, 58.0))
 	var camera_row := HBoxContainer.new()
 	camera_row.add_theme_constant_override("separation", 8)
 	action_panel.add_child(camera_row)
@@ -679,7 +744,7 @@ func _build_touch_controls() -> void:
 	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD   |   R / RESET RUN"
+	instructions.text = "WASD / touch to move   |   Space / ATTACK   |   E / FIRE   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD   |   R / RESET RUN"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -896,6 +961,8 @@ func _load_save() -> bool:
 	is_paused = false
 	held_actions.clear()
 	pause_was_down = false
+	fire_cooldown = 0.0
+	fire_was_down = false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
 	beacon_reached = bool(parsed.get("beacon_reached", false))
