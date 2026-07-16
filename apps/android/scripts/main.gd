@@ -37,6 +37,7 @@ var load_was_down := false
 var pause_was_down := false
 var beacon_reached := false
 var run_complete := false
+var run_failed := false
 var is_paused := false
 var infected_knockback_timer := 0.0
 var infected_knockback_velocity := Vector3.ZERO
@@ -57,6 +58,7 @@ var signal_light: OmniLight3D
 var environment_time := 0.0
 var pause_panel: PanelContainer
 var pause_resume_button: Button
+var defeat_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -70,8 +72,14 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if player == null:
 		return
-	_handle_pause_input()
+	if not run_failed:
+		_handle_pause_input()
 	if is_paused:
+		_update_hud()
+		return
+	if run_failed:
+		_handle_save_load_input()
+		_handle_restart_input()
 		_update_hud()
 		return
 	if run_complete:
@@ -366,11 +374,13 @@ func _move_infected(delta: float) -> void:
 			health = maxi(health - 10, 0)
 			damage_timer = 1.0
 			_set_feedback("The infected hit you.", 1.0)
-			_save_game()
 			if health <= 0:
-				health = STARTING_HEALTH
-				player.position = Vector3(0.0, 1.0, 4.0)
-				_set_feedback("You collapsed. The route resets.", 2.0)
+				run_failed = true
+				player.velocity = Vector3.ZERO
+				infected.velocity = Vector3.ZERO
+				_set_feedback("You collapsed. Retry the route or load the last checkpoint.", 4.0)
+			else:
+				_save_game()
 
 
 func _update_combat_feedback(delta: float) -> void:
@@ -424,7 +434,7 @@ func _handle_restart_input() -> void:
 
 func _handle_save_load_input() -> void:
 	var save_down := Input.is_key_pressed(KEY_F5) or bool(held_actions.get("save", false))
-	if save_down and not save_was_down:
+	if save_down and not save_was_down and not run_failed:
 		if _save_game():
 			_set_feedback("Checkpoint saved.", 1.5)
 		else:
@@ -461,6 +471,13 @@ func _toggle_pause() -> void:
 	_update_hud()
 
 
+func _load_checkpoint_from_defeat() -> void:
+	if _load_save():
+		_set_feedback("Last checkpoint loaded.", 1.5)
+	else:
+		_set_feedback("No compatible checkpoint found.", 1.5)
+
+
 func _restart_run() -> void:
 	health = STARTING_HEALTH
 	infected_health = 100
@@ -476,6 +493,7 @@ func _restart_run() -> void:
 	load_was_down = false
 	pause_was_down = false
 	is_paused = false
+	run_failed = false
 	held_actions.clear()
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
@@ -718,6 +736,51 @@ func _build_touch_controls() -> void:
 	pause_margin.add_child(pause_content)
 	pause_panel.add_child(pause_margin)
 	hud_root.add_child(pause_panel)
+	_build_defeat_panel(hud_root)
+
+
+func _build_defeat_panel(parent: Control) -> void:
+	defeat_panel = PanelContainer.new()
+	defeat_panel.set_anchors_preset(Control.PRESET_CENTER)
+	defeat_panel.offset_left = -260.0
+	defeat_panel.offset_top = -158.0
+	defeat_panel.offset_right = 260.0
+	defeat_panel.offset_bottom = 158.0
+	defeat_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	defeat_panel.visible = false
+	var defeat_margin := MarginContainer.new()
+	defeat_margin.add_theme_constant_override("margin_left", 28)
+	defeat_margin.add_theme_constant_override("margin_top", 24)
+	defeat_margin.add_theme_constant_override("margin_right", 28)
+	defeat_margin.add_theme_constant_override("margin_bottom", 24)
+	var defeat_content := VBoxContainer.new()
+	defeat_content.add_theme_constant_override("separation", 14)
+	var defeat_title := Label.new()
+	defeat_title.text = "RUN LOST"
+	defeat_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	defeat_title.add_theme_font_size_override("font_size", 30)
+	defeat_content.add_child(defeat_title)
+	var defeat_description := Label.new()
+	defeat_description.text = "The route went dark. Retry from the beginning or return to your last saved checkpoint."
+	defeat_description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	defeat_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	defeat_description.add_theme_font_size_override("font_size", 18)
+	defeat_content.add_child(defeat_description)
+	var retry_button := Button.new()
+	retry_button.text = "RETRY ROUTE"
+	retry_button.custom_minimum_size = Vector2(240.0, 56.0)
+	retry_button.add_theme_font_size_override("font_size", 20)
+	retry_button.pressed.connect(_restart_run)
+	defeat_content.add_child(retry_button)
+	var load_button := Button.new()
+	load_button.text = "LOAD CHECKPOINT"
+	load_button.custom_minimum_size = Vector2(240.0, 56.0)
+	load_button.add_theme_font_size_override("font_size", 20)
+	load_button.pressed.connect(_load_checkpoint_from_defeat)
+	defeat_content.add_child(load_button)
+	defeat_margin.add_child(defeat_content)
+	defeat_panel.add_child(defeat_margin)
+	parent.add_child(defeat_panel)
 
 
 func _build_progress_bar(parent: Control, position: Vector2, fill_color: Color) -> ProgressBar:
@@ -780,13 +843,17 @@ func _update_hud() -> void:
 		return
 	if pause_panel != null:
 		pause_panel.visible = is_paused
+	if defeat_panel != null:
+		defeat_panel.visible = run_failed
 	var renderer: String = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
 	var renderer_note := "Renderer: %s" % renderer
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
 	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100" % infected_health
 	var objective_note := ""
-	if is_paused:
+	if run_failed:
+		objective_note = "RUN LOST - RETRY ROUTE or LOAD CHECKPOINT"
+	elif is_paused:
 		objective_note = "RUN PAUSED - press P, ESC, or RESUME to continue"
 	elif run_complete:
 		objective_note = "RUN COMPLETE — press R or RESET RUN to replay"
@@ -825,6 +892,10 @@ func _load_save() -> bool:
 	var schema_version := int(parsed.get("schema_version", 0))
 	if schema_version < MIN_SUPPORTED_SAVE_SCHEMA or schema_version > SAVE_SCHEMA_VERSION:
 		return false
+	run_failed = false
+	is_paused = false
+	held_actions.clear()
+	pause_was_down = false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
 	beacon_reached = bool(parsed.get("beacon_reached", false))
