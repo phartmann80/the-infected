@@ -2,7 +2,7 @@
 
 Status: Planned work after the production-readiness foundation PR.
 
-Current implementation slice: `feat/landing-page-chapters-v1` adds the story and outbreak chapter, registry-governed presentation slots, prototype-labelled game systems, legal routes, a footer, reduced-motion-compatible structure, and measurable performance targets. It does not add a production hero candidate, a broad roster, or a persistent signup backend.
+Current implementation slice: `feat/landing-page-production-v1` adds a cinematic chapter rhythm for the story, world, people, arsenal, mission, progression, review gates, a coherent legal/contact surface, and an honest Early Access gate. It does not add a production hero candidate, a broad roster, or a persistent signup backend.
 
 The landing page should grow from the approved cinematic direction, not become a generic feature grid. The next visual gate is one approved production hero composition. No large character or enemy roster should be generated before that gate.
 
@@ -25,6 +25,14 @@ Build the page as a descent through the city, following `docs/CHAPTER_STRUCTURE.
 - Arsenal: scarce, practical equipment and weapons.
 - The Mission: the survival objective and why the player keeps moving.
 - Join the Survivors: early-access conversion after the world has earned attention.
+
+### Product slice v1 review
+
+- Story and world sections now carry the visitor from the first silence to the remaining signal.
+- Survivor and infected presentation slots remain registry-governed and visibly marked as placeholders until approved assets exist.
+- Arsenal, levels, progression, and loot are present as prototype-labelled systems rather than invented final canon.
+- Early Access remains blocked until persistence, consent, retention, and privacy handling are approved.
+- Cookies and Contact routes are present as prototype legal surfaces; ownership and support details require final project review before public launch.
 
 ## Phase 3: Game-information surfaces
 

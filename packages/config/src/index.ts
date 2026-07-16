@@ -1,1 +1,1 @@
-export const projectConfig = { name: 'The Infected', domain: 'https://theinfected.app', repository: 'https://github.com/janpaul80/the-infected' } as const;
+export const projectConfig = { name: 'The Infected', domain: 'https://theinfected.app', repository: 'https://github.com/phartmann80/the-infected' } as const;
