@@ -8,6 +8,7 @@ const INFECTED_SPEED := 1.15
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const STARTING_HEALTH := 100
+const CAMERA_SMOOTHING := 9.0
 
 var game_data: Dictionary = {}
 var player: CharacterBody3D
@@ -27,6 +28,8 @@ var status_label: Label
 var health_label: Label
 var inventory_label: Label
 var feedback_label: Label
+var health_bar: ProgressBar
+var infected_bar: ProgressBar
 
 
 func _ready() -> void:
@@ -50,7 +53,7 @@ func _physics_process(delta: float) -> void:
 		_move_infected(delta)
 	_collect_pickups()
 	_handle_attack_input()
-	_update_camera()
+	_update_camera(delta)
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
@@ -273,7 +276,7 @@ func _collect_pickups() -> void:
 		_save_game()
 
 
-func _update_camera() -> void:
+func _update_camera(delta: float = 1.0) -> void:
 	if camera == null or player == null:
 		return
 	if held_actions.get("camera_left", false):
@@ -281,59 +284,136 @@ func _update_camera() -> void:
 	if held_actions.get("camera_right", false):
 		camera_yaw += 0.025
 	var offset := Vector3(0.0, 3.4, 6.5).rotated(Vector3.UP, camera_yaw)
-	camera.global_position = player.global_position + offset
+	var target_position := player.global_position + offset
+	var smoothing_weight := clampf(delta * CAMERA_SMOOTHING, 0.0, 1.0)
+	camera.global_position = camera.global_position.lerp(target_position, smoothing_weight)
 	camera.look_at(player.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
 
 
 func _build_touch_controls() -> void:
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
+	var hud_root := Control.new()
+	hud_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hud_root.mouse_filter = Control.MOUSE_FILTER_PASS
+	canvas.add_child(hud_root)
 
 	status_label = Label.new()
 	status_label.position = Vector2(24.0, 20.0)
+	status_label.size = Vector2(560.0, 68.0)
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", 20)
-	canvas.add_child(status_label)
+	hud_root.add_child(status_label)
 
 	health_label = Label.new()
-	health_label.position = Vector2(24.0, 106.0)
+	health_label.position = Vector2(24.0, 94.0)
 	health_label.add_theme_font_size_override("font_size", 18)
-	canvas.add_child(health_label)
+	hud_root.add_child(health_label)
+	health_bar = _build_progress_bar(hud_root, Vector2(24.0, 124.0), Color("d98263"))
 
 	inventory_label = Label.new()
-	inventory_label.position = Vector2(24.0, 138.0)
+	inventory_label.position = Vector2(24.0, 154.0)
 	inventory_label.add_theme_font_size_override("font_size", 18)
-	canvas.add_child(inventory_label)
+	hud_root.add_child(inventory_label)
+	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 184.0), Color("9eb27e"))
 
 	feedback_label = Label.new()
-	feedback_label.position = Vector2(24.0, 180.0)
+	feedback_label.position = Vector2(24.0, 214.0)
+	feedback_label.size = Vector2(620.0, 46.0)
+	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("ffd2ae"))
 	feedback_label.add_theme_font_size_override("font_size", 18)
-	canvas.add_child(feedback_label)
+	hud_root.add_child(feedback_label)
 
-	_add_touch_button(canvas, "▲", "up", Vector2(112.0, 500.0))
-	_add_touch_button(canvas, "◀", "left", Vector2(24.0, 560.0))
-	_add_touch_button(canvas, "▼", "down", Vector2(112.0, 560.0))
-	_add_touch_button(canvas, "▶", "right", Vector2(200.0, 560.0))
-	_add_touch_button(canvas, "⟲", "camera_left", Vector2(1020.0, 560.0))
-	_add_touch_button(canvas, "⟳", "camera_right", Vector2(1120.0, 560.0))
-	_add_touch_button(canvas, "ATTACK", "attack", Vector2(1000.0, 450.0))
+	var dpad := GridContainer.new()
+	dpad.columns = 3
+	dpad.add_theme_constant_override("h_separation", 4)
+	dpad.add_theme_constant_override("v_separation", 4)
+	_set_bottom_left(dpad, 24.0, 26.0, 224.0, 176.0)
+	hud_root.add_child(dpad)
+	_add_touch_spacer(dpad)
+	_add_touch_button(dpad, "▲", "up")
+	_add_touch_spacer(dpad)
+	_add_touch_button(dpad, "◀", "left")
+	_add_touch_button(dpad, "▼", "down")
+	_add_touch_button(dpad, "▶", "right")
+
+	var action_panel := VBoxContainer.new()
+	action_panel.add_theme_constant_override("separation", 8)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 132.0)
+	hud_root.add_child(action_panel)
+	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
+	var camera_row := HBoxContainer.new()
+	camera_row.add_theme_constant_override("separation", 8)
+	action_panel.add_child(camera_row)
+	_add_touch_button(camera_row, "LOOK ◀", "camera_left", Vector2(108.0, 56.0))
+	_add_touch_button(camera_row, "LOOK ▶", "camera_right", Vector2(108.0, 56.0))
 
 	var instructions := Label.new()
 	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   camera arrows to look"
-	instructions.position = Vector2(24.0, 670.0)
+	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	instructions.offset_left = 24.0
+	instructions.offset_top = -34.0
+	instructions.offset_right = -24.0
+	instructions.offset_bottom = -8.0
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	instructions.add_theme_font_size_override("font_size", 18)
-	canvas.add_child(instructions)
+	hud_root.add_child(instructions)
 
 
-func _add_touch_button(canvas: CanvasLayer, label: String, action: String, position: Vector2) -> void:
+func _build_progress_bar(parent: Control, position: Vector2, fill_color: Color) -> ProgressBar:
+	var progress := ProgressBar.new()
+	progress.position = position
+	progress.size = Vector2(280.0, 18.0)
+	progress.max_value = STARTING_HEALTH
+	progress.show_percentage = false
+	progress.add_theme_stylebox_override("background", _bar_style(Color("1c252c")))
+	progress.add_theme_stylebox_override("fill", _bar_style(fill_color))
+	parent.add_child(progress)
+	return progress
+
+
+func _bar_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.corner_radius_top_left = 5
+	style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5
+	style.corner_radius_bottom_right = 5
+	return style
+
+
+func _set_bottom_left(control: Control, distance_left: float, distance_bottom: float, width: float, height: float) -> void:
+	control.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	control.offset_left = distance_left
+	control.offset_top = -distance_bottom - height
+	control.offset_right = distance_left + width
+	control.offset_bottom = -distance_bottom
+
+
+func _set_bottom_right(control: Control, distance_right: float, distance_bottom: float, width: float, height: float) -> void:
+	control.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	control.offset_left = -distance_right - width
+	control.offset_top = -distance_bottom - height
+	control.offset_right = -distance_right
+	control.offset_bottom = -distance_bottom
+
+
+func _add_touch_spacer(parent: Control) -> void:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(72.0, 56.0)
+	parent.add_child(spacer)
+
+
+func _add_touch_button(parent: Control, label: String, action: String, button_size: Vector2 = Vector2(72.0, 56.0)) -> void:
 	var button := Button.new()
 	button.text = label
-	button.position = position
-	button.size = Vector2(96.0 if action == "attack" else 72.0, 56.0)
+	button.custom_minimum_size = button_size
+	button.size = button_size
 	button.focus_mode = Control.FOCUS_NONE
 	button.button_down.connect(func() -> void: held_actions[action] = true)
 	button.button_up.connect(func() -> void: held_actions[action] = false)
-	canvas.add_child(button)
+	parent.add_child(button)
 
 
 func _update_hud() -> void:
@@ -347,6 +427,9 @@ func _update_hud() -> void:
 	status_label.text = "The Infected prototype\n%s\nData: %s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note]
 	health_label.text = "Health: %d / %d   |   Save schema: %d" % [health, STARTING_HEALTH, SAVE_SCHEMA_VERSION]
 	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d   Ammo: %d" % [inventory.get("scrap", 0), inventory.get("medkits", 0), inventory.get("ammo", 0)]
+	health_bar.value = health
+	infected_bar.value = infected_health
+	infected_bar.visible = infected != null
 
 
 func _set_feedback(message: String, duration: float) -> void:
