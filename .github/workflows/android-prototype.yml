@@ -73,6 +73,7 @@ jobs:
           grep -F "package: name='app.theinfected.game'" "$AAPT2_BADGING"
           grep -F "minSdkVersion:'28'" "$AAPT2_BADGING"
           grep -F "targetSdkVersion:'36'" "$AAPT2_BADGING"
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/apksigner" verify --verbose --print-certs apps/android/artifacts/the-infected-debug.apk
           stat --format='APK size: %s bytes' apps/android/artifacts/the-infected-debug.apk
           sha256sum apps/android/artifacts/the-infected-debug.apk | tee apps/android/artifacts/the-infected-debug.apk.sha256
 
