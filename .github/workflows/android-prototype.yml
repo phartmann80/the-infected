@@ -62,7 +62,7 @@ jobs:
           mkdir -p apps/android/artifacts
           GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
           "$GODOT" --headless --path apps/android --editor --quit
-          "$GODOT" --headless --path apps/android --export-debug "Android Debug" artifacts/the-infected-debug.apk
+          "$GODOT" --headless --path apps/android --install-android-build-template --export-debug "Android Debug" artifacts/the-infected-debug.apk
           AAPT_BADGING=/tmp/the-infected-apk-badging.txt
           "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging apps/android/artifacts/the-infected-debug.apk | tee "$AAPT_BADGING"
           grep -F "package: name='app.theinfected.game'" "$AAPT_BADGING"
