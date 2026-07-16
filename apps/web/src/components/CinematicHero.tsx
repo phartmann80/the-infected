@@ -35,6 +35,9 @@ export function CinematicHero() {
   const ambientRef = useRef<HTMLAudioElement>(null);
   const narrationRef = useRef<HTMLAudioElement>(null);
   const heroRef = useRef<HTMLElement>(null);
+  const signupTriggerRef = useRef<HTMLButtonElement>(null);
+  const signupDialogRef = useRef<HTMLDivElement>(null);
+  const signupEmailRef = useRef<HTMLInputElement>(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [narrationState, setNarrationState] = useState<'idle' | 'playing' | 'complete'>('idle');
   const [signupOpen, setSignupOpen] = useState(false);
@@ -71,14 +74,48 @@ export function CinematicHero() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
+  const closeSignup = useCallback(() => {
+    setSignupOpen(false);
+    setSignupStatus('idle');
+  }, []);
+
   useEffect(() => {
     if (!signupOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const trigger = signupTriggerRef.current;
+    document.body.style.overflow = 'hidden';
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusFirstField = () => signupEmailRef.current?.focus();
+    const focusFrame = window.requestAnimationFrame(focusFirstField);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSignupOpen(false);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSignup();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const dialog = signupDialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [signupOpen]);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      window.requestAnimationFrame(() => trigger?.focus());
+    };
+  }, [closeSignup, signupOpen]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -270,6 +307,7 @@ export function CinematicHero() {
               >
                 <button
                   type="button"
+                  ref={signupTriggerRef}
                   onClick={() => {
                     setSignupOpen(true);
                     setSignupStatus('idle');
@@ -318,7 +356,18 @@ export function CinematicHero() {
         </main>
 
         {signupOpen && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="signup-title" aria-describedby="signup-description">
+          <div
+            ref={signupDialogRef}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signup-title"
+            aria-describedby="signup-description"
+            tabIndex={-1}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeSignup();
+            }}
+          >
             <form
               className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0b0b0a] p-6 shadow-2xl"
               onSubmit={(event) => {
@@ -331,6 +380,7 @@ export function CinematicHero() {
               <label className="mt-5 block text-xs font-bold uppercase tracking-[0.2em] text-stone-400" htmlFor="survivor-email">Email</label>
               <input
                 id="survivor-email"
+                ref={signupEmailRef}
                 name="email"
                 type="email"
                 required
@@ -347,7 +397,7 @@ export function CinematicHero() {
               {signupStatus === 'unavailable' && <p className="mt-4 text-sm text-red-300" role="alert">Early Access registration is not open in this preview.</p>}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button type="submit" disabled={signupStatus === 'submitting'} className="min-h-11 rounded-full bg-orange-500 px-5 text-sm font-black uppercase tracking-[0.16em] text-black disabled:cursor-wait disabled:opacity-60">Submit</button>
-                <button type="button" onClick={() => setSignupOpen(false)} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white" aria-label="Close early access dialog">Close</button>
+                <button type="button" onClick={closeSignup} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white" aria-label="Close early access dialog">Close</button>
               </div>
             </form>
           </div>
