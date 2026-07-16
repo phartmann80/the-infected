@@ -328,19 +328,6 @@ export function CinematicHero() {
         )}
       </section>
 
-      <section className="relative overflow-hidden bg-black px-5 py-28 text-stone-200 sm:px-8 lg:px-12">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-[#080403] to-transparent" />
-        <div aria-hidden className="absolute left-1/2 top-10 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-orange-950/20 blur-3xl" />
-        <div className="relative mx-auto max-w-4xl border-l border-orange-200/18 pl-6">
-          <p className="text-xs uppercase tracking-[0.42em] text-orange-100/60">Below the smoke</p>
-          <h2 className="mt-5 max-w-2xl text-4xl font-black uppercase leading-none tracking-[-0.06em] text-white sm:text-6xl">
-            Every street remembers what happened.
-          </h2>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-stone-400">
-            The next section will descend into the world: checkpoints, survivor traces, lost broadcasts, and the systems that shape the Android game.
-          </p>
-        </div>
-      </section>
     </>
   );
 }
