@@ -34,8 +34,10 @@ var medkit_was_down := false
 var restart_was_down := false
 var save_was_down := false
 var load_was_down := false
+var pause_was_down := false
 var beacon_reached := false
 var run_complete := false
+var is_paused := false
 var infected_knockback_timer := 0.0
 var infected_knockback_velocity := Vector3.ZERO
 var held_actions: Dictionary = {}
@@ -53,6 +55,8 @@ var hit_flash_timer := 0.0
 var signal_beacon: Node3D
 var signal_light: OmniLight3D
 var environment_time := 0.0
+var pause_panel: PanelContainer
+var pause_resume_button: Button
 
 
 func _ready() -> void:
@@ -65,6 +69,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if player == null:
+		return
+	_handle_pause_input()
+	if is_paused:
+		_update_hud()
 		return
 	if run_complete:
 		_handle_save_load_input()
@@ -432,6 +440,27 @@ func _handle_save_load_input() -> void:
 	load_was_down = load_down
 
 
+func _handle_pause_input() -> void:
+	var pause_down := Input.is_key_pressed(KEY_P) or Input.is_key_pressed(KEY_ESCAPE)
+	if pause_down and not pause_was_down:
+		_toggle_pause()
+	pause_was_down = pause_down
+
+
+func _toggle_pause() -> void:
+	is_paused = not is_paused
+	held_actions.clear()
+	pause_was_down = false
+	if player != null:
+		player.velocity = Vector3.ZERO
+	if infected != null:
+		infected.velocity = Vector3.ZERO
+	if is_paused and pause_resume_button != null:
+		pause_resume_button.grab_focus()
+	_set_feedback("Run paused." if is_paused else "Run resumed.", 1.0)
+	_update_hud()
+
+
 func _restart_run() -> void:
 	health = STARTING_HEALTH
 	infected_health = 100
@@ -445,6 +474,9 @@ func _restart_run() -> void:
 	infected_knockback_velocity = Vector3.ZERO
 	save_was_down = false
 	load_was_down = false
+	pause_was_down = false
+	is_paused = false
+	held_actions.clear()
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
 	for pickup in pickups:
@@ -639,6 +671,54 @@ func _build_touch_controls() -> void:
 	instructions.add_theme_font_size_override("font_size", 18)
 	hud_root.add_child(instructions)
 
+	var pause_button := Button.new()
+	pause_button.text = "PAUSE"
+	pause_button.custom_minimum_size = Vector2(132.0, 52.0)
+	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	pause_button.offset_left = -156.0
+	pause_button.offset_top = 20.0
+	pause_button.offset_right = -24.0
+	pause_button.offset_bottom = 72.0
+	pause_button.add_theme_font_size_override("font_size", 18)
+	pause_button.pressed.connect(_toggle_pause)
+	hud_root.add_child(pause_button)
+
+	pause_panel = PanelContainer.new()
+	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_panel.offset_left = -240.0
+	pause_panel.offset_top = -132.0
+	pause_panel.offset_right = 240.0
+	pause_panel.offset_bottom = 132.0
+	pause_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_panel.visible = false
+	var pause_content := VBoxContainer.new()
+	pause_content.add_theme_constant_override("separation", 14)
+	var pause_title := Label.new()
+	pause_title.text = "RUN PAUSED"
+	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_title.add_theme_font_size_override("font_size", 28)
+	pause_content.add_child(pause_title)
+	var pause_description := Label.new()
+	pause_description.text = "The route is held. Resume when you are ready."
+	pause_description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pause_description.add_theme_font_size_override("font_size", 18)
+	pause_content.add_child(pause_description)
+	pause_resume_button = Button.new()
+	pause_resume_button.text = "RESUME"
+	pause_resume_button.custom_minimum_size = Vector2(220.0, 56.0)
+	pause_resume_button.add_theme_font_size_override("font_size", 20)
+	pause_resume_button.pressed.connect(_toggle_pause)
+	pause_content.add_child(pause_resume_button)
+	var pause_margin := MarginContainer.new()
+	pause_margin.add_theme_constant_override("margin_left", 28)
+	pause_margin.add_theme_constant_override("margin_top", 24)
+	pause_margin.add_theme_constant_override("margin_right", 28)
+	pause_margin.add_theme_constant_override("margin_bottom", 24)
+	pause_margin.add_child(pause_content)
+	pause_panel.add_child(pause_margin)
+	hud_root.add_child(pause_panel)
+
 
 func _build_progress_bar(parent: Control, position: Vector2, fill_color: Color) -> ProgressBar:
 	var progress := ProgressBar.new()
@@ -698,13 +778,17 @@ func _add_touch_button(parent: Control, label: String, action: String, button_si
 func _update_hud() -> void:
 	if status_label == null:
 		return
+	if pause_panel != null:
+		pause_panel.visible = is_paused
 	var renderer: String = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
 	var renderer_note := "Renderer: %s" % renderer
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
 	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100" % infected_health
 	var objective_note := ""
-	if run_complete:
+	if is_paused:
+		objective_note = "RUN PAUSED - press P, ESC, or RESUME to continue"
+	elif run_complete:
 		objective_note = "RUN COMPLETE — press R or RESET RUN to replay"
 	elif not beacon_reached and signal_beacon != null:
 		var beacon_distance := maxi(int(player.global_position.distance_to(signal_beacon.global_position)), 0)
