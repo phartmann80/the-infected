@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Privacy notice',
+  description: 'Prototype privacy notice for The Infected Early Access registration flow, pending final public review.',
+  alternates: { canonical: '/legal/privacy' },
+};
 
 export default function PrivacyPage() {
   return (

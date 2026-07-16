@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Cookie notice',
+  description: 'Prototype cookie notice for The Infected website capabilities and future consent review.',
+  alternates: { canonical: '/legal/cookies' },
+};
 
 export default function CookiesPage() {
   return (
