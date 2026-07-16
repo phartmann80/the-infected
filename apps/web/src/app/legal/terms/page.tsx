@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Terms of use',
+  description: 'Prototype terms of use for The Infected landing page and pre-release development preview, pending final review.',
+  alternates: { canonical: '/legal/terms' },
+};
 
 export default function TermsPage() {
   return (
