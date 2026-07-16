@@ -671,10 +671,12 @@ func _update_hud() -> void:
 	var objective_note := ""
 	if run_complete:
 		objective_note = "RUN COMPLETE — press R or RESET RUN to replay"
-	elif not beacon_reached:
-		objective_note = "Objective: reach the signal beacon"
+	elif not beacon_reached and signal_beacon != null:
+		var beacon_distance := maxi(int(player.global_position.distance_to(signal_beacon.global_position)), 0)
+		objective_note = "Objective: reach the signal beacon (%dm)" % beacon_distance
 	elif infected != null:
-		objective_note = "Objective: neutralize the infected"
+		var infected_distance := maxi(int(player.global_position.distance_to(infected.global_position)), 0)
+		objective_note = "Objective: neutralize the infected (%dm)" % infected_distance
 	else:
 		objective_note = "Objective complete — securing route"
 	status_label.text = "The Infected prototype\n%s\nData: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note, objective_note]
