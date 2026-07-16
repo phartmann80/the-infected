@@ -227,7 +227,7 @@ func _add_touch_button(canvas: CanvasLayer, label: String, action: String, posit
 func _update_hud() -> void:
 	if status_label == null:
 		return
-	var renderer := RenderingServer.get_rendering_method()
+	var renderer: String = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
 	var renderer_note := "Renderer: %s" % renderer
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
