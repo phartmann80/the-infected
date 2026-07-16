@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "project": "the-infected",
+  "content_version": "0.1.0-foundation",
+  "canonical_content_approved": false,
+  "environment_id": "environment-001-review",
+  "player_id": "survivor-001-review",
+  "infected_id": "infected-001-review",
+  "note": "Review-only foundation data. Production characters, enemies, weapons, lore, and permanent 3D assets are not approved."
+}
