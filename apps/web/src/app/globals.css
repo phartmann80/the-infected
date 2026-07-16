@@ -4,6 +4,7 @@
 :root { color-scheme: dark; background: #030405; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; background: #030405; color: #f7f4ef; text-rendering: optimizeLegibility; }
+section[id] { scroll-margin-top: 5.5rem; }
 ::selection { background: rgba(255, 92, 38, 0.85); color: #080706; }
 :focus-visible { outline: 2px solid rgba(255, 210, 174, 0.95); outline-offset: 4px; }
 .chapter-link-scroll { scrollbar-width: none; }
