@@ -19,6 +19,7 @@ The prototype proves the smallest complete runtime path before content-heavy pro
 - Android Platform Tools: `36.0.2`.
 - Android NDK: `28.1.13356709` / r28b.
 - CMake: `3.10.2.4988404`.
+- ABI policy: `arm64-v8a` only; older 32-bit devices are intentionally excluded until package-size and compatibility requirements are reviewed.
 - Signing: debug export only; no signing keys or release credentials in Git or CI.
 
 ## Renderer compatibility gate
@@ -69,7 +70,7 @@ The Android prototype workflow pins the Godot release, export template version, 
 3. Download Godot `4.7.1-stable` and its matching export templates.
 4. Run a headless project import check.
 5. Export the `Android Debug` preset to an APK.
-6. Verify the package ID with Android build tools.
+6. Inspect the generated APK manifest and fail unless the package ID, minSdk 28, and targetSdk 36 are present.
 7. Calculate and upload the APK SHA-256 file.
 
 The workflow never signs a release, stores a credential, enables a paid API, or promotes an asset to canonical status.

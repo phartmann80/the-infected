@@ -9,6 +9,8 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 - Mobile renderer as the primary export path
 - Package ID `app.theinfected.game`
 - Minimum Android API 28; target and compile API 36. API 36 is being targeted in preparation for the Google Play target-SDK requirement expected in August 2026; this requirement is not treated as already mandatory.
+- Export configuration explicitly sets Gradle minSdk 28 and targetSdk 36.
+- ABI policy: arm64-v8a only. Older 32-bit devices are intentionally excluded from this prototype until package-size and compatibility requirements are reviewed.
 - OpenJDK 17, NDK `28.1.13356709`, CMake `3.10.2.4988404`
 
 ## Run locally

@@ -63,12 +63,15 @@ jobs:
           GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
           "$GODOT" --headless --path apps/android --editor --quit
           "$GODOT" --headless --path apps/android --export-debug "Android Debug" artifacts/the-infected-debug.apk
-          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging apps/android/artifacts/the-infected-debug.apk | grep -F "name='app.theinfected.game'"
-          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging apps/android/artifacts/the-infected-debug.apk | grep -E "^(package:|sdkVersion:|targetSdkVersion:|uses-permission:)" || true
+          AAPT_BADGING=/tmp/the-infected-apk-badging.txt
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging apps/android/artifacts/the-infected-debug.apk | tee "$AAPT_BADGING"
+          grep -F "package: name='app.theinfected.game'" "$AAPT_BADGING"
+          grep -F "sdkVersion:'28'" "$AAPT_BADGING"
+          grep -F "targetSdkVersion:'36'" "$AAPT_BADGING"
           stat --format='APK size: %s bytes' apps/android/artifacts/the-infected-debug.apk
           sha256sum apps/android/artifacts/the-infected-debug.apk | tee apps/android/artifacts/the-infected-debug.apk.sha256
 
-      - name: Upload unsigned debug artifact and hash
+      - name: Upload debug artifact and hash
         uses: actions/upload-artifact@v4
         with:
           name: the-infected-android-debug
