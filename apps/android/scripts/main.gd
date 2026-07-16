@@ -8,6 +8,7 @@ const INFECTED_SPEED := 1.15
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const STARTING_HEALTH := 100
+const MEDKIT_HEAL := 40
 const CAMERA_SMOOTHING := 9.0
 
 var game_data: Dictionary = {}
@@ -21,6 +22,7 @@ var attack_cooldown := 0.0
 var save_timer := 0.0
 var camera_yaw := 0.0
 var attack_was_down := false
+var medkit_was_down := false
 var held_actions: Dictionary = {}
 var inventory: Dictionary = {"scrap": 0, "medkits": 1, "ammo": 6}
 var pickups: Array[Node3D] = []
@@ -53,6 +55,7 @@ func _physics_process(delta: float) -> void:
 		_move_infected(delta)
 	_collect_pickups()
 	_handle_attack_input()
+	_handle_medkit_input()
 	_update_camera(delta)
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
@@ -236,6 +239,28 @@ func _handle_attack_input() -> void:
 	attack_was_down = attack_down
 
 
+func _handle_medkit_input() -> void:
+	var medkit_down := Input.is_key_pressed(KEY_H) or bool(held_actions.get("medkit", false))
+	if medkit_down and not medkit_was_down:
+		_use_medkit()
+	medkit_was_down = medkit_down
+
+
+func _use_medkit() -> void:
+	var available := int(inventory.get("medkits", 0))
+	if health >= STARTING_HEALTH:
+		_set_feedback("Health is already full.", 1.0)
+		return
+	if available <= 0:
+		_set_feedback("No medkits available.", 1.0)
+		return
+	var previous_health := health
+	health = mini(STARTING_HEALTH, health + MEDKIT_HEAL)
+	inventory["medkits"] = available - 1
+	_set_feedback("Medkit used. Health restored: +%d." % (health - previous_health), 1.5)
+	_save_game()
+
+
 func _try_attack() -> void:
 	if infected == null or attack_cooldown > 0.0:
 		return
@@ -340,8 +365,9 @@ func _build_touch_controls() -> void:
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
-	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 132.0)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 188.0)
 	hud_root.add_child(action_panel)
+	_add_touch_button(action_panel, "MEDKIT", "medkit", Vector2(224.0, 48.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
 	var camera_row := HBoxContainer.new()
 	camera_row.add_theme_constant_override("separation", 8)
@@ -350,7 +376,7 @@ func _build_touch_controls() -> void:
 	_add_touch_button(camera_row, "LOOK ▶", "camera_right", Vector2(108.0, 56.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   camera arrows to look"
+	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT to heal"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0

@@ -56,7 +56,7 @@ The prototype must demonstrate all of the following:
 6. Spawn one infected slot.
 7. Demonstrate health and damage.
 8. Demonstrate combat and health damage against the one infected slot.
-9. Show basic inventory pickup state in the HUD.
+9. Show basic inventory pickup state in the HUD and use a medkit during damage recovery.
 10. Read and write a versioned local save schema containing health, position, inventory, and threat state.
 11. Produce an installable debug APK.
 12. Repeat the export in CI and publish a SHA-256 artifact hash.
