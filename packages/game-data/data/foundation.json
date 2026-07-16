@@ -7,6 +7,6 @@
   "player_id": "survivor-001-review",
   "infected_id": "infected-001-review",
   "weapon_id": "weapon-001-review",
-  "prototype_features": ["movement", "camera", "combat", "combat-feedback", "melee-recoil", "objective-guidance", "environment-props", "health", "inventory", "inventory-use", "save-load", "save-load-controls", "pause-flow", "hud", "survival-loop"],
+  "prototype_features": ["movement", "camera", "combat", "combat-feedback", "melee-recoil", "objective-guidance", "environment-props", "health", "inventory", "inventory-use", "save-load", "save-load-controls", "pause-flow", "defeat-recovery", "hud", "survival-loop"],
   "note": "Review-only vertical-slice data. Production characters, enemies, weapons, lore, and permanent 3D assets are not approved."
 }
