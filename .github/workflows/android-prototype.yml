@@ -58,11 +58,31 @@ jobs:
           cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
 
       - name: Import and export debug APK
+        env:
+          ANDROID_DEV_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEV_KEYSTORE_BASE64 }}
+          ANDROID_DEV_KEY_ALIAS: ${{ secrets.ANDROID_DEV_KEY_ALIAS }}
+          ANDROID_DEV_STORE_PASSWORD: ${{ secrets.ANDROID_DEV_STORE_PASSWORD }}
+          ANDROID_DEV_KEY_PASSWORD: ${{ secrets.ANDROID_DEV_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           mkdir -p apps/android/artifacts
           GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
+          SIGNING_KEYSTORE="$RUNNER_TEMP/the-infected-dev-signing.jks"
+          SIGNED_APK="$RUNNER_TEMP/the-infected-debug-signed.apk"
+          trap 'rm -f "$SIGNING_KEYSTORE" "$SIGNED_APK"' EXIT
+          printf '%s' "$ANDROID_DEV_KEYSTORE_BASE64" | base64 --decode > "$SIGNING_KEYSTORE"
+          chmod 600 "$SIGNING_KEYSTORE"
           "$GODOT" --headless --path apps/android --editor --quit
           "$GODOT" --headless --path apps/android --install-android-build-template --export-debug "Android Debug" artifacts/the-infected-debug.apk
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/apksigner" sign \
+            --ks "$SIGNING_KEYSTORE" \
+            --ks-type JKS \
+            --ks-key-alias "$ANDROID_DEV_KEY_ALIAS" \
+            --ks-pass env:ANDROID_DEV_STORE_PASSWORD \
+            --key-pass env:ANDROID_DEV_KEY_PASSWORD \
+            --out "$SIGNED_APK" \
+            apps/android/artifacts/the-infected-debug.apk
+          mv "$SIGNED_APK" apps/android/artifacts/the-infected-debug.apk
           AAPT_BADGING=/tmp/the-infected-apk-badging.txt
           "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging apps/android/artifacts/the-infected-debug.apk > "$AAPT_BADGING"
           grep -F "package: name='app.theinfected.game'" "$AAPT_BADGING"

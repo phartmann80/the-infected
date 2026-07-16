@@ -12,6 +12,7 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 - Export configuration explicitly sets Gradle minSdk 28 and targetSdk 36.
 - ABI policy: arm64-v8a only. Older 32-bit devices are intentionally excluded from this prototype until package-size and compatibility requirements are reviewed.
 - OpenJDK 17, NDK `28.1.13356709`, CMake `3.10.2.4988404`
+- CI development exports use a dedicated encrypted GitHub Actions keystore. The decoded keystore exists only in the temporary runner workspace and is deleted during cleanup. No production signing credential is configured.
 
 ## Run locally
 

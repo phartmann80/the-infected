@@ -20,7 +20,7 @@ The prototype proves the smallest complete runtime path before content-heavy pro
 - Android NDK: `28.1.13356709` / r28b.
 - CMake: `3.10.2.4988404`.
 - ABI policy: `arm64-v8a` only; older 32-bit devices are intentionally excluded until package-size and compatibility requirements are reviewed.
-- Signing: debug export only; no signing keys or release credentials in Git or CI.
+- Signing: development-signed debug export using a dedicated encrypted GitHub Actions keystore; the decoded keystore exists only in the temporary runner workspace and is deleted during cleanup. No signing keys or release credentials are stored in Git, and no production signing key is configured.
 
 ## Renderer compatibility gate
 
