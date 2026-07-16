@@ -176,17 +176,25 @@ export function LandingChapters() {
   return (
     <div className="bg-[#060606] text-stone-200">
       <nav className="sticky top-0 z-30 border-y border-white/10 bg-[#060606]/85 px-5 py-4 backdrop-blur-xl sm:px-8 lg:px-12" aria-label="Landing page chapters">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6">
-          <Link href="#story" className="text-xs font-black uppercase tracking-[0.22em] text-white transition hover:text-orange-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
-            The Infected
-          </Link>
-          <div className="hidden items-center gap-6 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-500 sm:flex">
-            <Link href="#world" className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">World</Link>
-            <Link href="#survivors" className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">People</Link>
-            <Link href="#arsenal" className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Arsenal</Link>
-            <Link href="#mission" className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Mission</Link>
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="flex items-center justify-between gap-6">
+            <Link href="#story" className="shrink-0 text-xs font-black uppercase tracking-[0.22em] text-white transition hover:text-orange-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
+              The Infected
+            </Link>
+            <Link href="#join" className="shrink-0 rounded-full border border-orange-200/25 px-4 py-2 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-orange-100 transition hover:border-orange-200/60 hover:bg-orange-200/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 sm:hidden">
+              Early access
+            </Link>
           </div>
-          <Link href="#join" className="rounded-full border border-orange-200/25 px-4 py-2 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-orange-100 transition hover:border-orange-200/60 hover:bg-orange-200/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
+          <div className="chapter-link-scroll min-w-0 overflow-x-auto pb-1 sm:order-none sm:flex-1 sm:pb-0">
+            <ul className="flex min-w-max items-center gap-6 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-500 sm:justify-center">
+              <li><Link href="#world" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">World</Link></li>
+              <li><Link href="#survivors" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">People</Link></li>
+              <li><Link href="#arsenal" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Arsenal</Link></li>
+              <li><Link href="#mission" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Mission</Link></li>
+              <li><Link href="#review" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Review gates</Link></li>
+            </ul>
+          </div>
+          <Link href="#join" className="hidden shrink-0 rounded-full border border-orange-200/25 px-4 py-2 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-orange-100 transition hover:border-orange-200/60 hover:bg-orange-200/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 sm:inline-flex">
             Early access
           </Link>
         </div>
