@@ -70,3 +70,15 @@ The Hero Production Candidate review should include:
 - Vercel preview available without access barriers for reviewers
 
 Do not merge into main before review approval.
+
+## Current internal-review candidate
+
+One wide candidate is available for review at `apps/web/public/assets/cinematic/hero-production-candidate-internal-review.png`.
+
+- Registry status: `internal-review`
+- Canonical: `false`
+- Temporary: `true`
+- Dimensions: `1672 × 941`
+- SHA-256: `7e1c60237635816ab8b535a9569e223d8fcb0bec4f2ec618a64b4fec8f6ff292`
+
+This candidate is not wired into the live hero, does not replace the temporary poster or video, and does not constitute approval of Survivor 001, Infected 001, Environment 001, logo compositing, audio direction, or final production art.
