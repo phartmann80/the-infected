@@ -7,9 +7,12 @@ const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
+const ATTACK_SWING_DURATION := 0.22
+const HIT_FLASH_DURATION := 0.16
 const STARTING_HEALTH := 100
 const MEDKIT_HEAL := 40
 const CAMERA_SMOOTHING := 9.0
+const INFECTED_COLOR := Color("8b9b73")
 
 var game_data: Dictionary = {}
 var player: CharacterBody3D
@@ -32,6 +35,9 @@ var inventory_label: Label
 var feedback_label: Label
 var health_bar: ProgressBar
 var infected_bar: ProgressBar
+var player_weapon: MeshInstance3D
+var infected_material: StandardMaterial3D
+var hit_flash_timer := 0.0
 
 
 func _ready() -> void:
@@ -50,6 +56,9 @@ func _physics_process(delta: float) -> void:
 	var direction := Vector3(movement.x, 0.0, movement.y).rotated(Vector3.UP, camera_yaw)
 	player.velocity = direction * PLAYER_SPEED
 	player.move_and_slide()
+	if direction.length_squared() > 0.001:
+		var target_yaw := atan2(-direction.x, -direction.z)
+		player.rotation.y = lerp_angle(player.rotation.y, target_yaw, minf(delta * 10.0, 1.0))
 
 	if infected != null:
 		_move_infected(delta)
@@ -57,6 +66,7 @@ func _physics_process(delta: float) -> void:
 	_handle_attack_input()
 	_handle_medkit_input()
 	_update_camera(delta)
+	_update_combat_feedback(delta)
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
@@ -172,7 +182,8 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 	mesh.height = 1.8
 	mesh.radius = 0.45
 	mesh_instance.mesh = mesh
-	mesh_instance.material_override = _material(color)
+	var material := _material(color)
+	mesh_instance.material_override = material
 	actor.add_child(mesh_instance)
 
 	var collision := CollisionShape3D.new()
@@ -184,7 +195,22 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 
 	if is_infected:
 		mesh_instance.scale = Vector3(1.0, 1.15, 1.0)
+		infected_material = material
+	else:
+		player_weapon = _build_weapon(actor)
 	return actor
+
+
+func _build_weapon(parent: Node3D) -> MeshInstance3D:
+	var weapon := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.12, 0.12, 1.15)
+	weapon.mesh = mesh
+	weapon.material_override = _material(Color("c7b8a1"))
+	weapon.position = Vector3(0.5, 0.2, -0.35)
+	weapon.rotation_degrees = Vector3(0.0, -25.0, 35.0)
+	parent.add_child(weapon)
+	return weapon
 
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -232,6 +258,13 @@ func _move_infected(delta: float) -> void:
 				_set_feedback("You collapsed. The route resets.", 2.0)
 
 
+func _update_combat_feedback(delta: float) -> void:
+	hit_flash_timer = maxf(hit_flash_timer - delta, 0.0)
+	if infected_material == null:
+		return
+	infected_material.albedo_color = Color("ffbd86") if hit_flash_timer > 0.0 else INFECTED_COLOR
+
+
 func _handle_attack_input() -> void:
 	var attack_down := Input.is_key_pressed(KEY_SPACE) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or bool(held_actions.get("attack", false))
 	if attack_down and not attack_was_down:
@@ -265,14 +298,25 @@ func _try_attack() -> void:
 	if infected == null or attack_cooldown > 0.0:
 		return
 	attack_cooldown = 0.55
+	_play_attack_feedback()
 	var distance := player.global_position.distance_to(infected.global_position)
 	if distance > ATTACK_RANGE:
 		_set_feedback("Too far away.", 0.75)
 		return
 	infected_health = maxi(infected_health - ATTACK_DAMAGE, 0)
+	hit_flash_timer = HIT_FLASH_DURATION
 	_set_feedback("Hit confirmed. Infected health: %d" % infected_health, 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
+
+
+func _play_attack_feedback() -> void:
+	if player_weapon == null:
+		return
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(player_weapon, "rotation_degrees", Vector3(-80.0, -25.0, 35.0), ATTACK_SWING_DURATION * 0.45)
+	tween.tween_property(player_weapon, "rotation_degrees", Vector3(0.0, -25.0, 35.0), ATTACK_SWING_DURATION * 0.55)
 
 
 func _defeat_infected(award_salvage: bool = true) -> void:
