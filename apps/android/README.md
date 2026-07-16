@@ -25,8 +25,8 @@ The scene uses review-only primitives and proves the first small gameplay loop: 
 
 ## Prototype controls
 
-- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, `H` to use a medkit, `F5` to save, `F9` to load, `R` to reset the run, and camera buttons for rotation.
-- Android: use the on-screen movement, camera, `MEDKIT`, `ATTACK`, `SAVE`, `LOAD`, and `RESET RUN` controls.
+- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, `H` to use a medkit, `F5` to save, `F9` to load, `R` to reset the run, `P` or `Escape` to pause, and camera buttons for rotation.
+- Android: use the on-screen movement, camera, `MEDKIT`, `ATTACK`, `SAVE`, `LOAD`, `RESET RUN`, and `PAUSE` controls. The pause panel freezes the encounter and offers `RESUME`.
 - Walk into the marked review-only pickups to add scrap or ammunition to the inventory.
 - Reach the signal beacon, defeat the infected, and use `R` or `RESET RUN` to replay the route after completion.
 - The save file records health, position, camera yaw, inventory, infected health and position, collected pickups, beacon progress, and completion state. Save schema 3 accepts schema 1 and 2 saves; older files default fields introduced by later schemas.
