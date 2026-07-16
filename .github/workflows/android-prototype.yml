@@ -64,10 +64,15 @@ jobs:
           "$GODOT" --headless --path apps/android --editor --quit
           "$GODOT" --headless --path apps/android --install-android-build-template --export-debug "Android Debug" artifacts/the-infected-debug.apk
           AAPT_BADGING=/tmp/the-infected-apk-badging.txt
-          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging apps/android/artifacts/the-infected-debug.apk | tee "$AAPT_BADGING"
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging apps/android/artifacts/the-infected-debug.apk > "$AAPT_BADGING"
           grep -F "package: name='app.theinfected.game'" "$AAPT_BADGING"
           grep -F "sdkVersion:'28'" "$AAPT_BADGING"
           grep -F "targetSdkVersion:'36'" "$AAPT_BADGING"
+          AAPT2_BADGING=/tmp/the-infected-apk-badging-aapt2.txt
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging apps/android/artifacts/the-infected-debug.apk > "$AAPT2_BADGING"
+          grep -F "package: name='app.theinfected.game'" "$AAPT2_BADGING"
+          grep -F "minSdkVersion:'28'" "$AAPT2_BADGING"
+          grep -F "targetSdkVersion:'36'" "$AAPT2_BADGING"
           stat --format='APK size: %s bytes' apps/android/artifacts/the-infected-debug.apk
           sha256sum apps/android/artifacts/the-infected-debug.apk | tee apps/android/artifacts/the-infected-debug.apk.sha256
 
