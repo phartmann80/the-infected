@@ -2,6 +2,8 @@
 
 Status: Planned work after the production-readiness foundation PR.
 
+Current implementation slice: `feat/early-access-registration-v1` adds the feature-flagged Early Access contract, Node route, privacy-safe storage boundary, consent form wiring, and the cinematic chapter rhythm from `feat/landing-page-production-v1`. It does not add a production hero candidate, a broad roster, or enable public registration.
+
 The landing page should grow from the approved cinematic direction, not become a generic feature grid. The next visual gate is one approved production hero composition. No large character or enemy roster should be generated before that gate.
 
 ## Phase 1: Hero production candidate
@@ -23,6 +25,14 @@ Build the page as a descent through the city, following `docs/CHAPTER_STRUCTURE.
 - Arsenal: scarce, practical equipment and weapons.
 - The Mission: the survival objective and why the player keeps moving.
 - Join the Survivors: early-access conversion after the world has earned attention.
+
+### Product slice v1 review
+
+- Story and world sections now carry the visitor from the first silence to the remaining signal.
+- Survivor and infected presentation slots remain registry-governed and visibly marked as placeholders until approved assets exist.
+- Arsenal, levels, progression, and loot are present as prototype-labelled systems rather than invented final canon.
+- Early Access persistence and consent handling are implemented behind `EARLY_ACCESS_ENABLED=false`; retention, private data requests, and deployment enablement remain review gates.
+- Cookies and Contact routes are present as prototype legal surfaces; ownership and support details require final project review before public launch.
 
 ## Phase 3: Game-information surfaces
 
@@ -50,6 +60,14 @@ Each surface must use approved game data or clearly marked prototype copy. No fi
 - Verify poster-only mobile behavior, lazy media loading, pause-on-hidden behavior, and audio opt-in.
 - Define budgets before final media lands: initial HTML/JS, hero poster, video bytes, audio bytes, Largest Contentful Paint, and interaction readiness on a representative mobile device.
 - Add image dimensions, responsive crops, WebM/MP4 strategy, cache headers, and a CDN decision when bandwidth evidence justifies it.
+
+### v1 performance gate
+
+- LCP: at or below 2.5 seconds on a representative mid-range mobile device.
+- Initial JavaScript: at or below 220 KB compressed before hero media.
+- Hero poster: at or below 350 KB; video and audio remain opt-in after first paint.
+- Interaction readiness: at or below 3.5 seconds on a throttled mobile connection.
+- These are review targets, not measured results. The production hero candidate must be measured against them before approval.
 
 ## Phase 6: SEO and release review
 
