@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EarlyAccessForm } from './EarlyAccessForm';
 
 type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked';
 
@@ -437,16 +438,15 @@ export function LandingChapters() {
             <div className="max-w-2xl">
               <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65"><span className="h-px w-8 bg-orange-300/70" aria-hidden />Transmission / Early Access</p>
               <h2 className="mt-5 text-5xl font-black uppercase leading-[0.88] tracking-[-0.08em] text-white sm:text-7xl">Be there when the signal answers.</h2>
-              <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">The Early Access contract and persistence boundary are now implemented. Registration remains feature-flagged closed until the privacy, contact, retention, and deployment review is complete.</p>
+              <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">Leave a signal for the next transmission. The registration contract is defined, but this preview keeps persistence closed until privacy, contact, retention, and deployment review are complete.</p>
             </div>
-            <div className="max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5">
-              <StatusBadge status="prototype" />
-              <p className="mt-4 text-sm leading-7 text-stone-400">The form is wired to <code className="text-orange-100/80">POST /api/early-access</code>. The feature flag is disabled in this preview, so no registration is stored.</p>
-              <div className="mt-5 flex flex-wrap gap-4 text-xs font-bold uppercase tracking-[0.16em]">
-                <Link href="/legal/privacy" className="text-orange-100 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">Privacy handling</Link>
-                <Link href="/contact" className="text-orange-100 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">Contact</Link>
-              </div>
-            </div>
+            <EarlyAccessForm
+              idPrefix="landing"
+              source="landing"
+              heading="Leave your signal"
+              description="The form is ready for the reviewed backend. This preview returns an unavailable state and stores nothing while registration is closed."
+              className="max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5"
+            />
           </div>
         </div>
       </section>

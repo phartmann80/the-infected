@@ -3,8 +3,8 @@
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EarlyAccessForm } from './EarlyAccessForm';
 import { SceneBoundary } from './hero/SceneBoundary';
 
 type EnvironmentalSceneComponentProps = {
@@ -52,7 +52,6 @@ export function CinematicHero() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [narrationState, setNarrationState] = useState<'idle' | 'playing' | 'complete'>('idle');
   const [signupOpen, setSignupOpen] = useState(false);
-  const [signupStatus, setSignupStatus] = useState<'idle' | 'submitting' | 'success' | 'error' | 'unavailable'>('idle');
   const [webglAvailable, setWebglAvailable] = useState(false);
   const [heroVisible, setHeroVisible] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);
@@ -89,7 +88,6 @@ export function CinematicHero() {
 
   const closeSignup = useCallback(() => {
     setSignupOpen(false);
-    setSignupStatus('idle');
   }, []);
 
   useEffect(() => {
@@ -177,34 +175,6 @@ export function CinematicHero() {
       setSoundEnabled(false);
     }
   }, [lowBandwidth, playNarrationOnce, soundEnabled]);
-
-  const submitSignup = useCallback(async (formData: FormData) => {
-    const email = String(formData.get('email') ?? '').trim();
-    const consent = formData.get('consent') === 'on';
-    if (!/^\S+@\S+\.\S+$/.test(email) || !consent) {
-      setSignupStatus('error');
-      return;
-    }
-    setSignupStatus('submitting');
-    try {
-      const response = await fetch('/api/early-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, consent, source: 'hero' }),
-      });
-      if (response.status === 503) {
-        setSignupStatus('unavailable');
-        return;
-      }
-      if (!response.ok) {
-        setSignupStatus('error');
-        return;
-      }
-      setSignupStatus('success');
-    } catch {
-      setSignupStatus('unavailable');
-    }
-  }, []);
 
   const audioStatus = useMemo(() => {
     if (lowBandwidth) return 'Low-bandwidth mode. Video, WebGL, and audio are paused.';
@@ -324,7 +294,6 @@ export function CinematicHero() {
                   ref={signupTriggerRef}
                   onClick={() => {
                     setSignupOpen(true);
-                    setSignupStatus('idle');
                   }}
                   className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
                 >
@@ -376,45 +345,22 @@ export function CinematicHero() {
             className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="signup-title"
-            aria-describedby="signup-description"
+            aria-labelledby="hero-signup-title"
+            aria-describedby="hero-signup-description"
             tabIndex={-1}
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) closeSignup();
             }}
           >
-            <form
+            <EarlyAccessForm
+              ref={signupEmailRef}
+              idPrefix="hero"
+              source="hero"
+              heading="Join the Survivors"
+              description="The registration contract is wired into this preview. It remains closed until the reviewed storage and privacy configuration is enabled."
               className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0b0b0a] p-6 shadow-2xl"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submitSignup(new FormData(event.currentTarget));
-              }}
-            >
-              <h2 id="signup-title" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Join the Survivors</h2>
-              <p id="signup-description" className="mt-3 text-sm leading-6 text-stone-300">The registration contract is wired into this preview. It remains closed until the reviewed storage and privacy configuration is enabled.</p>
-              <label className="mt-5 block text-xs font-bold uppercase tracking-[0.2em] text-stone-400" htmlFor="survivor-email">Email</label>
-              <input
-                id="survivor-email"
-                ref={signupEmailRef}
-                name="email"
-                type="email"
-                required
-                placeholder="survivor@example.com"
-                className="mt-2 min-h-12 w-full rounded-2xl border border-white/14 bg-white/8 px-4 text-white outline-none focus:ring-2 focus:ring-orange-300"
-              />
-              <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-stone-400" htmlFor="survivor-consent">
-                <input id="survivor-consent" name="consent" type="checkbox" required className="mt-1 h-4 w-4 accent-orange-400" />
-                <span>I agree to receive development updates and have read the <Link className="text-orange-100 underline underline-offset-4" href="/legal/privacy">Privacy notice</Link>.</span>
-              </label>
-              {signupStatus === 'submitting' && <p className="mt-4 text-sm text-stone-300" role="status">Sending registration…</p>}
-              {signupStatus === 'success' && <p className="mt-4 text-sm text-orange-200" role="status">Registration received. Watch for the next transmission.</p>}
-              {signupStatus === 'error' && <p className="mt-4 text-sm text-red-300" role="alert">Enter a valid email and agree to the Privacy notice.</p>}
-              {signupStatus === 'unavailable' && <p className="mt-4 text-sm text-red-300" role="alert">Early Access registration is not open in this preview.</p>}
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button type="submit" disabled={signupStatus === 'submitting'} className="min-h-11 rounded-full bg-orange-500 px-5 text-sm font-black uppercase tracking-[0.16em] text-black disabled:cursor-wait disabled:opacity-60">Submit</button>
-                <button type="button" onClick={closeSignup} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white" aria-label="Close early access dialog">Close</button>
-              </div>
-            </form>
+              onCancel={closeSignup}
+            />
           </div>
         )}
       </section>
