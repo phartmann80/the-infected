@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "project": "the-infected",
+  "content_version": "0.1.0-foundation",
+  "canonical_content_approved": false,
+  "environment_id": "environment-001-review",
+  "player_id": "survivor-001-review",
+  "infected_id": "infected-001-review",
+  "weapon_id": "weapon-001-review",
+  "prototype_features": ["movement", "camera", "combat", "health", "inventory", "save-load", "hud"],
+  "note": "Review-only vertical-slice data. Production characters, enemies, weapons, lore, and permanent 3D assets are not approved."
+}
