@@ -55,11 +55,13 @@ The prototype must demonstrate all of the following:
 5. Support touch movement and camera control.
 6. Spawn one infected slot.
 7. Demonstrate health and damage.
-8. Read and write a versioned local save schema.
-9. Produce an installable debug APK.
-10. Repeat the export in CI and publish a SHA-256 artifact hash.
+8. Demonstrate combat and health damage against the one infected slot.
+9. Show basic inventory pickup state in the HUD.
+10. Read and write a versioned local save schema containing health, position, inventory, and threat state.
+11. Produce an installable debug APK.
+12. Repeat the export in CI and publish a SHA-256 artifact hash.
 
-Weapons, inventory, economy, progression, large enemy rosters, multiplayer, purchases, production signing, and live services are explicitly out of scope.
+Final weapons, economy, progression, large enemy rosters, multiplayer, purchases, production signing, and live services are explicitly out of scope. The vertical slice uses one review-only combat interaction and a minimal inventory state only to prove the loop.
 
 ## Repeatable CI export
 

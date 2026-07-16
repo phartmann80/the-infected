@@ -21,7 +21,14 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 3. Open `apps/android/project.godot` in Godot 4.7.1.
 4. Run the `AndroidPrototype` scene on desktop for the input and save-schema smoke test.
 
-The scene uses review-only primitives. It does not contain production characters, weapons, inventory, economy, progression, paid content, multiplayer, or release signing.
+The scene uses review-only primitives and proves the first small gameplay loop: movement, camera follow, one survivor, one infected, basic combat and damage, pickup inventory, a versioned local save, and a HUD. It does not contain production characters, final weapons, economy, progression, paid content, multiplayer, or release signing.
+
+## Prototype controls
+
+- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, camera buttons for rotation.
+- Android: use the on-screen movement, camera, and `ATTACK` controls.
+- Walk into the marked review-only pickups to add scrap or ammunition to the inventory.
+- The save file records health, position, inventory, infected health, and defeated state.
 
 ## Renderer compatibility gate
 
