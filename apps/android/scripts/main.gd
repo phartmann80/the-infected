@@ -2,7 +2,8 @@ extends Node3D
 
 const DATA_PATH := "res://data/game_foundation.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 1
+const SAVE_SCHEMA_VERSION := 2
+const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
 const ATTACK_RANGE := 2.4
@@ -12,6 +13,7 @@ const HIT_FLASH_DURATION := 0.16
 const STARTING_HEALTH := 100
 const MEDKIT_HEAL := 40
 const CAMERA_SMOOTHING := 9.0
+const SIGNAL_BEACON_REACH := 2.2
 const INFECTED_COLOR := Color("8b9b73")
 
 var game_data: Dictionary = {}
@@ -26,6 +28,9 @@ var save_timer := 0.0
 var camera_yaw := 0.0
 var attack_was_down := false
 var medkit_was_down := false
+var restart_was_down := false
+var beacon_reached := false
+var run_complete := false
 var held_actions: Dictionary = {}
 var inventory: Dictionary = {"scrap": 0, "medkits": 1, "ammo": 6}
 var pickups: Array[Node3D] = []
@@ -54,6 +59,10 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if player == null:
 		return
+	if run_complete:
+		_handle_restart_input()
+		_update_hud()
+		return
 
 	var movement := _movement_input()
 	var direction := Vector3(movement.x, 0.0, movement.y).rotated(Vector3.UP, camera_yaw)
@@ -68,9 +77,11 @@ func _physics_process(delta: float) -> void:
 	_collect_pickups()
 	_handle_attack_input()
 	_handle_medkit_input()
+	_handle_restart_input()
 	_update_camera(delta)
 	_update_combat_feedback(delta)
 	_update_environment(delta)
+	_update_objective()
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
@@ -354,6 +365,19 @@ func _update_environment(delta: float) -> void:
 	signal_light.light_energy = 1.05 + sin(environment_time * 2.4) * 0.25
 
 
+func _update_objective() -> void:
+	if player == null or run_complete:
+		return
+	if not beacon_reached and signal_beacon != null and player.global_position.distance_to(signal_beacon.global_position) <= SIGNAL_BEACON_REACH:
+		beacon_reached = true
+		_set_feedback("Signal acquired. Neutralize the infected.", 2.5)
+		_save_game()
+	if beacon_reached and infected == null:
+		run_complete = true
+		_set_feedback("Route secured. Run complete. Press R or RESET RUN to replay.", 4.0)
+		_save_game()
+
+
 func _handle_attack_input() -> void:
 	var attack_down := Input.is_key_pressed(KEY_SPACE) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or bool(held_actions.get("attack", false))
 	if attack_down and not attack_was_down:
@@ -366,6 +390,48 @@ func _handle_medkit_input() -> void:
 	if medkit_down and not medkit_was_down:
 		_use_medkit()
 	medkit_was_down = medkit_down
+
+
+func _handle_restart_input() -> void:
+	var restart_down := Input.is_key_pressed(KEY_R) or bool(held_actions.get("restart", false))
+	if restart_down and not restart_was_down:
+		_restart_run()
+	restart_was_down = restart_down
+
+
+func _restart_run() -> void:
+	health = STARTING_HEALTH
+	infected_health = 100
+	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
+	damage_timer = 0.0
+	attack_cooldown = 0.0
+	save_timer = 0.0
+	beacon_reached = false
+	run_complete = false
+	player.position = Vector3(0.0, 1.0, 4.0)
+	player.velocity = Vector3.ZERO
+	for pickup in pickups:
+		if is_instance_valid(pickup):
+			pickup.visible = true
+
+	if infected == null or not is_instance_valid(infected) or infected.is_queued_for_deletion():
+		infected = _build_actor(
+			String(game_data.get("infected_id", "infected-001-review")),
+			Vector3(0.0, 1.0, -4.0),
+			INFECTED_COLOR,
+			true,
+		)
+	else:
+		infected.position = Vector3(0.0, 1.0, -4.0)
+		infected.velocity = Vector3.ZERO
+		infected.visible = true
+		if infected_material != null:
+			infected_material.albedo_color = INFECTED_COLOR
+
+	camera_yaw = 0.0
+	_update_camera(1.0)
+	_set_feedback("Run reset. Reach the signal beacon.", 2.0)
+	_save_game()
 
 
 func _use_medkit() -> void:
@@ -498,7 +564,7 @@ func _build_touch_controls() -> void:
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
-	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 188.0)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 244.0)
 	hud_root.add_child(action_panel)
 	_add_touch_button(action_panel, "MEDKIT", "medkit", Vector2(224.0, 48.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
@@ -507,9 +573,10 @@ func _build_touch_controls() -> void:
 	action_panel.add_child(camera_row)
 	_add_touch_button(camera_row, "LOOK ◀", "camera_left", Vector2(108.0, 56.0))
 	_add_touch_button(camera_row, "LOOK ▶", "camera_right", Vector2(108.0, 56.0))
+	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT to heal"
+	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT to heal   |   R / RESET RUN"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -583,7 +650,16 @@ func _update_hud() -> void:
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
 	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100" % infected_health
-	status_label.text = "The Infected prototype\n%s\nData: %s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note]
+	var objective_note := ""
+	if run_complete:
+		objective_note = "RUN COMPLETE — press R or RESET RUN to replay"
+	elif not beacon_reached:
+		objective_note = "Objective: reach the signal beacon"
+	elif infected != null:
+		objective_note = "Objective: neutralize the infected"
+	else:
+		objective_note = "Objective complete — securing route"
+	status_label.text = "The Infected prototype\n%s\nData: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note, objective_note]
 	health_label.text = "Health: %d / %d   |   Save schema: %d" % [health, STARTING_HEALTH, SAVE_SCHEMA_VERSION]
 	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d   Ammo: %d" % [inventory.get("scrap", 0), inventory.get("medkits", 0), inventory.get("ammo", 0)]
 	health_bar.value = health
@@ -605,10 +681,15 @@ func _load_save() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-	if typeof(parsed) != TYPE_DICTIONARY or int(parsed.get("schema_version", 0)) != SAVE_SCHEMA_VERSION:
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var schema_version := int(parsed.get("schema_version", 0))
+	if schema_version < MIN_SUPPORTED_SAVE_SCHEMA or schema_version > SAVE_SCHEMA_VERSION:
 		return
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
+	beacon_reached = bool(parsed.get("beacon_reached", false))
+	run_complete = bool(parsed.get("run_complete", false))
 	var saved_position = parsed.get("position", [])
 	if saved_position is Array and saved_position.size() == 3 and player != null:
 		player.position = Vector3(float(saved_position[0]), float(saved_position[1]), float(saved_position[2]))
@@ -632,6 +713,8 @@ func _save_game() -> void:
 		"health": health,
 		"infected_health": infected_health,
 		"infected_defeated": infected == null,
+		"beacon_reached": beacon_reached,
+		"run_complete": run_complete,
 		"inventory": inventory,
 		"position": [player.position.x, player.position.y, player.position.z],
 	}))
