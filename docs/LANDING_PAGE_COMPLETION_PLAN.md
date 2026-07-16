@@ -2,6 +2,8 @@
 
 Status: Planned work after the production-readiness foundation PR.
 
+Current implementation slice: `feat/landing-page-chapters-v1` adds the story and outbreak chapter, registry-governed presentation slots, prototype-labelled game systems, legal routes, a footer, reduced-motion-compatible structure, and measurable performance targets. It does not add a production hero candidate, a broad roster, or a persistent signup backend.
+
 The landing page should grow from the approved cinematic direction, not become a generic feature grid. The next visual gate is one approved production hero composition. No large character or enemy roster should be generated before that gate.
 
 ## Phase 1: Hero production candidate
@@ -50,6 +52,14 @@ Each surface must use approved game data or clearly marked prototype copy. No fi
 - Verify poster-only mobile behavior, lazy media loading, pause-on-hidden behavior, and audio opt-in.
 - Define budgets before final media lands: initial HTML/JS, hero poster, video bytes, audio bytes, Largest Contentful Paint, and interaction readiness on a representative mobile device.
 - Add image dimensions, responsive crops, WebM/MP4 strategy, cache headers, and a CDN decision when bandwidth evidence justifies it.
+
+### v1 performance gate
+
+- LCP: at or below 2.5 seconds on a representative mid-range mobile device.
+- Initial JavaScript: at or below 220 KB compressed before hero media.
+- Hero poster: at or below 350 KB; video and audio remain opt-in after first paint.
+- Interaction readiness: at or below 3.5 seconds on a throttled mobile connection.
+- These are review targets, not measured results. The production hero candidate must be measured against them before approval.
 
 ## Phase 6: SEO and release review
 
