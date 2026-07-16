@@ -83,7 +83,8 @@
         "notes": "Poster frame from procedural temporary cinematic city scene. Internal review only; replace with approved poster/key art."
       },
       "usedIn": [
-        "landing-page-hero-v1"
+        "landing-page-hero-v1",
+        "landing-world-chapter-review-v1"
       ],
       "sha256": "f12fb02f945b6f9a338bc6bf92e773fce108697b8d7b7455df8a54ed09e9d435",
       "temporary": true
