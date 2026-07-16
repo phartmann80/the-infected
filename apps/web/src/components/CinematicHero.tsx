@@ -12,6 +12,11 @@ type EnvironmentalSceneComponentProps = {
   reducedDetail?: boolean;
 };
 
+type ConnectionInformation = {
+  saveData?: boolean;
+  effectiveType?: string;
+};
+
 const EnvironmentalScene = dynamic<EnvironmentalSceneComponentProps>(
   () => import('./hero/EnvironmentalScene').then((mod) => mod.EnvironmentalScene),
   { ssr: false, loading: () => null }
@@ -27,6 +32,12 @@ function hasWebGLSupport() {
   } catch {
     return false;
   }
+}
+
+function prefersLowBandwidth() {
+  if (typeof navigator === 'undefined') return false;
+  const connection = (navigator as Navigator & { connection?: ConnectionInformation }).connection;
+  return Boolean(connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g');
 }
 
 export function CinematicHero() {
@@ -46,15 +57,17 @@ export function CinematicHero() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [lowBandwidth, setLowBandwidth] = useState(false);
 
-  const sceneActive = Boolean(!reduceMotion && webglAvailable && heroVisible && pageVisible);
-  const videoActive = Boolean(!reduceMotion && !isMobile && heroVisible && pageVisible);
+  const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
+  const videoActive = Boolean(!reduceMotion && !lowBandwidth && !isMobile && heroVisible && pageVisible);
 
   useEffect(() => {
     setWebglAvailable(hasWebGLSupport());
     const media = window.matchMedia('(max-width: 767px)');
     const updateMobile = () => setIsMobile(media.matches);
     updateMobile();
+    setLowBandwidth(prefersLowBandwidth());
     media.addEventListener('change', updateMobile);
     return () => media.removeEventListener('change', updateMobile);
   }, []);
@@ -127,13 +140,13 @@ export function CinematicHero() {
   useEffect(() => {
     const ambient = ambientRef.current;
     const narration = narrationRef.current;
-    if (!pageVisible || !heroVisible) {
+    if (!pageVisible || !heroVisible || lowBandwidth) {
       ambient?.pause();
       narration?.pause();
       return;
     }
     if (soundEnabled) void ambient?.play().catch(() => undefined);
-  }, [pageVisible, heroVisible, soundEnabled]);
+  }, [heroVisible, lowBandwidth, pageVisible, soundEnabled]);
 
   const playNarrationOnce = useCallback(async () => {
     const narration = narrationRef.current;
@@ -149,7 +162,7 @@ export function CinematicHero() {
 
   const toggleSound = useCallback(async () => {
     const ambient = ambientRef.current;
-    if (!ambient) return;
+    if (!ambient || lowBandwidth) return;
     if (soundEnabled) {
       ambient.pause();
       setSoundEnabled(false);
@@ -163,7 +176,7 @@ export function CinematicHero() {
     } catch {
       setSoundEnabled(false);
     }
-  }, [playNarrationOnce, soundEnabled]);
+  }, [lowBandwidth, playNarrationOnce, soundEnabled]);
 
   const submitSignup = useCallback(async (formData: FormData) => {
     const email = String(formData.get('email') ?? '').trim();
@@ -194,11 +207,12 @@ export function CinematicHero() {
   }, []);
 
   const audioStatus = useMemo(() => {
+    if (lowBandwidth) return 'Low-bandwidth mode. Video, WebGL, and audio are paused.';
     if (!soundEnabled) return 'Sound muted. Narration captions available.';
     if (narrationState === 'playing') return 'Ambient sound active. Narration playing.';
     if (narrationState === 'complete') return 'Ambient sound active. Narration complete.';
     return 'Ambient sound active.';
-  }, [narrationState, soundEnabled]);
+  }, [lowBandwidth, narrationState, soundEnabled]);
 
   return (
     <>
@@ -206,17 +220,17 @@ export function CinematicHero() {
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
-          autoPlay={!reduceMotion}
+          autoPlay={!reduceMotion && !lowBandwidth}
           muted
           loop
           playsInline
-          preload={reduceMotion || isMobile ? 'none' : 'metadata'}
+          preload={reduceMotion || lowBandwidth || isMobile ? 'none' : 'metadata'}
           poster="/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg"
           aria-hidden
         >
           <source src="/assets/cinematic/temporary-cinematic-loop-noncanonical.mp4" type="video/mp4" />
         </video>
-        {reduceMotion && <div aria-hidden className="absolute inset-0 bg-[url('/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg')] bg-cover bg-center" />}
+        {(reduceMotion || lowBandwidth) && <div aria-hidden className="absolute inset-0 bg-[url('/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg')] bg-cover bg-center" />}
         <audio ref={ambientRef} src="/assets/audio/temporary-ambient-loop-noncanonical.webm" loop preload="none" />
         <audio
           ref={narrationRef}
@@ -228,7 +242,7 @@ export function CinematicHero() {
         {sceneActive && (
           <SceneBoundary fallback={null}>
             <Suspense fallback={null}>
-              <EnvironmentalScene active={sceneActive} reducedDetail={isMobile} />
+              <EnvironmentalScene active={sceneActive} reducedDetail={isMobile || lowBandwidth} />
             </Suspense>
           </SceneBoundary>
         )}
@@ -322,8 +336,9 @@ export function CinematicHero() {
                   className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/18 bg-black/35 px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/14 focus:outline-none focus:ring-2 focus:ring-white/50"
                   aria-pressed={soundEnabled}
                   aria-describedby="audio-status narration-caption"
+                  disabled={lowBandwidth}
                 >
-                  {soundEnabled ? 'Mute' : 'Enter with Sound'}
+                  {lowBandwidth ? 'Low-bandwidth mode' : soundEnabled ? 'Mute' : 'Enter with Sound'}
                 </button>
               </motion.div>
 
@@ -351,7 +366,7 @@ export function CinematicHero() {
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 border-t border-white/10 pb-2 pt-4 text-xs uppercase tracking-[0.22em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
             <span>Descend into the city</span>
             <span id="audio-status" role="status" aria-live="polite">{audioStatus}</span>
-            <span>Android reveal in production</span>
+            <span>{lowBandwidth ? 'Media paused to protect your connection' : 'Android reveal in production'}</span>
           </div>
         </main>
 
