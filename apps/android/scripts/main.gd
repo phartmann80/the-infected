@@ -2,7 +2,7 @@ extends Node3D
 
 const DATA_PATH := "res://data/game_foundation.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 2
+const SAVE_SCHEMA_VERSION := 3
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
@@ -32,6 +32,8 @@ var camera_yaw := 0.0
 var attack_was_down := false
 var medkit_was_down := false
 var restart_was_down := false
+var save_was_down := false
+var load_was_down := false
 var beacon_reached := false
 var run_complete := false
 var infected_knockback_timer := 0.0
@@ -65,6 +67,7 @@ func _physics_process(delta: float) -> void:
 	if player == null:
 		return
 	if run_complete:
+		_handle_save_load_input()
 		_handle_restart_input()
 		_update_hud()
 		return
@@ -82,6 +85,7 @@ func _physics_process(delta: float) -> void:
 	_collect_pickups()
 	_handle_attack_input()
 	_handle_medkit_input()
+	_handle_save_load_input()
 	_handle_restart_input()
 	_update_camera(delta)
 	_update_combat_feedback(delta)
@@ -410,6 +414,24 @@ func _handle_restart_input() -> void:
 	restart_was_down = restart_down
 
 
+func _handle_save_load_input() -> void:
+	var save_down := Input.is_key_pressed(KEY_F5) or bool(held_actions.get("save", false))
+	if save_down and not save_was_down:
+		if _save_game():
+			_set_feedback("Checkpoint saved.", 1.5)
+		else:
+			_set_feedback("Checkpoint could not be saved.", 1.5)
+	save_was_down = save_down
+
+	var load_down := Input.is_key_pressed(KEY_F9) or bool(held_actions.get("load", false))
+	if load_down and not load_was_down:
+		if _load_save():
+			_set_feedback("Checkpoint loaded.", 1.5)
+		else:
+			_set_feedback("No compatible checkpoint found.", 1.5)
+	load_was_down = load_down
+
+
 func _restart_run() -> void:
 	health = STARTING_HEALTH
 	infected_health = 100
@@ -421,30 +443,37 @@ func _restart_run() -> void:
 	run_complete = false
 	infected_knockback_timer = 0.0
 	infected_knockback_velocity = Vector3.ZERO
+	save_was_down = false
+	load_was_down = false
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
 	for pickup in pickups:
 		if is_instance_valid(pickup):
 			pickup.visible = true
 
-	if infected == null or not is_instance_valid(infected) or infected.is_queued_for_deletion():
-		infected = _build_actor(
-			String(game_data.get("infected_id", "infected-001-review")),
-			Vector3(0.0, 1.0, -4.0),
-			INFECTED_COLOR,
-			true,
-		)
-	else:
-		infected.position = Vector3(0.0, 1.0, -4.0)
-		infected.velocity = Vector3.ZERO
-		infected.visible = true
-		if infected_material != null:
-			infected_material.albedo_color = INFECTED_COLOR
+	_ensure_infected()
+	infected.position = Vector3(0.0, 1.0, -4.0)
+	infected.velocity = Vector3.ZERO
+	infected_health = 100
+	if infected_material != null:
+		infected_material.albedo_color = INFECTED_COLOR
 
 	camera_yaw = 0.0
 	_update_camera(1.0)
 	_set_feedback("Run reset. Reach the signal beacon.", 2.0)
 	_save_game()
+
+
+func _ensure_infected() -> void:
+	if infected != null and is_instance_valid(infected) and not infected.is_queued_for_deletion():
+		infected.visible = true
+		return
+	infected = _build_actor(
+		String(game_data.get("infected_id", "infected-001-review")),
+		Vector3(0.0, 1.0, -4.0),
+		INFECTED_COLOR,
+		true,
+	)
 
 
 func _use_medkit() -> void:
@@ -492,7 +521,7 @@ func _play_attack_feedback() -> void:
 	tween.tween_property(player_weapon, "rotation_degrees", Vector3(0.0, -25.0, 35.0), ATTACK_SWING_DURATION * 0.55)
 
 
-func _defeat_infected(award_salvage: bool = true) -> void:
+func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) -> void:
 	if infected == null:
 		return
 	var defeated := infected
@@ -501,7 +530,8 @@ func _defeat_infected(award_salvage: bool = true) -> void:
 	if award_salvage:
 		inventory["scrap"] = int(inventory.get("scrap", 0)) + 3
 		_set_feedback("Threat neutralized. Salvage recovered: +3 scrap.", 3.0)
-	_save_game()
+	if persist_state:
+		_save_game()
 
 
 func _collect_pickups() -> void:
@@ -582,7 +612,7 @@ func _build_touch_controls() -> void:
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
-	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 244.0)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 300.0)
 	hud_root.add_child(action_panel)
 	_add_touch_button(action_panel, "MEDKIT", "medkit", Vector2(224.0, 48.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
@@ -591,10 +621,15 @@ func _build_touch_controls() -> void:
 	action_panel.add_child(camera_row)
 	_add_touch_button(camera_row, "LOOK ◀", "camera_left", Vector2(108.0, 56.0))
 	_add_touch_button(camera_row, "LOOK ▶", "camera_right", Vector2(108.0, 56.0))
+	var save_load_row := HBoxContainer.new()
+	save_load_row.add_theme_constant_override("separation", 8)
+	action_panel.add_child(save_load_row)
+	_add_touch_button(save_load_row, "SAVE", "save", Vector2(108.0, 48.0))
+	_add_touch_button(save_load_row, "LOAD", "load", Vector2(108.0, 48.0))
 	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT to heal   |   R / RESET RUN"
+	instructions.text = "WASD / touch to move   |   Space / ATTACK to strike   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD   |   R / RESET RUN"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -697,36 +732,59 @@ func _set_feedback(message: String, duration: float) -> void:
 	)
 
 
-func _load_save() -> void:
+func _load_save() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH):
-		return
+		return false
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return
+		return false
 	var schema_version := int(parsed.get("schema_version", 0))
 	if schema_version < MIN_SUPPORTED_SAVE_SCHEMA or schema_version > SAVE_SCHEMA_VERSION:
-		return
+		return false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
 	beacon_reached = bool(parsed.get("beacon_reached", false))
-	run_complete = bool(parsed.get("run_complete", false))
+	run_complete = false
 	var saved_position = parsed.get("position", [])
 	if saved_position is Array and saved_position.size() == 3 and player != null:
 		player.position = Vector3(float(saved_position[0]), float(saved_position[1]), float(saved_position[2]))
+	camera_yaw = float(parsed.get("camera_yaw", camera_yaw))
 	var saved_inventory = parsed.get("inventory", {})
 	if saved_inventory is Dictionary:
 		for item in inventory.keys():
 			inventory[item] = maxi(int(saved_inventory.get(item, inventory[item])), 0)
-	if bool(parsed.get("infected_defeated", false)):
-		_defeat_infected(false)
+	var saved_collected_pickups = parsed.get("collected_pickups", [])
+	for pickup in pickups:
+		pickup.visible = not (saved_collected_pickups is Array and saved_collected_pickups.has(pickup.name))
+	infected_knockback_timer = 0.0
+	infected_knockback_velocity = Vector3.ZERO
+	var infected_defeated := bool(parsed.get("infected_defeated", false))
+	if infected_defeated:
+		_defeat_infected(false, false)
+		run_complete = bool(parsed.get("run_complete", false))
+	else:
+		_ensure_infected()
+		var saved_infected_position = parsed.get("infected_position", [])
+		if saved_infected_position is Array and saved_infected_position.size() == 3:
+			infected.position = Vector3(float(saved_infected_position[0]), float(saved_infected_position[1]), float(saved_infected_position[2]))
+		infected.velocity = Vector3.ZERO
+	_update_camera(1.0)
+	return true
 
 
-func _save_game() -> void:
+func _save_game() -> bool:
 	if player == null:
-		return
+		return false
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
-		return
+		return false
+	var collected_pickups: Array = []
+	for pickup in pickups:
+		if is_instance_valid(pickup) and not pickup.visible:
+			collected_pickups.append(pickup.name)
+	var infected_position: Array = []
+	if infected != null and is_instance_valid(infected):
+		infected_position = [infected.position.x, infected.position.y, infected.position.z]
 	file.store_string(JSON.stringify({
 		"schema_version": SAVE_SCHEMA_VERSION,
 		"content_version": game_data.get("content_version", "unknown"),
@@ -737,4 +795,9 @@ func _save_game() -> void:
 		"run_complete": run_complete,
 		"inventory": inventory,
 		"position": [player.position.x, player.position.y, player.position.z],
+		"camera_yaw": camera_yaw,
+		"infected_position": infected_position,
+		"collected_pickups": collected_pickups,
 	}))
+	file.close()
+	return true
