@@ -382,11 +382,11 @@ export function LandingChapters() {
             <div className="max-w-2xl">
               <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65"><span className="h-px w-8 bg-orange-300/70" aria-hidden />Transmission / Early Access</p>
               <h2 className="mt-5 text-5xl font-black uppercase leading-[0.88] tracking-[-0.08em] text-white sm:text-7xl">Be there when the signal answers.</h2>
-              <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">The early-access capture flow is visible in the hero, but persistence remains gated on an approved backend contract, consent language, and retention policy.</p>
+              <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">The Early Access contract and persistence boundary are now implemented. Registration remains feature-flagged closed until the privacy, contact, retention, and deployment review is complete.</p>
             </div>
             <div className="max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5">
-              <StatusBadge status="blocked" />
-              <p className="mt-4 text-sm leading-7 text-stone-400">Registration will open after the storage and privacy review. Nothing is sent or stored from this prototype preview.</p>
+              <StatusBadge status="prototype" />
+              <p className="mt-4 text-sm leading-7 text-stone-400">The form is wired to <code className="text-orange-100/80">POST /api/early-access</code>. The feature flag is disabled in this preview, so no registration is stored.</p>
               <div className="mt-5 flex flex-wrap gap-4 text-xs font-bold uppercase tracking-[0.16em]">
                 <Link href="/legal/privacy" className="text-orange-100 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">Privacy handling</Link>
                 <Link href="/contact" className="text-orange-100 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">Contact</Link>
