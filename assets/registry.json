@@ -107,6 +107,30 @@
       ],
       "sha256": "57504a4983ccb45227e7ed2e526eef07ecb4e35afed9623f8aa2d10b59c27d23",
       "temporary": true
+    },
+    {
+      "id": "cinematic.hero.production-candidate.internal-review.v1",
+      "name": "Hero Production Candidate Internal Review",
+      "type": "cinematic.key-art",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/hero-production-candidate-internal-review.png",
+      "source": "openai-image-generation-internal-review",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; not approved or canonical",
+        "notes": "Single wide hero composition generated from HERO_PRODUCTION_CANDIDATE_BRIEF.md. Reserved left-side negative space supports separate logo, headline, and CTA compositing. Survivor, infected, environment, and final hero approval remain open."
+      },
+      "usedIn": [
+        "hero-production-candidate-review"
+      ],
+      "sha256": "7e1c60237635816ab8b535a9569e223d8fcb0bec4f2ec618a64b4fec8f6ff292",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "temporary": true
     }
   ]
 }
