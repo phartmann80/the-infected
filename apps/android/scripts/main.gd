@@ -38,6 +38,9 @@ var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
 var infected_material: StandardMaterial3D
 var hit_flash_timer := 0.0
+var signal_beacon: Node3D
+var signal_light: OmniLight3D
+var environment_time := 0.0
 
 
 func _ready() -> void:
@@ -67,6 +70,7 @@ func _physics_process(delta: float) -> void:
 	_handle_medkit_input()
 	_update_camera(delta)
 	_update_combat_feedback(delta)
+	_update_environment(delta)
 
 	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
@@ -95,6 +99,9 @@ func _build_world() -> void:
 	_build_box(environment_root, Vector3(0.0, -0.15, 0.0), Vector3(24.0, 0.3, 24.0), Color("24313a"))
 	_build_box(environment_root, Vector3(-5.0, 1.0, -3.0), Vector3(2.0, 2.0, 2.0), Color("45515a"))
 	_build_box(environment_root, Vector3(5.0, 0.75, 1.0), Vector3(3.0, 1.5, 1.5), Color("5b4740"))
+	_build_checkpoint(environment_root)
+	_build_vehicle(environment_root, Vector3(-6.5, 0.0, -2.0), 0.28)
+	_build_signal_beacon(environment_root)
 	_build_pickup(environment_root, "scrap", 2, Vector3(-3.0, 0.35, 1.0), Color("c08a4b"))
 	_build_pickup(environment_root, "ammo", 2, Vector3(3.5, 0.35, -1.5), Color("8ea6b7"))
 
@@ -110,6 +117,9 @@ func _build_world() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("78909c")
 	environment.ambient_light_energy = 0.45
+	environment.fog_enabled = true
+	environment.fog_light_color = Color("172028")
+	environment.fog_density = 0.012
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -151,6 +161,77 @@ func _build_box(parent: Node3D, position: Vector3, size: Vector3, color: Color) 
 	collision.shape = shape
 	body.add_child(collision)
 	return body
+
+
+func _build_checkpoint(parent: Node3D) -> void:
+	var checkpoint := Node3D.new()
+	checkpoint.name = "Checkpoint_001_Review"
+	checkpoint.position = Vector3(0.0, 0.0, -7.0)
+	parent.add_child(checkpoint)
+	_build_box(checkpoint, Vector3(-3.0, 1.3, 0.0), Vector3(0.35, 2.6, 0.35), Color("47545a"))
+	_build_box(checkpoint, Vector3(3.0, 1.3, 0.0), Vector3(0.35, 2.6, 0.35), Color("47545a"))
+	_build_box(checkpoint, Vector3(0.0, 2.45, 0.0), Vector3(6.35, 0.3, 0.35), Color("293238"))
+	_build_box(checkpoint, Vector3(0.0, 0.85, 0.0), Vector3(5.8, 0.18, 0.22), Color("c65c3c"))
+	_build_box(checkpoint, Vector3(-1.9, 1.45, 0.0), Vector3(0.12, 1.0, 0.12), Color("d6a056"))
+	_build_box(checkpoint, Vector3(1.9, 1.45, 0.0), Vector3(0.12, 1.0, 0.12), Color("d6a056"))
+
+	var warning_light := OmniLight3D.new()
+	warning_light.position = Vector3(0.0, 2.0, 0.35)
+	warning_light.light_color = Color("f26742")
+	warning_light.light_energy = 1.4
+	warning_light.omni_range = 5.0
+	warning_light.shadow_enabled = false
+	checkpoint.add_child(warning_light)
+
+
+func _build_vehicle(parent: Node3D, position: Vector3, yaw: float) -> void:
+	var vehicle := Node3D.new()
+	vehicle.name = "AbandonedVehicle_001_Review"
+	vehicle.position = position
+	vehicle.rotation.y = yaw
+	parent.add_child(vehicle)
+	_build_box(vehicle, Vector3(0.0, 0.75, 0.0), Vector3(3.2, 0.9, 1.5), Color("343c42"))
+	_build_box(vehicle, Vector3(-0.25, 1.4, 0.0), Vector3(1.7, 0.55, 1.25), Color("2a3238"))
+	for wheel_position in [Vector3(-1.05, 0.42, -0.82), Vector3(1.05, 0.42, -0.82), Vector3(-1.05, 0.42, 0.82), Vector3(1.05, 0.42, 0.82)]:
+		var wheel := MeshInstance3D.new()
+		var wheel_mesh := CylinderMesh.new()
+		wheel_mesh.height = 0.22
+		wheel_mesh.top_radius = 0.38
+		wheel_mesh.bottom_radius = 0.38
+		wheel_mesh.radial_segments = 12
+		wheel.mesh = wheel_mesh
+		wheel.material_override = _material(Color("111518"))
+		wheel.position = wheel_position
+		wheel.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+		vehicle.add_child(wheel)
+
+
+func _build_signal_beacon(parent: Node3D) -> void:
+	signal_beacon = Node3D.new()
+	signal_beacon.name = "SignalBeacon_001_Review"
+	signal_beacon.position = Vector3(0.0, 0.0, -9.0)
+	parent.add_child(signal_beacon)
+	_build_box(signal_beacon, Vector3(0.0, 0.35, 0.0), Vector3(0.85, 0.7, 0.85), Color("3a4144"))
+	_build_box(signal_beacon, Vector3(0.0, 1.35, 0.0), Vector3(0.18, 1.4, 0.18), Color("59656a"))
+
+	var beacon_mesh := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.height = 0.65
+	cylinder.top_radius = 0.28
+	cylinder.bottom_radius = 0.18
+	cylinder.radial_segments = 12
+	beacon_mesh.mesh = cylinder
+	beacon_mesh.material_override = _material(Color("d66a46"))
+	beacon_mesh.position = Vector3(0.0, 2.25, 0.0)
+	signal_beacon.add_child(beacon_mesh)
+
+	signal_light = OmniLight3D.new()
+	signal_light.position = Vector3(0.0, 2.25, 0.0)
+	signal_light.light_color = Color("f26742")
+	signal_light.light_energy = 1.2
+	signal_light.omni_range = 6.0
+	signal_light.shadow_enabled = false
+	signal_beacon.add_child(signal_light)
 
 
 func _build_pickup(parent: Node3D, kind: String, amount: int, position: Vector3, color: Color) -> void:
@@ -263,6 +344,14 @@ func _update_combat_feedback(delta: float) -> void:
 	if infected_material == null:
 		return
 	infected_material.albedo_color = Color("ffbd86") if hit_flash_timer > 0.0 else INFECTED_COLOR
+
+
+func _update_environment(delta: float) -> void:
+	if signal_beacon == null or signal_light == null:
+		return
+	environment_time = fmod(environment_time + delta, TAU)
+	signal_beacon.rotation.y += delta * 0.55
+	signal_light.light_energy = 1.05 + sin(environment_time * 2.4) * 0.25
 
 
 func _handle_attack_input() -> void:
