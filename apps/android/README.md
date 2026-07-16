@@ -21,7 +21,7 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 3. Open `apps/android/project.godot` in Godot 4.7.1.
 4. Run the `AndroidPrototype` scene on desktop for the input and save-schema smoke test.
 
-The scene uses review-only primitives and proves the first small gameplay loop: reach the signal beacon, survive one infected encounter, neutralize the threat, and replay the route. It includes a checkpoint and signal landmark, an abandoned vehicle, movement, smoothed camera follow, one survivor, one infected, readable prototype combat feedback, pickup/use inventory, a versioned local save, and a responsive touch HUD with health bars. It does not contain production characters, final weapons, economy, progression, paid content, multiplayer, or release signing.
+The scene uses review-only primitives and proves the first small gameplay loop: reach the signal beacon, survive one infected encounter, neutralize the threat, and replay the route. It includes a checkpoint and signal landmark, an abandoned vehicle, movement, smoothed camera follow, one survivor, one infected, readable prototype combat feedback with melee recoil, pickup/use inventory, a versioned local save, and a responsive touch HUD with health bars. It does not contain production characters, final weapons, economy, progression, paid content, multiplayer, or release signing.
 
 ## Prototype controls
 

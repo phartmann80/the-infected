@@ -10,6 +10,9 @@ const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const ATTACK_SWING_DURATION := 0.22
 const HIT_FLASH_DURATION := 0.16
+const INFECTED_KNOCKBACK_SPEED := 4.0
+const INFECTED_KNOCKBACK_DURATION := 0.2
+const INFECTED_KNOCKBACK_DECELERATION := 18.0
 const STARTING_HEALTH := 100
 const MEDKIT_HEAL := 40
 const CAMERA_SMOOTHING := 9.0
@@ -31,6 +34,8 @@ var medkit_was_down := false
 var restart_was_down := false
 var beacon_reached := false
 var run_complete := false
+var infected_knockback_timer := 0.0
+var infected_knockback_velocity := Vector3.ZERO
 var held_actions: Dictionary = {}
 var inventory: Dictionary = {"scrap": 0, "medkits": 1, "ammo": 6}
 var pickups: Array[Node3D] = []
@@ -331,6 +336,12 @@ func _movement_input() -> Vector2:
 
 
 func _move_infected(delta: float) -> void:
+	if infected_knockback_timer > 0.0:
+		infected.velocity = infected_knockback_velocity
+		infected.move_and_slide()
+		infected_knockback_velocity = infected_knockback_velocity.move_toward(Vector3.ZERO, INFECTED_KNOCKBACK_DECELERATION * delta)
+		infected_knockback_timer = maxf(infected_knockback_timer - delta, 0.0)
+		return
 	var to_player := player.global_position - infected.global_position
 	to_player.y = 0.0
 	var distance := to_player.length()
@@ -408,6 +419,8 @@ func _restart_run() -> void:
 	save_timer = 0.0
 	beacon_reached = false
 	run_complete = false
+	infected_knockback_timer = 0.0
+	infected_knockback_velocity = Vector3.ZERO
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
 	for pickup in pickups:
@@ -459,8 +472,13 @@ func _try_attack() -> void:
 		_set_feedback("Too far away.", 0.75)
 		return
 	infected_health = maxi(infected_health - ATTACK_DAMAGE, 0)
+	var knockback_direction := infected.global_position - player.global_position
+	knockback_direction.y = 0.0
+	if knockback_direction.length_squared() > 0.001:
+		infected_knockback_velocity = knockback_direction.normalized() * INFECTED_KNOCKBACK_SPEED
+		infected_knockback_timer = INFECTED_KNOCKBACK_DURATION
 	hit_flash_timer = HIT_FLASH_DURATION
-	_set_feedback("Hit confirmed. Infected health: %d" % infected_health, 0.9)
+	_set_feedback("Hit confirmed. Threat staggered. Infected health: %d" % infected_health, 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
 
