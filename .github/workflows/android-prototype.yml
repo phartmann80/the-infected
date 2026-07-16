@@ -1,0 +1,73 @@
+name: Android Prototype
+
+on:
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - 'packages/game-data/**'
+      - 'scripts/sync-game-data.mjs'
+      - '.github/workflows/android-prototype.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-debug-apk:
+    runs-on: ubuntu-24.04
+    env:
+      GODOT_VERSION: 4.7.1-stable
+      GODOT_TEMPLATE_VERSION: 4.7.1.stable
+      ANDROID_BUILD_TOOLS: 36.0.0
+      ANDROID_NDK: 28.1.13356709
+      ANDROID_CMAKE: 3.10.2.4988404
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install pinned Android toolchain
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}" "cmake;${ANDROID_CMAKE}"
+
+      - name: Install Node dependencies and check shared data
+        run: |
+          npm ci
+          npm run android:data:check
+
+      - name: Download pinned Godot editor and templates
+        run: |
+          curl --fail --location --silent --show-error "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" --output /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x "/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
+          echo "Godot editor SHA-256: $(sha256sum "/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64")"
+          curl --fail --location --silent --show-error "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz" --output /tmp/templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+
+      - name: Import and export debug APK
+        run: |
+          mkdir -p artifacts
+          GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
+          "$GODOT" --headless --path apps/android --editor --quit
+          "$GODOT" --headless --path apps/android --export-debug "Android Debug" artifacts/the-infected-debug.apk
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt" dump badging artifacts/the-infected-debug.apk | grep -F "name='app.theinfected.game'"
+          sha256sum artifacts/the-infected-debug.apk | tee artifacts/the-infected-debug.apk.sha256
+
+      - name: Upload unsigned debug artifact and hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-infected-android-debug
+          path: artifacts/
