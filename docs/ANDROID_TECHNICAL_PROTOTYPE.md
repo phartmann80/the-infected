@@ -12,6 +12,7 @@ The prototype proves the smallest complete runtime path before content-heavy pro
 - Package ID: `app.theinfected.game`.
 - Minimum Android: API 28 / Android 9.
 - Compile and target Android API: 36.
+- API 36 targeting note: this prototype targets API 36 in preparation for the Google Play target-SDK requirement expected in August 2026. It is not described here as already mandatory.
 - Java: OpenJDK 17.
 - Android SDK Platform: 36.
 - Android Build Tools: `36.0.0`.

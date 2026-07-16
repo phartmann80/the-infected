@@ -8,7 +8,7 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 - GDScript
 - Mobile renderer as the primary export path
 - Package ID `app.theinfected.game`
-- Minimum Android API 28; target and compile API 36
+- Minimum Android API 28; target and compile API 36. API 36 is being targeted in preparation for the Google Play target-SDK requirement expected in August 2026; this requirement is not treated as already mandatory.
 - OpenJDK 17, NDK `28.1.13356709`, CMake `3.10.2.4988404`
 
 ## Run locally
