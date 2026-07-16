@@ -25,8 +25,8 @@ The scene uses review-only primitives and proves the first small gameplay loop: 
 
 ## Prototype controls
 
-- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, camera buttons for rotation.
-- Android: use the on-screen movement, camera, and `ATTACK` controls.
+- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, `H` to use a medkit, and camera buttons for rotation.
+- Android: use the on-screen movement, camera, `MEDKIT`, and `ATTACK` controls.
 - Walk into the marked review-only pickups to add scrap or ammunition to the inventory.
 - The save file records health, position, inventory, infected health, and defeated state.
 
