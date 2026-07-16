@@ -114,6 +114,33 @@ const progression = [
   },
 ] as const;
 
+const gameplayLoop = [
+  {
+    step: '01',
+    label: 'Reach',
+    title: 'Follow the signal.',
+    description: 'Move through the review-only Environment 001 route until the beacon confirms the next objective.',
+  },
+  {
+    step: '02',
+    label: 'Survive',
+    title: 'Read the threat.',
+    description: 'One infected closes the distance. Movement, health, camera control, and melee recoil keep the encounter legible.',
+  },
+  {
+    step: '03',
+    label: 'Recover',
+    title: 'Carry what remains.',
+    description: 'Collect scrap and ammunition, use a medkit when the route turns against you, and keep the HUD readable.',
+  },
+  {
+    step: '04',
+    label: 'Persist',
+    title: 'Make the route repeatable.',
+    description: 'The versioned local save records the run, while RESET RUN returns the prototype to its opening state.',
+  },
+] as const;
+
 const budgets = [
   ['LCP', '≤ 2.5s', 'Representative mid-range mobile device'],
   ['Initial JS', '≤ 220 KB', 'Compressed before hero media'],
@@ -191,6 +218,7 @@ export function LandingChapters() {
               <li><Link href="#survivors" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">People</Link></li>
               <li><Link href="#arsenal" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Arsenal</Link></li>
               <li><Link href="#mission" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Mission</Link></li>
+              <li><Link href="#loop" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Loop</Link></li>
               <li><Link href="#review" className="whitespace-nowrap transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200">Review gates</Link></li>
             </ul>
           </div>
@@ -333,6 +361,25 @@ export function LandingChapters() {
             title="Keep moving toward the source."
             description="The first playable route is small by design. It needs one environment, one survivor, one infected, and enough tension to make the next door matter."
           />
+          <div id="loop" className="mt-14 rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8 lg:p-10">
+            <div className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Android vertical slice / internal evaluation</p>
+                <h3 className="mt-3 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white sm:text-4xl">The first route is a loop.</h3>
+              </div>
+              <StatusBadge status="prototype" />
+            </div>
+            <ol aria-label="Android prototype gameplay loop" className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+              {gameplayLoop.map((item) => (
+                <li key={item.step} className="bg-[#0b0b0a] p-5 sm:p-6">
+                  <p className="text-4xl font-black tracking-[-0.08em] text-orange-100/20" aria-hidden>{item.step}</p>
+                  <p className="mt-8 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
+                  <h4 className="mt-3 text-xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.title}</h4>
+                  <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
           <div className="mt-14 grid gap-5 lg:grid-cols-3">
             {levels.map((level) => (
               <article key={level.index} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b0a] p-6 sm:p-8">
