@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
 
@@ -255,15 +256,23 @@ export function LandingChapters() {
             description="The outbreak is told through places, missing voices, and the practical traces people leave behind when they run out of time."
           />
           <div className="mt-16 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative min-h-[26rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0c0e] p-6 sm:p-8">
+            <figure className="relative min-h-[26rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0c0e] p-6 sm:p-8">
+              <Image
+                src="/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg"
+                alt="Temporary review frame of the ruined quarantine route"
+                fill
+                sizes="(min-width: 1024px) 58vw, 100vw"
+                loading="lazy"
+                className="object-cover object-center opacity-55 saturate-[0.7]"
+              />
               <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(255,79,27,.24),transparent_23%),linear-gradient(135deg,rgba(22,47,60,.8),transparent_48%),linear-gradient(180deg,transparent_50%,rgba(0,0,0,.92))]" />
               <div aria-hidden className="absolute bottom-0 left-[12%] h-40 w-20 border-x border-t border-white/10 bg-black/30 sm:h-56 sm:w-28" />
               <div aria-hidden className="absolute bottom-0 left-[34%] h-56 w-28 border-x border-t border-orange-200/15 bg-black/35 sm:h-72 sm:w-40" />
               <div aria-hidden className="absolute bottom-0 right-[15%] h-32 w-24 border-x border-t border-white/10 bg-black/25 sm:h-44 sm:w-36" />
-              <div className="relative flex h-full min-h-[24rem] flex-col justify-between">
+              <div className="relative z-10 flex h-full min-h-[24rem] flex-col justify-between">
                 <div className="flex items-center justify-between text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">
                   <span>Field record / environment 001</span>
-                  <span>Internal review</span>
+                  <span className="rounded-full border border-sky-200/20 bg-sky-100/10 px-3 py-1 text-sky-100/80">Temporary frame</span>
                 </div>
                 <div>
                   <p className="text-[0.65rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">The arrival route</p>
@@ -271,7 +280,8 @@ export function LandingChapters() {
                   <p className="mt-5 max-w-md text-sm leading-7 text-stone-400">One canonical environment will carry the first web and Android milestone. The scene is intentionally not presented as final art yet.</p>
                 </div>
               </div>
-            </div>
+              <figcaption className="sr-only">Temporary non-canonical reference frame. Environment 001 production art is still awaiting approval.</figcaption>
+            </figure>
             <div className="grid gap-5">
               <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
                 <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Evidence / 01</p>
