@@ -2,7 +2,7 @@ extends Node3D
 
 const DATA_PATH := "res://data/game_foundation.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 3
+const SAVE_SCHEMA_VERSION := 4
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
@@ -61,6 +61,10 @@ var infected_material: StandardMaterial3D
 var hit_flash_timer := 0.0
 var signal_beacon: Node3D
 var signal_light: OmniLight3D
+var environment_root: Node3D
+var salvage_drop: Node3D
+var salvage_drop_collected := false
+var salvage_drop_position := Vector3.ZERO
 var environment_time := 0.0
 var pause_panel: PanelContainer
 var pause_resume_button: Button
@@ -137,7 +141,7 @@ func _load_game_data() -> void:
 
 
 func _build_world() -> void:
-	var environment_root := Node3D.new()
+	environment_root = Node3D.new()
 	environment_root.name = String(game_data.get("environment_id", "environment-001-review"))
 	add_child(environment_root)
 	_build_box(environment_root, Vector3(0.0, -0.15, 0.0), Vector3(24.0, 0.3, 24.0), Color("24313a"))
@@ -278,12 +282,13 @@ func _build_signal_beacon(parent: Node3D) -> void:
 	signal_beacon.add_child(signal_light)
 
 
-func _build_pickup(parent: Node3D, kind: String, amount: int, position: Vector3, color: Color) -> void:
+func _build_pickup(parent: Node3D, kind: String, amount: int, position: Vector3, color: Color, display_name: String = "") -> Node3D:
 	var pickup := Node3D.new()
-	pickup.name = "Pickup_%s" % kind
+	pickup.name = display_name if display_name != "" else "Pickup_%s" % kind
 	pickup.position = position
 	pickup.set_meta("kind", kind)
 	pickup.set_meta("amount", amount)
+	pickup.set_meta("is_salvage_drop", display_name != "")
 	parent.add_child(pickup)
 
 	var mesh_instance := MeshInstance3D.new()
@@ -293,6 +298,7 @@ func _build_pickup(parent: Node3D, kind: String, amount: int, position: Vector3,
 	mesh_instance.material_override = _material(color)
 	pickup.add_child(mesh_instance)
 	pickups.append(pickup)
+	return pickup
 
 
 func _build_actor(actor_name: String, position: Vector3, color: Color, is_infected: bool) -> CharacterBody3D:
@@ -426,7 +432,7 @@ func _update_objective() -> void:
 		beacon_reached = true
 		_set_feedback("Signal acquired. Neutralize the infected.", 2.5)
 		_save_game()
-	if beacon_reached and infected == null:
+	if beacon_reached and infected == null and salvage_drop == null:
 		run_complete = true
 		_set_feedback("Route secured. Run complete. Press R or RESET RUN to replay.", 4.0)
 		_save_game()
@@ -526,6 +532,7 @@ func _restart_run() -> void:
 	is_paused = false
 	run_failed = false
 	held_actions.clear()
+	_remove_salvage_drop()
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
 	for pickup in pickups:
@@ -639,13 +646,39 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 	if infected == null:
 		return
 	var defeated := infected
+	var defeated_position := defeated.global_position
 	infected = null
 	defeated.queue_free()
 	if award_salvage:
-		inventory["scrap"] = int(inventory.get("scrap", 0)) + 3
-		_set_feedback("Threat neutralized. Salvage recovered: +3 scrap.", 3.0)
+		_spawn_salvage_drop(defeated_position)
+		_set_feedback("Threat neutralized. Salvage dropped nearby.", 3.0)
 	if persist_state:
 		_save_game()
+
+
+func _spawn_salvage_drop(position: Vector3) -> void:
+	if environment_root == null or salvage_drop != null:
+		return
+	salvage_drop_position = Vector3(position.x, 0.35, position.z)
+	salvage_drop_collected = false
+	salvage_drop = _build_pickup(
+		environment_root,
+		"scrap",
+		3,
+		salvage_drop_position,
+		Color("e8b160"),
+		"LootDrop_Salvage_001",
+	)
+
+
+func _remove_salvage_drop() -> void:
+	for pickup in pickups.duplicate():
+		if is_instance_valid(pickup) and bool(pickup.get_meta("is_salvage_drop", false)):
+			pickups.erase(pickup)
+			pickup.queue_free()
+	salvage_drop = null
+	salvage_drop_collected = false
+	salvage_drop_position = Vector3.ZERO
 
 
 func _collect_pickups() -> void:
@@ -656,9 +689,15 @@ func _collect_pickups() -> void:
 			continue
 		var kind := String(pickup.get_meta("kind", "scrap"))
 		var amount := int(pickup.get_meta("amount", 1))
+		var is_salvage_drop := bool(pickup.get_meta("is_salvage_drop", false))
 		inventory[kind] = int(inventory.get(kind, 0)) + amount
 		pickup.visible = false
-		_set_feedback("Collected %s +%d." % [kind, amount], 1.5)
+		if is_salvage_drop:
+			salvage_drop_collected = true
+			salvage_drop = null
+			_set_feedback("Salvage secured: +%d scrap." % amount, 2.0)
+		else:
+			_set_feedback("Collected %s +%d." % [kind, amount], 1.5)
 		_save_game()
 
 
@@ -928,6 +967,9 @@ func _update_hud() -> void:
 	elif infected != null:
 		var infected_distance := maxi(int(player.global_position.distance_to(infected.global_position)), 0)
 		objective_note = "Objective: neutralize the infected (%dm)" % infected_distance
+	elif salvage_drop != null:
+		var salvage_distance := maxi(int(player.global_position.distance_to(salvage_drop.global_position)), 0)
+		objective_note = "Objective: collect salvage (%dm)" % salvage_distance
 	else:
 		objective_note = "Objective complete — securing route"
 	status_label.text = "The Infected prototype\n%s\nData: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note, objective_note]
@@ -960,6 +1002,7 @@ func _load_save() -> bool:
 	run_failed = false
 	is_paused = false
 	held_actions.clear()
+	_remove_salvage_drop()
 	pause_was_down = false
 	fire_cooldown = 0.0
 	fire_was_down = false
@@ -978,6 +1021,11 @@ func _load_save() -> bool:
 	var saved_collected_pickups = parsed.get("collected_pickups", [])
 	for pickup in pickups:
 		pickup.visible = not (saved_collected_pickups is Array and saved_collected_pickups.has(pickup.name))
+	salvage_drop_collected = bool(parsed.get("salvage_drop_collected", false))
+	var saved_salvage_spawned := bool(parsed.get("salvage_drop_spawned", false))
+	var saved_salvage_position = parsed.get("salvage_drop_position", [])
+	if saved_salvage_spawned and not salvage_drop_collected and saved_salvage_position is Array and saved_salvage_position.size() == 3:
+		_spawn_salvage_drop(Vector3(float(saved_salvage_position[0]), float(saved_salvage_position[1]), float(saved_salvage_position[2])))
 	infected_knockback_timer = 0.0
 	infected_knockback_velocity = Vector3.ZERO
 	var infected_defeated := bool(parsed.get("infected_defeated", false))
@@ -1020,6 +1068,9 @@ func _save_game() -> bool:
 		"camera_yaw": camera_yaw,
 		"infected_position": infected_position,
 		"collected_pickups": collected_pickups,
+		"salvage_drop_spawned": salvage_drop != null and is_instance_valid(salvage_drop),
+		"salvage_drop_collected": salvage_drop_collected,
+		"salvage_drop_position": [salvage_drop_position.x, salvage_drop_position.y, salvage_drop_position.z],
 	}))
 	file.close()
 	return true
