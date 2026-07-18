@@ -166,14 +166,14 @@ function StatusBadge({ status }: { status: RegistryStatus }) {
   );
 }
 
-function SectionMarker({ chapter, eyebrow, title, description }: { chapter: string; eyebrow: string; title: string; description?: string }) {
+function SectionMarker({ chapter, eyebrow, title, description, headingId }: { chapter: string; eyebrow: string; title: string; description?: string; headingId: string }) {
   return (
     <div className="max-w-3xl">
       <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65">
         <span className="h-px w-8 bg-orange-300/70" aria-hidden />
         {chapter} / {eyebrow}
       </p>
-      <h2 className="mt-5 text-4xl font-black uppercase leading-[0.92] tracking-[-0.07em] text-white sm:text-6xl lg:text-7xl">{title}</h2>
+      <h2 id={headingId} className="mt-5 text-4xl font-black uppercase leading-[0.92] tracking-[-0.07em] text-white sm:text-6xl lg:text-7xl">{title}</h2>
       {description && <p className="mt-6 max-w-2xl text-base leading-8 text-stone-400 sm:text-lg">{description}</p>}
     </div>
   );
@@ -207,7 +207,7 @@ export function LandingChapters() {
     <div className="bg-[#060606] text-stone-200">
       <ChapterNavigation />
 
-      <section id="story" className="relative overflow-hidden px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="story" aria-labelledby="story-heading" className="relative overflow-hidden px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div aria-hidden className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black via-[#080403] to-transparent" />
         <div aria-hidden className="absolute left-1/2 top-20 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-orange-950/20 blur-3xl" />
         <div className="relative mx-auto max-w-7xl">
@@ -217,6 +217,7 @@ export function LandingChapters() {
               eyebrow="The outbreak"
               title="The city did not end. It changed."
               description="The world went quiet before it fell. The last signal does not promise rescue. It promises a direction."
+              headingId="story-heading"
             />
             <div className="rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8">
               <div className="flex items-center justify-between text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">
@@ -246,7 +247,7 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="world" className="relative overflow-hidden border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="world" aria-labelledby="world-heading" className="relative overflow-hidden border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div aria-hidden className="absolute inset-0 opacity-30" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)', backgroundSize: '72px 72px', maskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)' }} />
         <div className="relative mx-auto max-w-7xl">
           <SectionMarker
@@ -254,6 +255,7 @@ export function LandingChapters() {
             eyebrow="World building"
             title="Every street remembers what happened."
             description="The outbreak is told through places, missing voices, and the practical traces people leave behind when they run out of time."
+            headingId="world-heading"
           />
           <div className="mt-16 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
             <figure className="relative min-h-[26rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0c0e] p-6 sm:p-8">
@@ -298,13 +300,14 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="survivors" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="survivors" aria-labelledby="survivors-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
           <SectionMarker
             chapter="Chapter 03"
             eyebrow="People and threat"
             title="Human stakes before a roster."
             description="The first approved survivor and infected designs will establish the visual language for the website and the playable slice. Until then, these slots stay honest."
+            headingId="survivors-heading"
           />
           <div className="mt-14 grid gap-5 md:grid-cols-2">
             {registryEntries.map((entry) => <RegistryCard key={entry.code} entry={entry} />)}
@@ -312,7 +315,7 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="arsenal" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="arsenal" aria-labelledby="arsenal-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
             <SectionMarker
@@ -320,6 +323,7 @@ export function LandingChapters() {
               eyebrow="Arsenal"
               title="What still works in your hands."
               description="Equipment is practical, scarce, and readable at a glance. These are prototype loadout placeholders, not final balance or item canon."
+              headingId="arsenal-heading"
             />
             <StatusBadge status="prototype" />
           </div>
@@ -341,13 +345,14 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="mission" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="mission" aria-labelledby="mission-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
           <SectionMarker
             chapter="Chapter 05"
             eyebrow="The mission"
             title="Keep moving toward the source."
             description="The first playable route is small by design. It needs one environment, one survivor, one infected, and enough tension to make the next door matter."
+            headingId="mission-heading"
           />
           <div id="loop" className="mt-14 rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8 lg:p-10">
             <div className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -388,7 +393,13 @@ export function LandingChapters() {
           </div>
 
           <div id="progression" className="mt-20 grid gap-12 border-t border-white/10 pt-14 lg:grid-cols-[0.8fr_1.2fr]">
-            <SectionMarker chapter="Chapter 06" eyebrow="Progression" title="Salvage has a cost." description="Progression should reward attention, not grind. The first loop will prove how movement, combat, inventory, and saving fit together." />
+            <SectionMarker
+              chapter="Chapter 06"
+              eyebrow="Progression"
+              title="Salvage has a cost."
+              description="Progression should reward attention, not grind. The first loop will prove how movement, combat, inventory, and saving fit together."
+              headingId="progression-heading"
+            />
             <div className="grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-3">
               {progression.map((item) => (
                 <article key={item.label} className="bg-[#0a0a09] p-6">
@@ -402,9 +413,9 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="review" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-32">
+      <section id="review" aria-labelledby="review-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-32">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.75fr_1.25fr]">
-          <SectionMarker chapter="Build discipline" eyebrow="Review gates" title="The atmosphere has a budget." description="These targets keep the cinematic surface usable on the devices that need the most care. They are gates to measure, not results to imply." />
+          <SectionMarker chapter="Build discipline" eyebrow="Review gates" title="The atmosphere has a budget." description="These targets keep the cinematic surface usable on the devices that need the most care. They are gates to measure, not results to imply." headingId="review-heading" />
           <div className="grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2">
             {budgets.map(([label, value, detail]) => (
               <div key={label} className="bg-[#0b0b0a] p-6 sm:p-8">
@@ -417,14 +428,14 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="join" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+      <section id="join" aria-labelledby="join-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-orange-200/20 bg-[radial-gradient(circle_at_80%_20%,rgba(255,78,25,.18),transparent_34%),#0d0b0a] p-7 sm:p-12 lg:p-16">
           <div aria-hidden className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-orange-200/10" />
           <div aria-hidden className="absolute -right-8 -top-8 h-48 w-48 rounded-full border border-orange-200/10" />
           <div className="relative grid gap-12 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-2xl">
               <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65"><span className="h-px w-8 bg-orange-300/70" aria-hidden />Transmission / Early Access</p>
-              <h2 className="mt-5 text-5xl font-black uppercase leading-[0.88] tracking-[-0.08em] text-white sm:text-7xl">Be there when the signal answers.</h2>
+              <h2 id="join-heading" className="mt-5 text-5xl font-black uppercase leading-[0.88] tracking-[-0.08em] text-white sm:text-7xl">Be there when the signal answers.</h2>
               <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">Leave a signal for the next transmission. The registration contract is defined, but this preview keeps persistence closed until privacy, contact, retention, and deployment review are complete.</p>
             </div>
             <EarlyAccessForm

@@ -75,6 +75,7 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
   return (
     <form
       className={className}
+      aria-busy={status === 'submitting'}
       onSubmit={(event) => {
         event.preventDefault();
         void submitSignup(new FormData(event.currentTarget));
@@ -96,7 +97,15 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
         className="mt-2 min-h-12 w-full rounded-2xl border border-white/14 bg-white/8 px-4 text-white outline-none placeholder:text-stone-600 focus:ring-2 focus:ring-orange-300"
       />
       <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-stone-400" htmlFor={consentId}>
-        <input id={consentId} name="consent" type="checkbox" required className="mt-1 h-4 w-4 accent-orange-400" />
+        <input
+          id={consentId}
+          name="consent"
+          type="checkbox"
+          required
+          aria-invalid={status === 'error' ? true : undefined}
+          aria-describedby={statusMessage ? statusId : undefined}
+          className="mt-1 h-4 w-4 accent-orange-400"
+        />
         <span>I agree to receive development updates and have read the <Link className="text-orange-100 underline underline-offset-4" href="/legal/privacy">Privacy notice</Link>.</span>
       </label>
       {statusMessage && <p id={statusId} className={`mt-4 text-sm ${status === 'success' ? 'text-orange-200' : status === 'submitting' ? 'text-stone-300' : 'text-red-300'}`} role={statusMessage.role}>{statusMessage.text}</p>}
