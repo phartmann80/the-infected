@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project": "the-infected",
-  "content_version": "0.2.0-inventory-prototype",
+  "content_version": "0.3.0-weapon-interaction-prototype",
   "canonical_content_approved": false,
   "environment_id": "environment-001-review",
   "player_id": "survivor-001-review",
   "infected_id": "infected-001-review",
   "weapon_id": "weapon-001-review",
-  "prototype_features": ["movement", "camera", "combat", "combat-feedback", "enemy-telegraph", "melee-recoil", "sidearm-ammo", "objective-guidance", "environment-props", "health", "inventory", "inventory-use", "item-catalog-read", "local-loadout", "equipped-weapon-presentation", "loot-drop", "save-load", "save-load-controls", "pause-flow", "defeat-recovery", "hud", "survival-loop"],
-  "note": "Review-only vertical-slice data. Item definitions are read-only prototype concepts; local equip state does not represent ownership. Production characters, enemies, weapons, lore, and permanent 3D or audio assets are not approved."
+  "prototype_features": ["movement", "camera", "combat", "combat-feedback", "enemy-telegraph", "melee-recoil", "weapon-switching", "catalog-driven-weapon-stats", "magazine-reserve-ammo", "reload", "muzzle-flash", "procedural-weapon-audio", "shell-ejection", "infected-hit-reaction", "infected-death-feedback", "objective-guidance", "environment-props", "health", "inventory", "inventory-use", "item-catalog-read", "local-loadout", "equipped-weapon-presentation", "loot-drop", "save-load", "save-load-controls", "pause-flow", "defeat-recovery", "hud", "survival-loop"],
+  "note": "Review-only vertical-slice data. Item definitions remain read-only prototype concepts; local equip and weapon state do not represent ownership. Combat uses bounded prototype values derived from the equipped concept. Production characters, enemies, weapons, balance, lore, and permanent 3D or audio assets are not approved."
 }
