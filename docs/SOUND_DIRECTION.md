@@ -55,3 +55,9 @@ Future dialogue and narration should come from:
 ## Browser rule
 
 Public narration must be a controlled prerecorded file, never browser SpeechSynthesis.
+
+## Item-system audio boundary
+
+`packages/game-data/data/audio-cues.v1.json` defines logical cues for main-menu music, shop atmosphere, item selection, verified purchase confirmation, inventory navigation, weapon interactions, and gear equip/showcase feedback.
+
+The cue catalog is data-driven and engine-independent. Every current cue is a placeholder with no bound audio asset. A cue becomes usable only after an approved binary is recorded in `assets/sound-registry.json`; missing cues must fail silently in clients. Purchase confirmation audio must play only after the backend reports a granted entitlement, never from a client redirect or unverified payment result.
