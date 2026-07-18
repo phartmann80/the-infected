@@ -2,6 +2,7 @@ extends Node3D
 
 const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
+const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
@@ -97,6 +98,7 @@ func _ready() -> void:
 	prototype_loadout.initialize(item_catalog)
 	_build_world()
 	_load_save()
+	_apply_equipped_weapon_presentation()
 	_build_touch_controls()
 	_update_hud()
 
@@ -378,6 +380,7 @@ func _build_weapon(parent: Node3D) -> MeshInstance3D:
 
 func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	var sidearm := MeshInstance3D.new()
+	sidearm.name = "EquippedWeaponPrototype"
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.18, 0.18, 0.58)
 	sidearm.mesh = mesh
@@ -386,6 +389,26 @@ func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	sidearm.rotation_degrees = Vector3(0.0, 18.0, -18.0)
 	parent.add_child(sidearm)
 	return sidearm
+
+
+func _apply_equipped_weapon_presentation() -> void:
+	if player_sidearm == null:
+		return
+	var item_id := prototype_loadout.equipped_item_id("weapon")
+	var item := item_catalog.item_by_id(item_id)
+	var presentation := WeaponPresentationScript.from_item(item)
+	if presentation.is_empty():
+		player_sidearm.visible = false
+		return
+	var mesh := BoxMesh.new()
+	mesh.size = presentation.get("size", Vector3(0.18, 0.20, 0.56))
+	player_sidearm.mesh = mesh
+	player_sidearm.position = presentation.get("position", Vector3(-0.42, 0.18, -0.38))
+	player_sidearm.rotation_degrees = presentation.get("rotation_degrees", Vector3(0.0, 18.0, -18.0))
+	player_sidearm.material_override = _material(presentation.get("color", Color("78858b")))
+	player_sidearm.set_meta("prototype_item_id", item_id)
+	player_sidearm.set_meta("prototype_profile", presentation.get("profile", "unknown"))
+	player_sidearm.visible = true
 
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -1111,6 +1134,7 @@ func _equip_selected_item() -> void:
 		_set_feedback("Prototype item could not be equipped.", 1.5)
 		return
 	var equipped_item := item_catalog.item_by_id(inventory_selected_item_id)
+	_apply_equipped_weapon_presentation()
 	_save_game()
 	_set_feedback("Local loadout updated: %s" % equipped_item.get("name", inventory_selected_item_id), 1.8)
 	_refresh_inventory_items()
@@ -1328,6 +1352,7 @@ func _load_save() -> bool:
 		for item in inventory.keys():
 			inventory[item] = maxi(int(saved_inventory.get(item, inventory[item])), 0)
 	prototype_loadout.restore(parsed.get("prototype_loadout", {}), item_catalog)
+	_apply_equipped_weapon_presentation()
 	var saved_collected_pickups = parsed.get("collected_pickups", [])
 	for pickup in pickups:
 		pickup.visible = not (saved_collected_pickups is Array and saved_collected_pickups.has(pickup.name))

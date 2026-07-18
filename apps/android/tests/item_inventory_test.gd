@@ -4,6 +4,7 @@ const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const TEST_SAVE_PATH := "user://item_inventory_contract_test.json"
 const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
+const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 
 
 func _initialize() -> void:
@@ -21,6 +22,20 @@ func _initialize() -> void:
 	detached_item["name"] = "mutated test copy"
 	if String(catalog.item_by_id("weapon.raven12").get("name", "")) != "Raven-12 Tactical Shotgun":
 		_fail("Catalog callers can mutate the read-only source data.")
+		return
+	var presentation_profiles: Dictionary = {}
+	for weapon: Dictionary in catalog.items_for_category("weapon"):
+		var presentation := WeaponPresentationScript.from_item(weapon)
+		if String(presentation.get("item_id", "")) != String(weapon.get("id", "")):
+			_fail("Weapon presentation did not preserve the catalog item ID.")
+			return
+		var size: Vector3 = presentation.get("size", Vector3.ZERO)
+		if size.x <= 0.0 or size.y <= 0.0 or size.z <= 0.0:
+			_fail("Weapon presentation produced invalid primitive dimensions.")
+			return
+		presentation_profiles[String(presentation.get("profile", ""))] = true
+	if presentation_profiles.size() < 4:
+		_fail("Weapon presentation does not distinguish enough catalog sub-category profiles.")
 		return
 
 	var loadout := PrototypeLoadoutScript.new()
@@ -60,7 +75,7 @@ func _initialize() -> void:
 			return
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
-	print("Android item inventory test passed: 10 weapons, 20 gear items, local equip, save, and restore.")
+	print("Android item inventory test passed: 10 weapons, 20 gear items, local equip, save, restore, and in-hand presentation mapping.")
 	quit(0)
 
 
