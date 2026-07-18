@@ -1,8 +1,11 @@
 extends Node3D
 
+const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
+const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
 const DATA_PATH := "res://data/game_foundation.json"
+const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 4
+const SAVE_SCHEMA_VERSION := 5
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
@@ -27,6 +30,8 @@ const SIGNAL_BEACON_REACH := 2.2
 const INFECTED_COLOR := Color("8b9b73")
 
 var game_data: Dictionary = {}
+var item_catalog = ItemCatalogScript.new()
+var prototype_loadout = PrototypeLoadoutScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -46,10 +51,12 @@ var restart_was_down := false
 var save_was_down := false
 var load_was_down := false
 var pause_was_down := false
+var inventory_was_down := false
 var beacon_reached := false
 var run_complete := false
 var run_failed := false
 var is_paused := false
+var inventory_screen_open := false
 var infected_knockback_timer := 0.0
 var infected_knockback_velocity := Vector3.ZERO
 var held_actions: Dictionary = {}
@@ -75,10 +82,19 @@ var environment_time := 0.0
 var pause_panel: PanelContainer
 var pause_resume_button: Button
 var defeat_panel: PanelContainer
+var inventory_panel: PanelContainer
+var inventory_item_list: ItemList
+var inventory_detail_label: Label
+var inventory_equip_button: Button
+var inventory_category_label: Label
+var inventory_category := "weapon"
+var inventory_selected_item_id := ""
 
 
 func _ready() -> void:
 	_load_game_data()
+	_load_item_catalog()
+	prototype_loadout.initialize(item_catalog)
 	_build_world()
 	_load_save()
 	_build_touch_controls()
@@ -87,6 +103,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if player == null:
+		return
+	_handle_inventory_input()
+	if inventory_screen_open:
+		_update_hud()
 		return
 	if not run_failed:
 		_handle_pause_input()
@@ -144,6 +164,11 @@ func _load_game_data() -> void:
 		push_error("Shared game data is not a JSON object.")
 		return
 	game_data = parsed
+
+
+func _load_item_catalog() -> void:
+	if not item_catalog.load_from_path(ITEM_CATALOG_PATH):
+		push_error("Prototype item catalog unavailable: %s" % item_catalog.error_message)
 
 
 func _build_world() -> void:
@@ -528,6 +553,32 @@ func _handle_save_load_input() -> void:
 	load_was_down = load_down
 
 
+func _handle_inventory_input() -> void:
+	var close_with_escape := inventory_screen_open and Input.is_key_pressed(KEY_ESCAPE)
+	var inventory_down := Input.is_key_pressed(KEY_I) or close_with_escape
+	if inventory_down and not inventory_was_down:
+		_toggle_inventory()
+		if close_with_escape:
+			pause_was_down = true
+	inventory_was_down = inventory_down
+
+
+func _toggle_inventory() -> void:
+	if not inventory_screen_open and (is_paused or run_failed):
+		return
+	inventory_screen_open = not inventory_screen_open
+	held_actions.clear()
+	if inventory_panel != null:
+		inventory_panel.visible = inventory_screen_open
+	if inventory_screen_open:
+		_refresh_inventory_items()
+		if inventory_item_list != null:
+			inventory_item_list.grab_focus()
+	else:
+		inventory_selected_item_id = ""
+	_update_hud()
+
+
 func _handle_pause_input() -> void:
 	var pause_down := Input.is_key_pressed(KEY_P) or Input.is_key_pressed(KEY_ESCAPE)
 	if pause_down and not pause_was_down:
@@ -536,9 +587,16 @@ func _handle_pause_input() -> void:
 
 
 func _toggle_pause() -> void:
+	if inventory_screen_open:
+		_toggle_inventory()
+		return
 	is_paused = not is_paused
 	held_actions.clear()
 	pause_was_down = false
+	inventory_was_down = false
+	inventory_screen_open = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 	if player != null:
 		player.velocity = Vector3.ZERO
 	if infected != null:
@@ -782,12 +840,13 @@ func _build_touch_controls() -> void:
 
 	inventory_label = Label.new()
 	inventory_label.position = Vector2(24.0, 154.0)
+	inventory_label.size = Vector2(760.0, 48.0)
 	inventory_label.add_theme_font_size_override("font_size", 18)
 	hud_root.add_child(inventory_label)
-	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 184.0), Color("9eb27e"))
+	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 210.0), Color("9eb27e"))
 
 	feedback_label = Label.new()
-	feedback_label.position = Vector2(24.0, 214.0)
+	feedback_label.position = Vector2(24.0, 240.0)
 	feedback_label.size = Vector2(620.0, 46.0)
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("ffd2ae"))
@@ -827,7 +886,7 @@ func _build_touch_controls() -> void:
 	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   Space / ATTACK   |   E / FIRE   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD   |   R / RESET RUN"
+	instructions.text = "WASD / touch to move   |   I / INVENTORY   |   Space / ATTACK   |   E / FIRE   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -848,6 +907,18 @@ func _build_touch_controls() -> void:
 	pause_button.add_theme_font_size_override("font_size", 18)
 	pause_button.pressed.connect(_toggle_pause)
 	hud_root.add_child(pause_button)
+
+	var inventory_button := Button.new()
+	inventory_button.text = "INVENTORY"
+	inventory_button.custom_minimum_size = Vector2(156.0, 52.0)
+	inventory_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	inventory_button.offset_left = -324.0
+	inventory_button.offset_top = 20.0
+	inventory_button.offset_right = -168.0
+	inventory_button.offset_bottom = 72.0
+	inventory_button.add_theme_font_size_override("font_size", 18)
+	inventory_button.pressed.connect(_toggle_inventory)
+	hud_root.add_child(inventory_button)
 
 	pause_panel = PanelContainer.new()
 	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
@@ -884,7 +955,194 @@ func _build_touch_controls() -> void:
 	pause_margin.add_child(pause_content)
 	pause_panel.add_child(pause_margin)
 	hud_root.add_child(pause_panel)
+	_build_inventory_panel(hud_root)
 	_build_defeat_panel(hud_root)
+
+
+func _build_inventory_panel(parent: Control) -> void:
+	inventory_panel = PanelContainer.new()
+	inventory_panel.set_anchors_preset(Control.PRESET_CENTER)
+	inventory_panel.offset_left = -560.0
+	inventory_panel.offset_top = -320.0
+	inventory_panel.offset_right = 560.0
+	inventory_panel.offset_bottom = 320.0
+	inventory_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	inventory_panel.visible = false
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+
+	var title := Label.new()
+	title.text = "PROTOTYPE INVENTORY"
+	title.add_theme_font_size_override("font_size", 30)
+	content.add_child(title)
+
+	var disclaimer := Label.new()
+	disclaimer.text = "Local evaluation loadout only. Concepts are non-canonical, unowned, and not for sale."
+	disclaimer.add_theme_color_override("font_color", Color("d8b98a"))
+	disclaimer.add_theme_font_size_override("font_size", 17)
+	content.add_child(disclaimer)
+
+	var category_row := HBoxContainer.new()
+	category_row.add_theme_constant_override("separation", 10)
+	var weapons_button := Button.new()
+	weapons_button.text = "WEAPONS (10)"
+	weapons_button.custom_minimum_size = Vector2(190.0, 50.0)
+	weapons_button.add_theme_font_size_override("font_size", 18)
+	weapons_button.pressed.connect(func() -> void: _set_inventory_category("weapon"))
+	category_row.add_child(weapons_button)
+	var gear_button := Button.new()
+	gear_button.text = "GEAR (20)"
+	gear_button.custom_minimum_size = Vector2(190.0, 50.0)
+	gear_button.add_theme_font_size_override("font_size", 18)
+	gear_button.pressed.connect(func() -> void: _set_inventory_category("gear"))
+	category_row.add_child(gear_button)
+	inventory_category_label = Label.new()
+	inventory_category_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inventory_category_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	inventory_category_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	inventory_category_label.add_theme_font_size_override("font_size", 16)
+	category_row.add_child(inventory_category_label)
+	content.add_child(category_row)
+
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 22)
+	inventory_item_list = ItemList.new()
+	inventory_item_list.custom_minimum_size = Vector2(430.0, 348.0)
+	inventory_item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inventory_item_list.add_theme_font_size_override("font_size", 17)
+	inventory_item_list.item_selected.connect(_on_inventory_item_selected)
+	inventory_item_list.item_activated.connect(_on_inventory_item_activated)
+	body.add_child(inventory_item_list)
+
+	var detail_column := VBoxContainer.new()
+	detail_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_column.add_theme_constant_override("separation", 12)
+	inventory_detail_label = Label.new()
+	inventory_detail_label.custom_minimum_size = Vector2(560.0, 282.0)
+	inventory_detail_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inventory_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	inventory_detail_label.add_theme_font_size_override("font_size", 16)
+	detail_column.add_child(inventory_detail_label)
+	inventory_equip_button = Button.new()
+	inventory_equip_button.text = "EQUIP LOCALLY"
+	inventory_equip_button.custom_minimum_size = Vector2(250.0, 54.0)
+	inventory_equip_button.add_theme_font_size_override("font_size", 18)
+	inventory_equip_button.pressed.connect(_equip_selected_item)
+	detail_column.add_child(inventory_equip_button)
+	body.add_child(detail_column)
+	content.add_child(body)
+
+	var close_button := Button.new()
+	close_button.text = "CLOSE INVENTORY"
+	close_button.custom_minimum_size = Vector2(240.0, 50.0)
+	close_button.add_theme_font_size_override("font_size", 18)
+	close_button.pressed.connect(_toggle_inventory)
+	content.add_child(close_button)
+
+	margin.add_child(content)
+	inventory_panel.add_child(margin)
+	parent.add_child(inventory_panel)
+
+
+func _set_inventory_category(category: String) -> void:
+	if category != "weapon" and category != "gear":
+		return
+	inventory_category = category
+	inventory_selected_item_id = ""
+	_refresh_inventory_items()
+
+
+func _refresh_inventory_items() -> void:
+	if inventory_item_list == null:
+		return
+	inventory_item_list.clear()
+	var items := item_catalog.items_for_category(inventory_category)
+	if inventory_category_label != null:
+		inventory_category_label.text = "%s / %d PROTOTYPE CONCEPTS" % [inventory_category.to_upper(), items.size()]
+	if items.is_empty():
+		inventory_detail_label.text = "Item catalog unavailable."
+		inventory_equip_button.disabled = true
+		return
+
+	var selected_index := 0
+	var equipped_id := prototype_loadout.equipped_item_id(inventory_category)
+	for item: Dictionary in items:
+		var item_id := String(item.get("id", ""))
+		var label := String(item.get("name", item_id))
+		if item_id == equipped_id:
+			label += "   [EQUIPPED]"
+		inventory_item_list.add_item(label)
+		var index := inventory_item_list.get_item_count() - 1
+		inventory_item_list.set_item_metadata(index, item_id)
+		if item_id == inventory_selected_item_id or (inventory_selected_item_id.is_empty() and item_id == equipped_id):
+			selected_index = index
+	inventory_item_list.select(selected_index)
+	_on_inventory_item_selected(selected_index)
+
+
+func _on_inventory_item_selected(index: int) -> void:
+	if inventory_item_list == null or index < 0 or index >= inventory_item_list.get_item_count():
+		return
+	inventory_selected_item_id = String(inventory_item_list.get_item_metadata(index))
+	var item := item_catalog.item_by_id(inventory_selected_item_id)
+	inventory_detail_label.text = _format_inventory_item(item)
+	var equipped := prototype_loadout.is_equipped(inventory_selected_item_id)
+	inventory_equip_button.disabled = equipped
+	inventory_equip_button.text = "EQUIPPED LOCALLY" if equipped else "EQUIP LOCALLY"
+
+
+func _on_inventory_item_activated(index: int) -> void:
+	_on_inventory_item_selected(index)
+	_equip_selected_item()
+
+
+func _equip_selected_item() -> void:
+	if inventory_selected_item_id.is_empty():
+		return
+	if not prototype_loadout.equip(inventory_selected_item_id, item_catalog):
+		_set_feedback("Prototype item could not be equipped.", 1.5)
+		return
+	var equipped_item := item_catalog.item_by_id(inventory_selected_item_id)
+	_save_game()
+	_set_feedback("Local loadout updated: %s" % equipped_item.get("name", inventory_selected_item_id), 1.8)
+	_refresh_inventory_items()
+
+
+func _format_inventory_item(item: Dictionary) -> String:
+	if item.is_empty():
+		return "Select a prototype item to inspect its data."
+	var required_level: Variant = item.get("requiredLevel", null)
+	var level_text := "None" if required_level == null else str(required_level)
+	var lines := PackedStringArray([
+		String(item.get("name", "Unknown item")),
+		"%s / %s / required level: %s" % [String(item.get("rarity", "unknown")).to_upper(), String(item.get("subCategory", "unknown")), level_text],
+		"",
+		String(item.get("description", "")),
+		"",
+		"Purpose: %s" % item.get("purpose", ""),
+		"",
+		"Prototype stats",
+	])
+	var stats: Dictionary = item.get("stats", {})
+	for stat_name: String in stats.keys():
+		lines.append("  %s: %s" % [stat_name.capitalize(), stats[stat_name]])
+	if String(item.get("category", "")) == "weapon":
+		var ammo: Dictionary = item.get("ammo", {})
+		var reload: Dictionary = item.get("reload", {})
+		lines.append("  Ammo: %s / %s" % [ammo.get("type", "unknown"), ammo.get("capacity", 0)])
+		lines.append("  Reload: %s / %ss" % [reload.get("behavior", "unknown"), reload.get("durationSeconds", 0)])
+	lines.append("")
+	lines.append("Visual direction: %s" % item.get("visualIdentity", "Pending"))
+	lines.append("Presentation: placeholder references only / no final model or audio")
+	return "\n".join(lines)
 
 
 func _build_defeat_panel(parent: Control) -> void:
@@ -993,6 +1251,8 @@ func _update_hud() -> void:
 		pause_panel.visible = is_paused
 	if defeat_panel != null:
 		defeat_panel.visible = run_failed
+	if inventory_panel != null:
+		inventory_panel.visible = inventory_screen_open
 	var renderer: String = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
 	var renderer_note := "Renderer: %s" % renderer
 	if renderer != "mobile":
@@ -1020,9 +1280,9 @@ func _update_hud() -> void:
 		objective_note = "Objective: collect salvage (%dm)" % salvage_distance
 	else:
 		objective_note = "Objective complete — securing route"
-	status_label.text = "The Infected prototype\n%s\nData: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), threat_note, objective_note]
+	status_label.text = "The Infected prototype\n%s\nData: %s | Items: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), item_catalog.content_version(), threat_note, objective_note]
 	health_label.text = "Health: %d / %d   |   Save schema: %d" % [health, STARTING_HEALTH, SAVE_SCHEMA_VERSION]
-	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d   Ammo: %d" % [inventory.get("scrap", 0), inventory.get("medkits", 0), inventory.get("ammo", 0)]
+	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d   Ammo: %d\nLoadout   %s   |   %s" % [inventory.get("scrap", 0), inventory.get("medkits", 0), inventory.get("ammo", 0), prototype_loadout.equipped_item_name("weapon", item_catalog), prototype_loadout.equipped_item_name("gear", item_catalog)]
 	health_bar.value = health
 	infected_bar.value = infected_health
 	infected_bar.visible = infected != null
@@ -1067,6 +1327,7 @@ func _load_save() -> bool:
 	if saved_inventory is Dictionary:
 		for item in inventory.keys():
 			inventory[item] = maxi(int(saved_inventory.get(item, inventory[item])), 0)
+	prototype_loadout.restore(parsed.get("prototype_loadout", {}), item_catalog)
 	var saved_collected_pickups = parsed.get("collected_pickups", [])
 	for pickup in pickups:
 		pickup.visible = not (saved_collected_pickups is Array and saved_collected_pickups.has(pickup.name))
@@ -1113,6 +1374,7 @@ func _save_game() -> bool:
 		"beacon_reached": beacon_reached,
 		"run_complete": run_complete,
 		"inventory": inventory,
+		"prototype_loadout": prototype_loadout.to_save_data(),
 		"position": [player.position.x, player.position.y, player.position.z],
 		"camera_yaw": camera_yaw,
 		"infected_position": infected_position,
