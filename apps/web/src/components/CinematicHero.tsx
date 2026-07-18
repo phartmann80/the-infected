@@ -195,14 +195,14 @@ export function CinematicHero() {
           loop
           playsInline
           preload={reduceMotion || lowBandwidth || isMobile ? 'none' : 'metadata'}
-          poster="/assets/cinematic/hero-production-candidate-internal-review.png"
+          poster="/assets/cinematic/hero-production-candidate-internal-review.webp"
           aria-hidden
         >
           <source src="/assets/cinematic/temporary-cinematic-loop-noncanonical.mp4" type="video/mp4" />
         </video>
         {(reduceMotion || lowBandwidth) && (
           <Image
-            src="/assets/cinematic/hero-production-candidate-internal-review.png"
+            src="/assets/cinematic/hero-production-candidate-internal-review.webp"
             alt=""
             fill
             priority

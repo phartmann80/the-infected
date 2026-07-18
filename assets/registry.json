@@ -134,6 +134,35 @@
       "temporary": true
     },
     {
+      "id": "cinematic.hero.production-candidate.web-delivery.v1",
+      "name": "Hero Production Candidate Web Delivery",
+      "type": "cinematic.poster",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/hero-production-candidate-internal-review.webp",
+      "source": "deterministic-sharp-transcode",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "inherits internal-review status from cinematic.hero.production-candidate.internal-review.v1",
+        "sourceAssetId": "cinematic.hero.production-candidate.internal-review.v1",
+        "tool": "sharp",
+        "toolVersion": "0.34.5",
+        "settings": "WebP quality 82, effort 6, smart subsampling enabled; source dimensions preserved",
+        "notes": "Lossy web-delivery derivative for the native video poster and reduced-motion fallback. It changes delivery encoding only and does not promote the source composition to canonical status."
+      },
+      "usedIn": [
+        "landing-page-hero-candidate-v1"
+      ],
+      "sha256": "6b45dbd60610b1c8a12eb1e8f02c9cf4faf2cd02f2f7ff46ced250a77aa73dc5",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "fileSizeBytes": 84122,
+      "temporary": true
+    },
+    {
       "id": "cinematic.environment-001.production-candidate.internal-review.v1",
       "name": "Environment 001 Production Candidate Internal Review",
       "type": "cinematic.key-art",
