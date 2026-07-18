@@ -54,7 +54,7 @@ export function ChapterNavigation() {
           </Link>
         </div>
         <div className="chapter-link-scroll min-w-0 overflow-x-auto pb-1 sm:order-none sm:flex-1 sm:pb-0">
-          <ul className="flex min-w-max items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-500 sm:justify-center">
+          <ul className="flex min-w-max items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400 sm:justify-center">
             {chapters.map((chapter) => (
               <li key={chapter.id}>
                 <Link

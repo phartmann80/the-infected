@@ -214,7 +214,7 @@ function RegistryCard({ entry }: { entry: RegistryEntry }) {
       <div className="relative flex min-h-72 flex-col justify-between">
         <div>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-stone-500">{entry.code}</p>
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-stone-400">{entry.code}</p>
             <StatusBadge status={entry.status} />
           </div>
           {entry.image && (
@@ -227,7 +227,7 @@ function RegistryCard({ entry }: { entry: RegistryEntry }) {
           <h3 className="mt-4 max-w-md text-3xl font-black uppercase leading-[0.95] tracking-[-0.06em] text-white">{entry.title}</h3>
           <p className="mt-5 max-w-lg text-sm leading-7 text-stone-400">{entry.description}</p>
         </div>
-        <div className="mt-10 flex items-center gap-3 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-600">
+        <div className="mt-10 flex items-center gap-3 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400">
           <span className="h-px flex-1 bg-white/10" aria-hidden />
           Registry governed
         </div>
@@ -264,7 +264,7 @@ export function LandingChapters() {
                   <span key={`${height}-${index}`} className="h-10 flex-1 bg-orange-300/45" style={{ transform: `scaleY(${height / 100})`, transformOrigin: 'bottom' }} aria-hidden />
                 ))}
               </div>
-              <p className="mt-5 text-xs uppercase tracking-[0.18em] text-stone-500">Transmission continues / location withheld</p>
+              <p className="mt-5 text-xs uppercase tracking-[0.18em] text-stone-400">Transmission continues / location withheld</p>
             </div>
           </div>
 
@@ -274,7 +274,7 @@ export function LandingChapters() {
                 <p className="text-5xl font-black tracking-[-0.08em] text-orange-100/20">{beat.number}</p>
                 <p className="mt-12 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{beat.label}</p>
                 <h3 className="mt-4 text-2xl font-black uppercase leading-none tracking-[-0.05em] text-white">{beat.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-stone-500">{beat.description}</p>
+                <p className="mt-4 text-sm leading-7 text-stone-400">{beat.description}</p>
               </article>
             ))}
           </div>
@@ -306,7 +306,7 @@ export function LandingChapters() {
               <div aria-hidden className="absolute bottom-0 left-[34%] h-56 w-28 border-x border-t border-orange-200/15 bg-black/35 sm:h-72 sm:w-40" />
               <div aria-hidden className="absolute bottom-0 right-[15%] h-32 w-24 border-x border-t border-white/10 bg-black/25 sm:h-44 sm:w-36" />
               <div className="relative z-10 flex h-full min-h-[24rem] flex-col justify-between">
-                <div className="flex items-center justify-between text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">
+                <div className="flex items-center justify-between text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-400">
                   <span>Field record / environment 001</span>
                   <span className="rounded-full border border-orange-200/20 bg-orange-100/10 px-3 py-1 text-orange-100/80">Internal review candidate</span>
                 </div>
@@ -322,12 +322,12 @@ export function LandingChapters() {
               <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
                 <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Evidence / 01</p>
                 <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">No exposition without a footprint.</h3>
-                <p className="mt-5 text-sm leading-7 text-stone-500">A barricade, a dead radio, a door left open. The world should tell the story before a character explains it.</p>
+                <p className="mt-5 text-sm leading-7 text-stone-400">A barricade, a dead radio, a door left open. The world should tell the story before a character explains it.</p>
               </article>
               <article className="rounded-[2rem] border border-white/10 bg-[#0b0b0a] p-6 sm:p-8">
                 <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Evidence / 02</p>
                 <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">The signal is a promise and a trap.</h3>
-                <p className="mt-5 text-sm leading-7 text-stone-500">Every chapter moves toward the same question: who is still transmitting, and why have they waited?</p>
+                <p className="mt-5 text-sm leading-7 text-stone-400">Every chapter moves toward the same question: who is still transmitting, and why have they waited?</p>
               </article>
             </div>
           </div>
@@ -350,9 +350,9 @@ export function LandingChapters() {
               <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">A person first. A roster later.</h3>
               <p className="mt-5 text-sm leading-7 text-stone-400">The candidate is a shared reference, not a final character canon. Name, backstory, equipment detail, and production approval remain open review decisions.</p>
               <dl className="mt-10 grid gap-4 border-t border-white/10 pt-6 text-xs uppercase tracking-[0.18em]">
-                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Asset state</dt><dd className="text-orange-100/80">Internal review</dd></div>
-                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Shared use</dt><dd className="text-stone-300">Web / Android reference</dd></div>
-                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Roster scope</dt><dd className="text-stone-300">One candidate</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-400">Asset state</dt><dd className="text-orange-100/80">Internal review</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-400">Shared use</dt><dd className="text-stone-300">Web / Android reference</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-400">Roster scope</dt><dd className="text-stone-300">One candidate</dd></div>
               </dl>
             </aside>
           </div>
@@ -375,9 +375,9 @@ export function LandingChapters() {
               <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">One infected. No roster.</h3>
               <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">The Android slice proves one readable enemy encounter. This page will not imply additional variants, names, abilities, or final lore until the first infected candidate passes creative review.</p>
               <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">One enemy</p></div>
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Behavior + Android review</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">One enemy</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Behavior + Android review</p></div>
               </div>
             </div>
           </div>
@@ -403,9 +403,9 @@ export function LandingChapters() {
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-2xl font-black uppercase tracking-[-0.05em] text-white">{item.name}</h3>
-                    <span className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-600">{item.role}</span>
+                    <span className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400">{item.role}</span>
                   </div>
-                  <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-500">{item.description}</p>
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-400">{item.description}</p>
                 </div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-stone-400 sm:text-right">{item.detail}</p>
               </article>
@@ -437,7 +437,7 @@ export function LandingChapters() {
                   <p className="text-4xl font-black tracking-[-0.08em] text-orange-100/20" aria-hidden>{item.step}</p>
                   <p className="mt-8 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
                   <h4 className="mt-3 text-xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.title}</h4>
-                  <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
+                  <p className="mt-4 text-sm leading-7 text-stone-400">{item.description}</p>
                 </li>
               ))}
             </ol>
@@ -454,7 +454,7 @@ export function LandingChapters() {
                   <div>
                     <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{level.location}</p>
                     <h3 className="mt-4 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">{level.name}</h3>
-                    <p className="mt-4 text-sm leading-7 text-stone-500">{level.description}</p>
+                    <p className="mt-4 text-sm leading-7 text-stone-400">{level.description}</p>
                   </div>
                 </div>
               </article>
@@ -474,7 +474,7 @@ export function LandingChapters() {
                 <article key={item.label} className="bg-[#0a0a09] p-6">
                   <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
                   <h3 className="mt-14 text-2xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
+                  <p className="mt-4 text-sm leading-7 text-stone-400">{item.description}</p>
                 </article>
               ))}
             </div>
@@ -493,7 +493,7 @@ export function LandingChapters() {
                 <article key={item.label} className="bg-[#0a0a09] p-5 sm:p-6">
                   <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
                   <p className="mt-8 text-xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.state}</p>
-                  <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
+                  <p className="mt-4 text-sm leading-7 text-stone-400">{item.description}</p>
                 </article>
               ))}
             </div>
@@ -507,9 +507,9 @@ export function LandingChapters() {
           <div className="grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2">
             {budgets.map(([label, value, detail]) => (
               <div key={label} className="bg-[#0b0b0a] p-6 sm:p-8">
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">{label}</p>
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-400">{label}</p>
                 <p className="mt-8 text-3xl font-black tracking-[-0.06em] text-orange-100">{value}</p>
-                <p className="mt-3 text-sm leading-6 text-stone-500">{detail}</p>
+                <p className="mt-3 text-sm leading-6 text-stone-400">{detail}</p>
               </div>
             ))}
           </div>
@@ -539,7 +539,7 @@ export function LandingChapters() {
       </section>
 
       <footer className="border-t border-white/10 px-5 py-12 sm:px-8 lg:px-12">
-        <div className="mx-auto grid max-w-7xl gap-10 text-sm text-stone-500 md:grid-cols-[1fr_auto_auto] md:items-end">
+        <div className="mx-auto grid max-w-7xl gap-10 text-sm text-stone-400 md:grid-cols-[1fr_auto_auto] md:items-end">
           <div>
             <p className="font-black uppercase tracking-[0.2em] text-stone-200">The Infected</p>
             <p className="mt-3 max-w-sm leading-6">A cinematic survival game in development. Android availability and all game systems remain in production.</p>
