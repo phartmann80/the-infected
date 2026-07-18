@@ -12,7 +12,7 @@ The current Draft PR chain includes:
 
 - cinematic hero behavior with reduced motion, audio opt-in, mobile and low-bandwidth fallbacks, and internal-review hero media;
 - story and outbreak/world chapters with the Environment 001 internal-review candidate;
-- separate Survivor and Infected chapters, with one Survivor candidate and one Infected placeholder governed by registry state;
+- separate Survivor and Infected chapters, with one Survivor candidate and one Infected internal-review candidate governed by registry state;
 - prototype-labelled arsenal, levels, mission, progression, loot, and currency surfaces;
 - responsive chapter navigation, legal/contact routes, production-style footer links, and accessible page landmarks;
 - Early Access form wiring with an explicit closed state and no submission or storage in the current preview.
@@ -22,7 +22,7 @@ This is visible progress, but it is not the final landing page. No final asset, 
 ## Phase 1: Creative hero gate
 
 1. Review one exceptional hero composition against the creative direction and mobile crop requirements.
-2. Review Environment 001 and Survivor 001 as shared web/Android visual references.
+2. Review Environment 001, Survivor 001, and Infected 001 as shared web/Android visual references.
 3. Approve provenance, usage, crop, poster, video, audio, and canonical status before promotion.
 4. Do not generate a broad character, enemy, or environment roster before this gate.
 
