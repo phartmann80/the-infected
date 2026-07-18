@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
+import { ProductionFooter } from './ProductionFooter';
 
 type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review';
 
@@ -538,25 +538,7 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-5 py-12 sm:px-8 lg:px-12">
-        <div className="mx-auto grid max-w-7xl gap-10 text-sm text-stone-400 md:grid-cols-[1fr_auto_auto] md:items-end">
-          <div>
-            <p className="font-black uppercase tracking-[0.2em] text-stone-200">The Infected</p>
-            <p className="mt-3 max-w-sm leading-6">A cinematic survival game in development. Android availability and all game systems remain in production.</p>
-          </div>
-          <nav aria-label="Game chapters" className="flex flex-wrap gap-x-5 gap-y-3 text-xs uppercase tracking-[0.16em]">
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="#story">Story</Link>
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="#arsenal">Arsenal</Link>
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="#mission">Mission</Link>
-          </nav>
-          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-3 text-xs uppercase tracking-[0.16em]">
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="/legal/privacy">Privacy</Link>
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="/legal/terms">Terms</Link>
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="/legal/cookies">Cookies</Link>
-            <Link className="transition hover:text-orange-200 focus:outline-none focus-visible:text-orange-200" href="/contact">Contact</Link>
-          </nav>
-        </div>
-      </footer>
+      <ProductionFooter />
     </div>
   );
 }
