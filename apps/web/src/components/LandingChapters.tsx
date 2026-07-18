@@ -491,6 +491,7 @@ export function LandingChapters() {
               idPrefix="landing"
               source="landing"
               heading="Leave your signal"
+              registrationEnabled={false}
               description="The form is ready for the reviewed backend. This preview returns an unavailable state and stores nothing while registration is closed."
               className="max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5"
             />

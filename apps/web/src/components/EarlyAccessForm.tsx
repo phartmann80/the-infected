@@ -11,6 +11,7 @@ type EarlyAccessFormProps = {
   source: EarlyAccessSource;
   heading: string;
   description: string;
+  registrationEnabled: boolean;
   className?: string;
   onCancel?: () => void;
 };
@@ -31,7 +32,7 @@ function getStatusMessage(status: SignupStatus) {
 }
 
 export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps>(function EarlyAccessForm(
-  { idPrefix, source, heading, description, className = '', onCancel },
+  { idPrefix, source, heading, description, registrationEnabled, className = '', onCancel },
   emailRef,
 ) {
   const reactId = useId().replace(/:/g, '');
@@ -44,6 +45,11 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
   const statusMessage = getStatusMessage(status);
 
   async function submitSignup(formData: FormData) {
+    if (!registrationEnabled) {
+      setStatus('unavailable');
+      return;
+    }
+
     const email = String(formData.get('email') ?? '').trim();
     const consent = formData.get('consent') === 'on';
     if (!/^\S+@\S+\.\S+$/.test(email) || !consent) {
@@ -84,6 +90,11 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
     >
       <h2 id={headingId} className="text-2xl font-black uppercase tracking-[-0.04em] text-white">{heading}</h2>
       <p id={descriptionId} className="mt-3 text-sm leading-6 text-stone-300">{description}</p>
+      {!registrationEnabled && (
+        <p className="mt-4 rounded-2xl border border-orange-200/15 bg-orange-100/[0.04] px-4 py-3 text-sm leading-6 text-orange-100/80" role="status">
+          Registration is closed in this preview. Nothing is submitted or stored.
+        </p>
+      )}
       <label className="mt-5 block text-xs font-bold uppercase tracking-[0.2em] text-stone-400" htmlFor={emailId}>Email</label>
       <input
         id={emailId}
@@ -110,7 +121,7 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
       </label>
       {statusMessage && <p id={statusId} className={`mt-4 text-sm ${status === 'success' ? 'text-orange-200' : status === 'submitting' ? 'text-stone-300' : 'text-red-300'}`} role={statusMessage.role}>{statusMessage.text}</p>}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button type="submit" disabled={status === 'submitting'} className="min-h-11 rounded-full bg-orange-500 px-5 text-sm font-black uppercase tracking-[0.16em] text-black disabled:cursor-wait disabled:opacity-60">Submit</button>
+        <button type="submit" disabled={!registrationEnabled || status === 'submitting'} className="min-h-11 rounded-full bg-orange-500 px-5 text-sm font-black uppercase tracking-[0.16em] text-black disabled:cursor-not-allowed disabled:opacity-45">{registrationEnabled ? 'Submit' : 'Registration closed'}</button>
         {onCancel && <button type="button" onClick={onCancel} className="min-h-11 rounded-full border border-white/14 px-5 text-sm font-bold uppercase tracking-[0.16em] text-white" aria-label="Close early access dialog">Close</button>}
       </div>
     </form>

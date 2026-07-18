@@ -368,6 +368,7 @@ export function CinematicHero() {
               idPrefix="hero"
               source="hero"
               heading="Join the Survivors"
+              registrationEnabled={false}
               description="The registration contract is wired into this preview. It remains closed until the reviewed storage and privacy configuration is enabled."
               className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0b0b0a] p-6 shadow-2xl"
               onCancel={closeSignup}
