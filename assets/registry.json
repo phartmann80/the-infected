@@ -184,6 +184,32 @@
         "height": 1586
       },
       "temporary": true
+    },
+    {
+      "id": "character.infected-001.production-candidate.internal-review.v1",
+      "name": "Infected 001 Production Candidate Internal Review",
+      "type": "character.key-art",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/infected-001-production-candidate-internal-review.jpg",
+      "source": "openai-image-generation-internal-review",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; not approved or canonical",
+        "provider": "OpenAI built-in image generation tool",
+        "model": "Tool-managed; model identifier was not exposed in this run",
+        "notes": "Single adult infected presentation candidate generated for the landing threat slot and future Android readability review. Grounded human-enough silhouette in a ruined quarantine checkpoint; no roster, final behavior, lore, logos, readable text, or graphic gore implied. Compressed to JPEG for web delivery; source remains an internal-review candidate."
+      },
+      "usedIn": [
+        "landing-infected-presentation-v1"
+      ],
+      "sha256": "9fb23254e241101f0bf2e0a4e4b4847f65f7f58e883f385dc7202d9aa666a175",
+      "dimensions": {
+        "width": 1024,
+        "height": 1536
+      },
+      "temporary": true
     }
   ]
 }

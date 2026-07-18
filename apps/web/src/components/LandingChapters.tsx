@@ -49,9 +49,11 @@ const registryEntries: RegistryEntry[] = [
   {
     code: 'INFECTED / 001',
     label: 'Threat presentation',
-    title: 'The threat arrives before the answer.',
-    description: 'The first infected design will define how tension moves through the world. The creature roster remains intentionally unopened.',
-    status: 'placeholder',
+    title: 'Infected 001 is ready for review.',
+    description: 'One candidate now establishes the first shared threat reference for the website and future Android readability review. No creature roster, final behavior, or lore is implied.',
+    status: 'internal-review',
+    image: '/assets/cinematic/infected-001-production-candidate-internal-review.jpg',
+    imageAlt: 'Internal-review candidate portrait of Infected 001 at a ruined quarantine checkpoint',
   },
 ];
 
@@ -373,9 +375,9 @@ export function LandingChapters() {
               <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">One infected. No roster.</h3>
               <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">The Android slice proves one readable enemy encounter. This page will not imply additional variants, names, abilities, or final lore until the first infected candidate passes creative review.</p>
               <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-sky-100/80">Placeholder</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
                 <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">One enemy</p></div>
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Art review</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Behavior + Android review</p></div>
               </div>
             </div>
           </div>
