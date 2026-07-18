@@ -3,10 +3,11 @@ extends Node3D
 const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
 const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
+const PrototypeWeaponStateScript := preload("res://scripts/prototype_weapon_state.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 5
+const SAVE_SCHEMA_VERSION := 6
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
@@ -17,9 +18,6 @@ const INFECTED_ATTACK_DAMAGE := 10
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const ATTACK_SWING_DURATION := 0.22
-const SIDEARM_RANGE := 12.0
-const SIDEARM_DAMAGE := 35
-const SIDEARM_COOLDOWN := 0.65
 const HIT_FLASH_DURATION := 0.16
 const INFECTED_KNOCKBACK_SPEED := 4.0
 const INFECTED_KNOCKBACK_DURATION := 0.2
@@ -33,6 +31,7 @@ const INFECTED_COLOR := Color("8b9b73")
 var game_data: Dictionary = {}
 var item_catalog = ItemCatalogScript.new()
 var prototype_loadout = PrototypeLoadoutScript.new()
+var prototype_weapon_state = PrototypeWeaponStateScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -42,11 +41,12 @@ var infected_attack_cooldown := 0.0
 var infected_attack_timer := 0.0
 var infected_attack_phase := 0
 var attack_cooldown := 0.0
-var fire_cooldown := 0.0
 var save_timer := 0.0
 var camera_yaw := 0.0
 var attack_was_down := false
 var fire_was_down := false
+var switch_was_down := false
+var reload_was_down := false
 var medkit_was_down := false
 var restart_was_down := false
 var save_was_down := false
@@ -71,8 +71,14 @@ var health_bar: ProgressBar
 var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
 var player_sidearm: MeshInstance3D
+var muzzle_flash: MeshInstance3D
+var muzzle_light: OmniLight3D
+var prototype_audio_player: AudioStreamPlayer
 var infected_material: StandardMaterial3D
 var hit_flash_timer := 0.0
+var muzzle_flash_timer := 0.0
+var camera_kick := 0.0
+var infected_reaction_timer := 0.0
 var signal_beacon: Node3D
 var signal_light: OmniLight3D
 var environment_root: Node3D
@@ -96,6 +102,7 @@ func _ready() -> void:
 	_load_game_data()
 	_load_item_catalog()
 	prototype_loadout.initialize(item_catalog)
+	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
 	_build_world()
 	_load_save()
 	_apply_equipped_weapon_presentation()
@@ -137,8 +144,11 @@ func _physics_process(delta: float) -> void:
 	if infected != null:
 		_move_infected(delta)
 	_collect_pickups()
+	_update_weapon_state(delta)
+	_handle_weapon_switch_input()
 	_handle_attack_input()
 	_handle_fire_input()
+	_handle_reload_input()
 	_handle_medkit_input()
 	_handle_save_load_input()
 	_handle_restart_input()
@@ -148,7 +158,6 @@ func _physics_process(delta: float) -> void:
 	_update_objective()
 
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
-	fire_cooldown = maxf(fire_cooldown - delta, 0.0)
 	infected_attack_cooldown = maxf(infected_attack_cooldown - delta, 0.0)
 	save_timer += delta
 	if save_timer >= 2.0:
@@ -221,6 +230,7 @@ func _build_world() -> void:
 	camera.name = "FollowCamera"
 	camera.current = true
 	add_child(camera)
+	_build_prototype_audio()
 	_update_camera()
 
 
@@ -388,6 +398,29 @@ func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	sidearm.position = Vector3(-0.42, 0.18, -0.35)
 	sidearm.rotation_degrees = Vector3(0.0, 18.0, -18.0)
 	parent.add_child(sidearm)
+
+	muzzle_flash = MeshInstance3D.new()
+	muzzle_flash.name = "PrototypeMuzzleFlash"
+	var flash_mesh := SphereMesh.new()
+	flash_mesh.height = 0.18
+	flash_mesh.radius = 0.09
+	flash_mesh.radial_segments = 8
+	flash_mesh.rings = 4
+	muzzle_flash.mesh = flash_mesh
+	muzzle_flash.material_override = _emissive_material(Color("ffb55f"))
+	muzzle_flash.position = Vector3(0.0, 0.0, -0.42)
+	muzzle_flash.visible = false
+	sidearm.add_child(muzzle_flash)
+
+	muzzle_light = OmniLight3D.new()
+	muzzle_light.name = "PrototypeMuzzleLight"
+	muzzle_light.position = muzzle_flash.position
+	muzzle_light.light_color = Color("ff9b4a")
+	muzzle_light.light_energy = 2.4
+	muzzle_light.omni_range = 3.2
+	muzzle_light.shadow_enabled = false
+	muzzle_light.visible = false
+	sidearm.add_child(muzzle_light)
 	return sidearm
 
 
@@ -408,13 +441,91 @@ func _apply_equipped_weapon_presentation() -> void:
 	player_sidearm.material_override = _material(presentation.get("color", Color("78858b")))
 	player_sidearm.set_meta("prototype_item_id", item_id)
 	player_sidearm.set_meta("prototype_profile", presentation.get("profile", "unknown"))
-	player_sidearm.visible = true
+	if muzzle_flash != null:
+		muzzle_flash.position = Vector3(0.0, 0.0, -float(mesh.size.z) * 0.62)
+	if muzzle_light != null:
+		muzzle_light.position = muzzle_flash.position
+	_apply_weapon_mode_presentation()
+
+
+func _equipped_weapon_item() -> Dictionary:
+	return item_catalog.item_by_id(prototype_loadout.equipped_item_id("weapon"))
+
+
+func _apply_weapon_mode_presentation() -> void:
+	var firearm_active := prototype_weapon_state.active_mode() == PrototypeWeaponStateScript.MODE_FIREARM
+	if player_sidearm != null:
+		player_sidearm.visible = firearm_active and not _equipped_weapon_item().is_empty()
+	if player_weapon != null:
+		player_weapon.visible = not firearm_active
+	if not firearm_active:
+		_set_muzzle_flash_visible(false)
+
+
+func _sync_ammo_inventory() -> void:
+	inventory["ammo"] = prototype_weapon_state.reserve_ammo()
+
+
+func _build_prototype_audio() -> void:
+	prototype_audio_player = AudioStreamPlayer.new()
+	prototype_audio_player.name = "PrototypeWeaponAudio"
+	var stream := AudioStreamGenerator.new()
+	stream.mix_rate = 22050.0
+	stream.buffer_length = 0.3
+	prototype_audio_player.stream = stream
+	prototype_audio_player.volume_db = -10.0
+	add_child(prototype_audio_player)
+
+
+func _play_prototype_audio(action: String) -> void:
+	if prototype_audio_player == null:
+		return
+	var item := _equipped_weapon_item()
+	var audio: Dictionary = item.get("audio", {})
+	prototype_audio_player.set_meta("catalog_audio_id", String(audio.get(action, "prototype.%s" % action)))
+	prototype_audio_player.stop()
+	prototype_audio_player.play()
+	var playback := prototype_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback == null:
+		return
+	var duration := 0.11 if action == "fire" else 0.18
+	var frame_count := int(22050.0 * duration)
+	var frames := PackedVector2Array()
+	frames.resize(frame_count)
+	for index in range(frame_count):
+		var time := float(index) / 22050.0
+		var progress := time / duration
+		var envelope := pow(1.0 - progress, 2.4)
+		var sample := 0.0
+		if action == "fire":
+			sample = (sin(TAU * 92.0 * time) * 0.62 + sin(TAU * 780.0 * time) * 0.22) * envelope
+		else:
+			var click_one := maxf(0.0, 1.0 - absf(time - 0.025) * 42.0)
+			var click_two := maxf(0.0, 1.0 - absf(time - 0.125) * 42.0)
+			sample = sin(TAU * 420.0 * time) * (click_one + click_two) * 0.32
+		frames[index] = Vector2(sample, sample)
+	playback.push_buffer(frames)
+
+
+func _set_muzzle_flash_visible(visible: bool) -> void:
+	if muzzle_flash != null:
+		muzzle_flash.visible = visible
+	if muzzle_light != null:
+		muzzle_light.visible = visible
 
 
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = 0.9
+	return material
+
+
+func _emissive_material(color: Color) -> StandardMaterial3D:
+	var material := _material(color)
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 3.2
 	return material
 
 
@@ -497,6 +608,14 @@ func _reset_infected_attack() -> void:
 
 func _update_combat_feedback(delta: float) -> void:
 	hit_flash_timer = maxf(hit_flash_timer - delta, 0.0)
+	muzzle_flash_timer = maxf(muzzle_flash_timer - delta, 0.0)
+	camera_kick = move_toward(camera_kick, 0.0, delta * 7.5)
+	_set_muzzle_flash_visible(muzzle_flash_timer > 0.0 and prototype_weapon_state.active_mode() == PrototypeWeaponStateScript.MODE_FIREARM)
+	infected_reaction_timer = maxf(infected_reaction_timer - delta, 0.0)
+	if infected != null:
+		var reaction_weight := infected_reaction_timer / HIT_FLASH_DURATION if infected_reaction_timer > 0.0 else 0.0
+		infected.rotation_degrees.z = -12.0 * reaction_weight
+		infected.scale = Vector3(1.0 + reaction_weight * 0.08, 1.0 - reaction_weight * 0.08, 1.0 + reaction_weight * 0.08)
 	if infected_material == null:
 		return
 	var combat_color := INFECTED_COLOR
@@ -507,6 +626,14 @@ func _update_combat_feedback(delta: float) -> void:
 	elif infected_attack_phase == 2:
 		combat_color = Color("c87c5b")
 	infected_material.albedo_color = combat_color
+
+
+func _update_weapon_state(delta: float) -> void:
+	var result := prototype_weapon_state.advance(delta)
+	if bool(result.get("reload_completed", false)):
+		_sync_ammo_inventory()
+		_set_feedback("Reload complete. %d / %d." % [prototype_weapon_state.magazine_ammo(), prototype_weapon_state.reserve_ammo()], 1.2)
+		_save_game()
 
 
 func _update_environment(delta: float) -> void:
@@ -542,6 +669,24 @@ func _handle_fire_input() -> void:
 	if fire_down and not fire_was_down:
 		_try_fire()
 	fire_was_down = fire_down
+
+
+func _handle_weapon_switch_input() -> void:
+	var switch_down := Input.is_key_pressed(KEY_Q) or bool(held_actions.get("switch_weapon", false))
+	if switch_down and not switch_was_down:
+		var active_mode := prototype_weapon_state.switch_mode()
+		_apply_weapon_mode_presentation()
+		_play_prototype_audio("equip")
+		_set_feedback("Active weapon: %s." % active_mode.capitalize(), 1.0)
+		_save_game()
+	switch_was_down = switch_down
+
+
+func _handle_reload_input() -> void:
+	var reload_down := Input.is_key_pressed(KEY_F) or bool(held_actions.get("reload", false))
+	if reload_down and not reload_was_down:
+		_try_reload()
+	reload_was_down = reload_down
 
 
 func _handle_medkit_input() -> void:
@@ -642,7 +787,7 @@ func _restart_run() -> void:
 	infected_health = 100
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
 	attack_cooldown = 0.0
-	fire_cooldown = 0.0
+	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
 	_reset_infected_attack()
 	save_timer = 0.0
 	beacon_reached = false
@@ -651,12 +796,15 @@ func _restart_run() -> void:
 	infected_knockback_velocity = Vector3.ZERO
 	attack_was_down = false
 	fire_was_down = false
+	switch_was_down = false
+	reload_was_down = false
 	save_was_down = false
 	load_was_down = false
 	pause_was_down = false
 	is_paused = false
 	run_failed = false
 	held_actions.clear()
+	_apply_equipped_weapon_presentation()
 	_remove_salvage_drop()
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
@@ -707,6 +855,9 @@ func _use_medkit() -> void:
 func _try_attack() -> void:
 	if infected == null or attack_cooldown > 0.0:
 		return
+	if prototype_weapon_state.active_mode() != PrototypeWeaponStateScript.MODE_MELEE:
+		_set_feedback("Switch to melee before attacking.", 1.0)
+		return
 	attack_cooldown = 0.55
 	_play_attack_feedback()
 	var distance := player.global_position.distance_to(infected.global_position)
@@ -717,21 +868,48 @@ func _try_attack() -> void:
 
 
 func _try_fire() -> void:
-	if infected == null or fire_cooldown > 0.0:
+	var result := prototype_weapon_state.try_fire()
+	if not bool(result.get("fired", false)):
+		match String(result.get("reason", "blocked")):
+			"inactive":
+				_set_feedback("Switch to the equipped firearm before firing.", 1.0)
+			"reloading":
+				_set_feedback("Reload in progress.", 0.8)
+			"empty":
+				_set_feedback("Magazine empty. Press F or RELOAD.", 1.2)
 		return
-	var ammo := int(inventory.get("ammo", 0))
-	if ammo <= 0:
-		_set_feedback("Sidearm empty. Find ammunition.", 1.0)
-		return
-	fire_cooldown = SIDEARM_COOLDOWN
-	inventory["ammo"] = ammo - 1
 	_play_fire_feedback()
-	var distance := player.global_position.distance_to(infected.global_position)
-	if distance > SIDEARM_RANGE:
-		_set_feedback("Shot missed. Target out of range. Ammo: %d" % inventory["ammo"], 1.0)
+	_sync_ammo_inventory()
+	var magazine := prototype_weapon_state.magazine_ammo()
+	if infected == null:
+		_set_feedback("Shot fired. Magazine: %d." % magazine, 0.8)
 		_save_game()
 		return
-	_damage_infected(SIDEARM_DAMAGE, "Sidearm hit. Threat staggered.")
+	var distance := player.global_position.distance_to(infected.global_position)
+	if distance > float(result.get("range_meters", 8.0)):
+		_set_feedback("Shot missed. Target out of range. Magazine: %d." % magazine, 1.0)
+		_save_game()
+		return
+	_damage_infected(int(result.get("damage", 1)), "%s hit. Magazine: %d." % [result.get("weapon_name", "Weapon"), magazine])
+	_save_game()
+
+
+func _try_reload() -> void:
+	var result := prototype_weapon_state.begin_reload()
+	if not bool(result.get("started", false)):
+		match String(result.get("reason", "blocked")):
+			"inactive":
+				_set_feedback("Switch to the equipped firearm before reloading.", 1.0)
+			"reloading":
+				_set_feedback("Reload already in progress.", 0.8)
+			"full":
+				_set_feedback("Magazine already full.", 0.8)
+			"no_reserve":
+				_set_feedback("No reserve ammunition.", 1.0)
+		return
+	_play_reload_feedback(float(result.get("duration", 1.0)))
+	_play_prototype_audio("reload")
+	_set_feedback("Reloading %s..." % result.get("weapon_name", "weapon"), minf(float(result.get("duration", 1.0)), 2.0))
 
 
 func _damage_infected(damage: int, feedback: String) -> void:
@@ -744,6 +922,7 @@ func _damage_infected(damage: int, feedback: String) -> void:
 		infected_knockback_velocity = knockback_direction.normalized() * INFECTED_KNOCKBACK_SPEED
 		infected_knockback_timer = INFECTED_KNOCKBACK_DURATION
 	hit_flash_timer = HIT_FLASH_DURATION
+	infected_reaction_timer = HIT_FLASH_DURATION
 	_set_feedback("%s Infected health: %d" % [feedback, infected_health], 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
@@ -752,10 +931,45 @@ func _damage_infected(damage: int, feedback: String) -> void:
 func _play_fire_feedback() -> void:
 	if player_sidearm == null:
 		return
+	muzzle_flash_timer = 0.075
+	camera_kick = 1.0
+	_set_muzzle_flash_visible(true)
+	_play_prototype_audio("fire")
+	_eject_prototype_shell()
+	var resting_position := player_sidearm.position
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(player_sidearm, "position", Vector3(-0.42, 0.18, 0.02), 0.08)
-	tween.tween_property(player_sidearm, "position", Vector3(-0.42, 0.18, -0.35), 0.12)
+	tween.tween_property(player_sidearm, "position", resting_position + Vector3(0.0, 0.04, 0.20), 0.055)
+	tween.tween_property(player_sidearm, "position", resting_position, 0.11)
+
+
+func _play_reload_feedback(duration: float) -> void:
+	if player_sidearm == null:
+		return
+	var resting_rotation := player_sidearm.rotation_degrees
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(player_sidearm, "rotation_degrees", resting_rotation + Vector3(24.0, 0.0, 12.0), 0.16)
+	tween.tween_interval(maxf(duration - 0.32, 0.0))
+	tween.tween_property(player_sidearm, "rotation_degrees", resting_rotation, 0.16)
+
+
+func _eject_prototype_shell() -> void:
+	if player == null or player_sidearm == null:
+		return
+	var shell := MeshInstance3D.new()
+	shell.name = "PrototypeShell"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.035, 0.035, 0.11)
+	shell.mesh = mesh
+	shell.material_override = _material(Color("b88b4d"))
+	shell.position = player_sidearm.position + Vector3(-0.18, 0.10, 0.04)
+	player.add_child(shell)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(shell, "position", shell.position + Vector3(-0.42, 0.32, 0.22), 0.28)
+	tween.tween_property(shell, "rotation_degrees", Vector3(260.0, 140.0, 90.0), 0.28)
+	tween.chain().tween_callback(shell.queue_free)
 
 
 func _play_attack_feedback() -> void:
@@ -773,7 +987,15 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 	var defeated := infected
 	var defeated_position := defeated.global_position
 	infected = null
-	defeated.queue_free()
+	_reset_infected_attack()
+	if award_salvage:
+		var death_tween := create_tween()
+		death_tween.set_parallel(true)
+		death_tween.tween_property(defeated, "rotation_degrees", Vector3(0.0, 0.0, 82.0), 0.32)
+		death_tween.tween_property(defeated, "scale", Vector3(1.15, 0.18, 1.15), 0.32)
+		death_tween.chain().tween_callback(defeated.queue_free)
+	else:
+		defeated.queue_free()
 	if award_salvage:
 		_spawn_salvage_drop(defeated_position)
 		_set_feedback("Threat neutralized. Salvage dropped nearby.", 3.0)
@@ -815,7 +1037,11 @@ func _collect_pickups() -> void:
 		var kind := String(pickup.get_meta("kind", "scrap"))
 		var amount := int(pickup.get_meta("amount", 1))
 		var is_salvage_drop := bool(pickup.get_meta("is_salvage_drop", false))
-		inventory[kind] = int(inventory.get(kind, 0)) + amount
+		if kind == "ammo":
+			prototype_weapon_state.add_reserve(amount)
+			_sync_ammo_inventory()
+		else:
+			inventory[kind] = int(inventory.get(kind, 0)) + amount
 		pickup.visible = false
 		if is_salvage_drop:
 			salvage_drop_collected = true
@@ -834,7 +1060,8 @@ func _update_camera(delta: float = 1.0) -> void:
 	if held_actions.get("camera_right", false):
 		camera_yaw += 0.025
 	var offset := Vector3(0.0, 3.4, 6.5).rotated(Vector3.UP, camera_yaw)
-	var target_position := player.global_position + offset
+	var recoil_offset := Vector3(0.0, camera_kick * 0.08, camera_kick * 0.16).rotated(Vector3.UP, camera_yaw)
+	var target_position := player.global_position + offset + recoil_offset
 	var smoothing_weight := clampf(delta * CAMERA_SMOOTHING, 0.0, 1.0)
 	camera.global_position = camera.global_position.lerp(target_position, smoothing_weight)
 	camera.look_at(player.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
@@ -863,13 +1090,13 @@ func _build_touch_controls() -> void:
 
 	inventory_label = Label.new()
 	inventory_label.position = Vector2(24.0, 154.0)
-	inventory_label.size = Vector2(760.0, 48.0)
+	inventory_label.size = Vector2(860.0, 68.0)
 	inventory_label.add_theme_font_size_override("font_size", 18)
 	hud_root.add_child(inventory_label)
-	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 210.0), Color("9eb27e"))
+	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 230.0), Color("9eb27e"))
 
 	feedback_label = Label.new()
-	feedback_label.position = Vector2(24.0, 240.0)
+	feedback_label.position = Vector2(24.0, 260.0)
 	feedback_label.size = Vector2(620.0, 46.0)
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("ffd2ae"))
@@ -891,9 +1118,14 @@ func _build_touch_controls() -> void:
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
-	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 366.0)
+	_set_bottom_right(action_panel, 24.0, 26.0, 224.0, 430.0)
 	hud_root.add_child(action_panel)
 	_add_touch_button(action_panel, "MEDKIT", "medkit", Vector2(224.0, 48.0))
+	var weapon_row := HBoxContainer.new()
+	weapon_row.add_theme_constant_override("separation", 8)
+	action_panel.add_child(weapon_row)
+	_add_touch_button(weapon_row, "SWITCH", "switch_weapon", Vector2(108.0, 52.0))
+	_add_touch_button(weapon_row, "RELOAD", "reload", Vector2(108.0, 52.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
 	_add_touch_button(action_panel, "FIRE", "fire", Vector2(224.0, 58.0))
 	var camera_row := HBoxContainer.new()
@@ -909,7 +1141,7 @@ func _build_touch_controls() -> void:
 	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch to move   |   I / INVENTORY   |   Space / ATTACK   |   E / FIRE   |   H / MEDKIT   |   F5 / SAVE   |   F9 / LOAD"
+	instructions.text = "WASD / touch move   |   Q / SWITCH   |   Space / ATTACK   |   E / FIRE   |   F / RELOAD   |   I / INVENTORY"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -1134,6 +1366,9 @@ func _equip_selected_item() -> void:
 		_set_feedback("Prototype item could not be equipped.", 1.5)
 		return
 	var equipped_item := item_catalog.item_by_id(inventory_selected_item_id)
+	if String(equipped_item.get("category", "")) == "weapon":
+		prototype_weapon_state.equip(equipped_item, prototype_weapon_state.reserve_ammo())
+		_sync_ammo_inventory()
 	_apply_equipped_weapon_presentation()
 	_save_game()
 	_set_feedback("Local loadout updated: %s" % equipped_item.get("name", inventory_selected_item_id), 1.8)
@@ -1306,7 +1541,10 @@ func _update_hud() -> void:
 		objective_note = "Objective complete — securing route"
 	status_label.text = "The Infected prototype\n%s\nData: %s | Items: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), item_catalog.content_version(), threat_note, objective_note]
 	health_label.text = "Health: %d / %d   |   Save schema: %d" % [health, STARTING_HEALTH, SAVE_SCHEMA_VERSION]
-	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d   Ammo: %d\nLoadout   %s   |   %s" % [inventory.get("scrap", 0), inventory.get("medkits", 0), inventory.get("ammo", 0), prototype_loadout.equipped_item_name("weapon", item_catalog), prototype_loadout.equipped_item_name("gear", item_catalog)]
+	var weapon_status := "%s   |   Magazine: %d / %d   |   Reserve: %d %s" % [prototype_weapon_state.active_mode().to_upper(), prototype_weapon_state.magazine_ammo(), prototype_weapon_state.magazine_capacity(), prototype_weapon_state.reserve_ammo(), prototype_weapon_state.ammo_type()]
+	if prototype_weapon_state.is_reloading():
+		weapon_status += "   |   RELOADING %.1fs" % prototype_weapon_state.reload_remaining()
+	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d\nLoadout   %s   |   %s\n%s" % [inventory.get("scrap", 0), inventory.get("medkits", 0), prototype_loadout.equipped_item_name("weapon", item_catalog), prototype_loadout.equipped_item_name("gear", item_catalog), weapon_status]
 	health_bar.value = health
 	infected_bar.value = infected_health
 	infected_bar.visible = infected != null
@@ -1336,9 +1574,10 @@ func _load_save() -> bool:
 	held_actions.clear()
 	_remove_salvage_drop()
 	pause_was_down = false
-	fire_cooldown = 0.0
 	_reset_infected_attack()
 	fire_was_down = false
+	switch_was_down = false
+	reload_was_down = false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
 	beacon_reached = bool(parsed.get("beacon_reached", false))
@@ -1352,6 +1591,8 @@ func _load_save() -> bool:
 		for item in inventory.keys():
 			inventory[item] = maxi(int(saved_inventory.get(item, inventory[item])), 0)
 	prototype_loadout.restore(parsed.get("prototype_loadout", {}), item_catalog)
+	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)), parsed.get("prototype_weapon_state", {}))
+	_sync_ammo_inventory()
 	_apply_equipped_weapon_presentation()
 	var saved_collected_pickups = parsed.get("collected_pickups", [])
 	for pickup in pickups:
@@ -1380,6 +1621,7 @@ func _load_save() -> bool:
 func _save_game() -> bool:
 	if player == null:
 		return false
+	_sync_ammo_inventory()
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return false
@@ -1400,6 +1642,7 @@ func _save_game() -> bool:
 		"run_complete": run_complete,
 		"inventory": inventory,
 		"prototype_loadout": prototype_loadout.to_save_data(),
+		"prototype_weapon_state": prototype_weapon_state.to_save_data(),
 		"position": [player.position.x, player.position.y, player.position.z],
 		"camera_yaw": camera_yaw,
 		"infected_position": infected_position,
