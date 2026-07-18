@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 const chapters = [
   { id: 'story', label: 'Story' },
   { id: 'world', label: 'World' },
-  { id: 'survivors', label: 'People' },
+  { id: 'survivors', label: 'Survivor' },
+  { id: 'infected', label: 'Infected' },
   { id: 'arsenal', label: 'Arsenal' },
   { id: 'mission', label: 'Mission' },
   { id: 'review', label: 'Review gates' },
