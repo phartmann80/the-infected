@@ -55,6 +55,9 @@ const registryEntries: RegistryEntry[] = [
   },
 ];
 
+const survivorEntry = registryEntries[0];
+const infectedEntry = registryEntries[1];
+
 const arsenal = [
   {
     code: 'A-01',
@@ -315,13 +318,48 @@ export function LandingChapters() {
         <div className="mx-auto max-w-7xl">
           <SectionMarker
             chapter="Chapter 03"
-            eyebrow="People and threat"
+            eyebrow="Survivor presentation"
             title="Human stakes before a roster."
-            description="The first approved survivor and infected designs will establish the visual language for the website and the playable slice. Until then, these slots stay honest."
+            description="One survivor candidate anchors the first shared visual reference for the website and playable slice. The presentation remains internal review until the creative gate is approved."
             headingId="survivors-heading"
           />
-          <div className="mt-14 grid gap-5 md:grid-cols-2">
-            {registryEntries.map((entry) => <RegistryCard key={entry.code} entry={entry} />)}
+          <div className="mt-14 grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+            <RegistryCard entry={survivorEntry} />
+            <aside className="rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Character gate / 001</p>
+              <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">A person first. A roster later.</h3>
+              <p className="mt-5 text-sm leading-7 text-stone-400">The candidate is a shared reference, not a final character canon. Name, backstory, equipment detail, and production approval remain open review decisions.</p>
+              <dl className="mt-10 grid gap-4 border-t border-white/10 pt-6 text-xs uppercase tracking-[0.18em]">
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Asset state</dt><dd className="text-orange-100/80">Internal review</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Shared use</dt><dd className="text-stone-300">Web / Android reference</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-stone-600">Roster scope</dt><dd className="text-stone-300">One candidate</dd></div>
+              </dl>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="infected" aria-labelledby="infected-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <SectionMarker
+            chapter="Chapter 04"
+            eyebrow="Infected presentation"
+            title="The threat gets a chapter of its own."
+            description="The first infected design will define how tension moves through the world. Until a candidate is approved, the threat language stays intentionally focused on one prototype enemy."
+            headingId="infected-heading"
+          />
+          <div className="mt-14 grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+            <RegistryCard entry={infectedEntry} />
+            <div className="rounded-[2rem] border border-red-200/15 bg-red-100/[0.035] p-6 sm:p-8">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-red-100/65">Threat boundary / prototype</p>
+              <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">One infected. No roster.</h3>
+              <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">The Android slice proves one readable enemy encounter. This page will not imply additional variants, names, abilities, or final lore until the first infected candidate passes creative review.</p>
+              <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-sky-100/80">Placeholder</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">One enemy</p></div>
+                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-600">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Art review</p></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -330,7 +368,7 @@ export function LandingChapters() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
             <SectionMarker
-              chapter="Chapter 04"
+              chapter="Chapter 05"
               eyebrow="Arsenal"
               title="What still works in your hands."
               description="Equipment is practical, scarce, and readable at a glance. These are prototype loadout placeholders, not final balance or item canon."
@@ -359,7 +397,7 @@ export function LandingChapters() {
       <section id="mission" aria-labelledby="mission-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
           <SectionMarker
-            chapter="Chapter 05"
+            chapter="Chapter 06"
             eyebrow="The mission"
             title="Keep moving toward the source."
             description="The first playable route is small by design. It needs one environment, one survivor, one infected, and enough tension to make the next door matter."
@@ -405,7 +443,7 @@ export function LandingChapters() {
 
           <div id="progression" className="mt-20 grid gap-12 border-t border-white/10 pt-14 lg:grid-cols-[0.8fr_1.2fr]">
             <SectionMarker
-              chapter="Chapter 06"
+              chapter="Chapter 07"
               eyebrow="Progression"
               title="Salvage has a cost."
               description="Progression should reward attention, not grind. The first loop will prove how movement, combat, inventory, and saving fit together."
