@@ -195,7 +195,7 @@ function RegistryCard({ entry }: { entry: RegistryEntry }) {
             <StatusBadge status={entry.status} />
           </div>
           {entry.image && (
-            <div className="relative mt-6 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-orange-200/15 bg-black/30">
+            <div className="relative mt-6 aspect-[5/8] overflow-hidden rounded-[1.5rem] border border-orange-200/15 bg-black/30">
               <Image src={entry.image} alt={entry.imageAlt ?? ''} fill sizes="(min-width: 768px) 42vw, 100vw" loading="lazy" className="object-cover object-center saturate-[0.82]" />
               <span className="absolute bottom-3 left-3 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur">Review frame</span>
             </div>
