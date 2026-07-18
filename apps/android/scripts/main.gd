@@ -6,6 +6,10 @@ const SAVE_SCHEMA_VERSION := 4
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
+const INFECTED_ATTACK_RANGE := 1.8
+const INFECTED_ATTACK_WINDUP := 0.42
+const INFECTED_ATTACK_RECOVERY := 0.72
+const INFECTED_ATTACK_DAMAGE := 10
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
 const ATTACK_SWING_DURATION := 0.22
@@ -28,7 +32,9 @@ var infected: CharacterBody3D
 var camera: Camera3D
 var health := STARTING_HEALTH
 var infected_health := 100
-var damage_timer := 0.0
+var infected_attack_cooldown := 0.0
+var infected_attack_timer := 0.0
+var infected_attack_phase := 0
 var attack_cooldown := 0.0
 var fire_cooldown := 0.0
 var save_timer := 0.0
@@ -119,9 +125,9 @@ func _physics_process(delta: float) -> void:
 	_update_environment(delta)
 	_update_objective()
 
-	damage_timer = maxf(damage_timer - delta, 0.0)
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
 	fire_cooldown = maxf(fire_cooldown - delta, 0.0)
+	infected_attack_cooldown = maxf(infected_attack_cooldown - delta, 0.0)
 	save_timer += delta
 	if save_timer >= 2.0:
 		_save_game()
@@ -384,37 +390,75 @@ func _movement_input() -> Vector2:
 
 func _move_infected(delta: float) -> void:
 	if infected_knockback_timer > 0.0:
+		_reset_infected_attack()
 		infected.velocity = infected_knockback_velocity
 		infected.move_and_slide()
 		infected_knockback_velocity = infected_knockback_velocity.move_toward(Vector3.ZERO, INFECTED_KNOCKBACK_DECELERATION * delta)
 		infected_knockback_timer = maxf(infected_knockback_timer - delta, 0.0)
 		return
+	if infected_attack_phase != 0:
+		infected.velocity = Vector3.ZERO
+		infected_attack_timer = maxf(infected_attack_timer - delta, 0.0)
+		if infected_attack_timer <= 0.0:
+			if infected_attack_phase == 1:
+				_resolve_infected_attack()
+				infected_attack_phase = 2
+				infected_attack_timer = INFECTED_ATTACK_RECOVERY
+			else:
+				infected_attack_phase = 0
+		return
 	var to_player := player.global_position - infected.global_position
 	to_player.y = 0.0
 	var distance := to_player.length()
-	if distance > 1.8:
+	if distance > INFECTED_ATTACK_RANGE:
 		infected.velocity = to_player.normalized() * INFECTED_SPEED
 		infected.move_and_slide()
+	elif infected_attack_cooldown <= 0.0:
+		infected.velocity = Vector3.ZERO
+		infected_attack_phase = 1
+		infected_attack_timer = INFECTED_ATTACK_WINDUP
+		infected_attack_cooldown = INFECTED_ATTACK_WINDUP + INFECTED_ATTACK_RECOVERY
+		_set_feedback("The infected is winding up. Move.", 0.8)
 	else:
 		infected.velocity = Vector3.ZERO
-		if damage_timer <= 0.0:
-			health = maxi(health - 10, 0)
-			damage_timer = 1.0
-			_set_feedback("The infected hit you.", 1.0)
-			if health <= 0:
-				run_failed = true
-				player.velocity = Vector3.ZERO
-				infected.velocity = Vector3.ZERO
-				_set_feedback("You collapsed. Retry the route or load the last checkpoint.", 4.0)
-			else:
-				_save_game()
+
+
+func _resolve_infected_attack() -> void:
+	if infected == null or player == null or run_failed:
+		return
+	var distance := player.global_position.distance_to(infected.global_position)
+	if distance > INFECTED_ATTACK_RANGE:
+		_set_feedback("You escaped the strike.", 0.8)
+		return
+	health = maxi(health - INFECTED_ATTACK_DAMAGE, 0)
+	_set_feedback("The infected hit you.", 1.0)
+	if health <= 0:
+		run_failed = true
+		player.velocity = Vector3.ZERO
+		infected.velocity = Vector3.ZERO
+		_set_feedback("You collapsed. Retry the route or load the last checkpoint.", 4.0)
+	else:
+		_save_game()
+
+
+func _reset_infected_attack() -> void:
+	infected_attack_cooldown = 0.0
+	infected_attack_timer = 0.0
+	infected_attack_phase = 0
 
 
 func _update_combat_feedback(delta: float) -> void:
 	hit_flash_timer = maxf(hit_flash_timer - delta, 0.0)
 	if infected_material == null:
 		return
-	infected_material.albedo_color = Color("ffbd86") if hit_flash_timer > 0.0 else INFECTED_COLOR
+	var combat_color := INFECTED_COLOR
+	if hit_flash_timer > 0.0:
+		combat_color = Color("ffbd86")
+	elif infected_attack_phase == 1:
+		combat_color = Color("ed9d63")
+	elif infected_attack_phase == 2:
+		combat_color = Color("c87c5b")
+	infected_material.albedo_color = combat_color
 
 
 func _update_environment(delta: float) -> void:
@@ -516,9 +560,9 @@ func _restart_run() -> void:
 	health = STARTING_HEALTH
 	infected_health = 100
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
-	damage_timer = 0.0
 	attack_cooldown = 0.0
 	fire_cooldown = 0.0
+	_reset_infected_attack()
 	save_timer = 0.0
 	beacon_reached = false
 	run_complete = false
@@ -954,6 +998,10 @@ func _update_hud() -> void:
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
 	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100" % infected_health
+	if infected != null and infected_attack_phase == 1:
+		threat_note += " | WIND-UP"
+	elif infected != null and infected_attack_phase == 2:
+		threat_note += " | RECOVERING"
 	var objective_note := ""
 	if run_failed:
 		objective_note = "RUN LOST - RETRY ROUTE or LOAD CHECKPOINT"
@@ -1005,6 +1053,7 @@ func _load_save() -> bool:
 	_remove_salvage_drop()
 	pause_was_down = false
 	fire_cooldown = 0.0
+	_reset_infected_attack()
 	fire_was_down = false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
