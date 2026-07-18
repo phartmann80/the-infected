@@ -139,20 +139,20 @@
       "type": "cinematic.key-art",
       "status": "internal-review",
       "canonical": false,
-      "version": "0.1.0",
+      "version": "0.1.2",
       "path": "apps/web/public/assets/cinematic/environment-001-production-candidate-internal-review.jpg",
-      "source": "openai-image-generation-internal-review",
+      "source": "openai-image-generation-internal-review-polish-v3",
       "provenance": {
         "owner": "The Infected project",
         "approval": "internal review only; not approved or canonical",
         "provider": "OpenAI built-in image generation tool",
         "model": "Tool-managed; model identifier was not exposed in this run",
-        "notes": "Revision pass preserves the original route, relay tower, gate, camera, and lighting while adding restrained failed-evacuation and military-collapse evidence: an additional abandoned vehicle, damaged floodlight and cable, sandbags, equipment cases, warning placards, and a dropped cone. No characters, creatures, logos, or readable text. Compressed to JPEG for web delivery; source remains an internal-review candidate."
+        "notes": "Final subtle storytelling pass preserves the exact route, relay tower, gate, camera, composition, and cold lighting while adding restrained failed-evacuation traces on the wet road, a faint distant warm fire or emergency glow, deeper atmospheric perspective around the communications tower, and a damaged quarantine placard without readable text. No characters, creatures, logos, or dramatic effects. Compressed to JPEG for web delivery; source remains an internal-review candidate."
       },
       "usedIn": [
-        "landing-world-chapter-environment-001-v2"
+        "landing-world-chapter-environment-001-v3"
       ],
-      "sha256": "ec3b51908b9acd45aa8ae75800fa14e210d67b45b0a81f631fa806d17ff22695",
+      "sha256": "8e2edfe640115362a882049d526cf5c681658e1183ded6566420db447671a4fc",
       "dimensions": {
         "width": 1672,
         "height": 941
