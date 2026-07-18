@@ -186,7 +186,7 @@ export function CinematicHero() {
 
   return (
     <>
-      <section ref={heroRef} className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
+      <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
@@ -274,6 +274,7 @@ export function CinematicHero() {
               </motion.p>
 
               <motion.h1
+                id="hero-heading"
                 className="max-w-[11ch] text-balance text-5xl font-black uppercase leading-[0.82] tracking-[-0.075em] text-white sm:text-7xl lg:text-8xl"
                 initial={reduceMotion ? false : { opacity: 0, y: 18 }}
                 animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
