@@ -10,6 +10,7 @@ const chapters = [
   { id: 'infected', label: 'Infected' },
   { id: 'arsenal', label: 'Arsenal' },
   { id: 'mission', label: 'Mission' },
+  { id: 'loot', label: 'Loot' },
   { id: 'review', label: 'Review gates' },
   { id: 'join', label: 'Join' },
 ] as const;

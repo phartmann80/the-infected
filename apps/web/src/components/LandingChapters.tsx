@@ -124,6 +124,24 @@ const progression = [
   },
 ] as const;
 
+const lootLedger = [
+  {
+    label: 'Loot',
+    state: 'Field salvage',
+    description: 'Collected materials and ammunition remain prototype data. Drop tables and final names await balance review.',
+  },
+  {
+    label: 'Currency',
+    state: 'Value pending',
+    description: 'A future salvage economy is acknowledged without inventing prices, vendors, or progression rewards.',
+  },
+  {
+    label: 'Carry rule',
+    state: 'Slice constraint',
+    description: 'Inventory space keeps each pickup readable in the current movement, combat, loot, and save loop.',
+  },
+] as const;
+
 const gameplayLoop = [
   {
     step: '01',
@@ -454,6 +472,25 @@ export function LandingChapters() {
                 <article key={item.label} className="bg-[#0a0a09] p-6">
                   <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
                   <h3 className="mt-14 text-2xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.title}</h3>
+                  <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+          <div id="loot" aria-labelledby="loot-heading" className="mt-10 rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8 lg:p-10">
+            <div className="flex flex-col gap-5 border-b border-white/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Loot / currency / prototype data</p>
+                <h3 id="loot-heading" className="mt-3 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white sm:text-4xl">Every pickup has a job.</h3>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-400">The page shows the shape of the economy without presenting placeholder values as final game canon.</p>
+              </div>
+              <StatusBadge status="prototype" />
+            </div>
+            <div className="mt-7 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
+              {lootLedger.map((item) => (
+                <article key={item.label} className="bg-[#0a0a09] p-5 sm:p-6">
+                  <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
+                  <p className="mt-8 text-xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.state}</p>
                   <p className="mt-4 text-sm leading-7 text-stone-500">{item.description}</p>
                 </article>
               ))}
