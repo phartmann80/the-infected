@@ -10,12 +10,15 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "lint:web": "npm run lint --workspace @the-infected/web",
+    "lint:game-data": "eslint -c apps/web/eslint.config.mjs packages/game-data/src/item-system.ts scripts/game-data/item-system.test.ts scripts/validate-game-data.mjs --rule \"@next/next/no-html-link-for-pages: off\" --max-warnings=0",
     "lint:image-generation": "eslint -c apps/web/eslint.config.mjs scripts/image-generation --max-warnings=0",
-    "lint": "npm run lint:web && npm run lint:image-generation",
+    "lint": "npm run lint:web && npm run lint:image-generation && npm run lint:game-data",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "validate:game-data": "node scripts/validate-game-data.mjs",
     "validate:registry": "node scripts/validate-registry.mjs",
     "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
     "secrets:scan": "node scripts/scan-secrets.mjs",
+    "test:game-data": "vitest run scripts/game-data/item-system.test.ts",
     "test:image-generation": "vitest run --config scripts/image-generation/vitest.config.ts",
     "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
     "image:generate": "tsx scripts/image-generation/generate.ts"
