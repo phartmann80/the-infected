@@ -239,7 +239,7 @@ export function CinematicHero() {
           style={{ background: 'radial-gradient(circle at 74% 68%, rgba(255,93,31,.22), transparent 19%), radial-gradient(circle at 28% 48%, rgba(91,119,137,.13), transparent 28%)' }}
         />
 
-        <main className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
+        <div className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
           <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
             <motion.div
               className="max-w-xl"
@@ -347,7 +347,7 @@ export function CinematicHero() {
             <span id="audio-status" role="status" aria-live="polite">{audioStatus}</span>
             <span>{lowBandwidth ? 'Media paused to protect your connection' : 'Hero composition in internal review'}</span>
           </div>
-        </main>
+        </div>
 
         {signupOpen && (
           <div
