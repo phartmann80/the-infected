@@ -33,7 +33,7 @@ export function LegalPageShell({ activePage, eyebrow, title, summary, children }
           <Link href="/" className="w-fit rounded-full px-2 py-1 text-xs font-black uppercase tracking-[0.22em] text-white transition hover:text-orange-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">
             The Infected
           </Link>
-          <nav aria-label="Legal and project pages" className="flex flex-wrap gap-x-5 gap-y-2 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-stone-500">
+          <nav aria-label="Legal and project pages" className="flex flex-wrap gap-x-5 gap-y-2 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-stone-400">
             {pageLinks.map((link) => (
               <Link
                 key={link.page}
@@ -65,7 +65,7 @@ export function LegalPageShell({ activePage, eyebrow, title, summary, children }
       </div>
 
       <footer className="border-t border-white/10 px-5 py-8 sm:px-8 lg:px-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-xs uppercase tracking-[0.16em] text-stone-600 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-xs uppercase tracking-[0.16em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
           <p>Draft copy — review required before public launch.</p>
           <Link href="/" className="w-fit rounded-full text-orange-100/75 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200">Return to the signal</Link>
         </div>

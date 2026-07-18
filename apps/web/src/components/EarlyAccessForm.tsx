@@ -105,7 +105,7 @@ export const EarlyAccessForm = forwardRef<HTMLInputElement, EarlyAccessFormProps
         autoComplete="email"
         placeholder="survivor@example.com"
         aria-invalid={status === 'error' ? true : undefined}
-        className="mt-2 min-h-12 w-full rounded-2xl border border-white/14 bg-white/8 px-4 text-white outline-none placeholder:text-stone-600 focus:ring-2 focus:ring-orange-300"
+        className="mt-2 min-h-12 w-full rounded-2xl border border-white/14 bg-white/8 px-4 text-white outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-orange-300"
       />
       <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-stone-400" htmlFor={consentId}>
         <input
