@@ -158,6 +158,32 @@
         "height": 941
       },
       "temporary": true
+    },
+    {
+      "id": "character.survivor-001.production-candidate.internal-review.v1",
+      "name": "Survivor 001 Production Candidate Internal Review",
+      "type": "character.key-art",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/survivor-001-production-candidate-internal-review.jpg",
+      "source": "openai-image-generation-internal-review",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; not approved or canonical",
+        "provider": "OpenAI built-in image generation tool",
+        "model": "Tool-managed; model identifier was not exposed in this run",
+        "notes": "Single adult survivor presentation candidate generated for the landing survivor slot and future Android character reference. No final name, backstory, or roster implication. Compressed to JPEG for web delivery; source remains an internal-review candidate."
+      },
+      "usedIn": [
+        "landing-survivor-presentation-v1"
+      ],
+      "sha256": "7bd88376f87bf6012d225f3b1fc6a7b389079c6721a6b4f485da83f0c68c1f1a",
+      "dimensions": {
+        "width": 992,
+        "height": 1586
+      },
+      "temporary": true
     }
   ]
 }

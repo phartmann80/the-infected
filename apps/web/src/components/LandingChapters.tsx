@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
 
-type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked';
+type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review';
 
 type RegistryEntry = {
   code: string;
@@ -11,6 +11,8 @@ type RegistryEntry = {
   title: string;
   description: string;
   status: RegistryStatus;
+  image?: string;
+  imageAlt?: string;
 };
 
 const storyBeats = [
@@ -38,9 +40,11 @@ const registryEntries: RegistryEntry[] = [
   {
     code: 'SURVIVOR / 001',
     label: 'Human presentation',
-    title: 'The first survivor is not a legend yet.',
-    description: 'This presentation slot is ready for one approved character study. No final name, backstory, or roster is implied by the current prototype.',
-    status: 'placeholder',
+    title: 'Survivor 001 is ready for review.',
+    description: 'One candidate presentation now anchors the first shared web and Android visual reference. It has no final name, backstory, or roster implication until creative approval.',
+    status: 'internal-review',
+    image: '/assets/cinematic/survivor-001-production-candidate-internal-review.jpg',
+    imageAlt: 'Internal-review candidate portrait of Survivor 001 in the quarantine route',
   },
   {
     code: 'INFECTED / 001',
@@ -156,6 +160,7 @@ const statusStyles: Record<RegistryStatus, string> = {
   prototype: 'border-orange-200/20 bg-orange-100/5 text-orange-100/80',
   placeholder: 'border-sky-200/20 bg-sky-100/5 text-sky-100/80',
   blocked: 'border-red-200/20 bg-red-100/5 text-red-100/80',
+  'internal-review': 'border-orange-200/30 bg-orange-100/10 text-orange-100',
 };
 
 function StatusBadge({ status }: { status: RegistryStatus }) {
@@ -189,6 +194,12 @@ function RegistryCard({ entry }: { entry: RegistryEntry }) {
             <p className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-stone-500">{entry.code}</p>
             <StatusBadge status={entry.status} />
           </div>
+          {entry.image && (
+            <div className="relative mt-6 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-orange-200/15 bg-black/30">
+              <Image src={entry.image} alt={entry.imageAlt ?? ''} fill sizes="(min-width: 768px) 42vw, 100vw" loading="lazy" className="object-cover object-center saturate-[0.82]" />
+              <span className="absolute bottom-3 left-3 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur">Review frame</span>
+            </div>
+          )}
           <p className="mt-16 text-xs uppercase tracking-[0.28em] text-orange-100/60">{entry.label}</p>
           <h3 className="mt-4 max-w-md text-3xl font-black uppercase leading-[0.95] tracking-[-0.06em] text-white">{entry.title}</h3>
           <p className="mt-5 max-w-lg text-sm leading-7 text-stone-400">{entry.description}</p>
