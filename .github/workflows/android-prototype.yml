@@ -57,6 +57,12 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/templates
           cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
 
+      - name: Validate Godot item catalog and local loadout
+        run: |
+          GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
+          timeout 180s "$GODOT" --headless --path apps/android --editor --quit
+          timeout 120s "$GODOT" --headless --path apps/android --script res://tests/item_inventory_test.gd
+
       - name: Import and export debug APK
         env:
           ANDROID_DEV_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEV_KEYSTORE_BASE64 }}

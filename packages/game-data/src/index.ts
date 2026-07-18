@@ -11,3 +11,5 @@ export const gameFoundationMetadata: GameFoundationMetadata = {
   canonicalContentApproved: false,
   note: 'Foundation shell only. Lore, timeline, characters, enemies, weapons, and permanent 3D assets are not approved yet.'
 };
+
+export * from './item-system';

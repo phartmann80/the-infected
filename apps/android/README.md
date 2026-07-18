@@ -17,19 +17,21 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 ## Run locally
 
 1. Run `npm ci` at the repository root.
-2. Run `npm run android:data:check`.
+2. Run `npm run android:data:check` to verify both the foundation and item catalogs are synchronized from `packages/game-data`.
 3. Open `apps/android/project.godot` in Godot 4.7.1.
 4. Run the `AndroidPrototype` scene on desktop for the input and save-schema smoke test.
 
-The scene uses review-only primitives and proves the first small gameplay loop: reach the signal beacon, survive one infected encounter, neutralize the threat, and replay the route. It includes a checkpoint and signal landmark, an abandoned vehicle, movement, smoothed camera follow, one survivor, one infected, readable prototype combat feedback with melee recoil and a sidearm/ammo loop, live objective-distance guidance, pickup/use inventory, explicit SAVE/LOAD controls, a versioned local save, and a responsive touch HUD with health bars. It does not contain production characters, final weapons, economy, progression, paid content, multiplayer, or release signing.
+The scene uses review-only primitives and proves the first small gameplay loop: reach the signal beacon, survive one infected encounter, neutralize the threat, and replay the route. It includes a checkpoint and signal landmark, an abandoned vehicle, movement, smoothed camera follow, one survivor, one infected, readable prototype combat feedback with melee recoil and a sidearm/ammo loop, live objective-distance guidance, pickup/use inventory, explicit SAVE/LOAD controls, a versioned local save, and a responsive touch HUD with health bars.
+
+The inventory screen reads the approved prototype catalog without mutating it. It exposes the existing 10 weapon and 20 gear concepts and stores one local weapon selection and one local gear selection. The equipped weapon updates a lightweight review-only primitive carried by the player, using catalog sub-category and rarity metadata; it is not a production model. This is an interaction and persistence test only: every concept remains non-canonical, selection does not establish ownership or unlock state, and catalog stats do not alter combat balance. No production models, animations, sounds, economy, paid content, multiplayer, or release signing are included.
 
 ## Prototype controls
 
-- Desktop: `WASD` or arrow keys to move, mouse-left or `Space` to attack, `E` or mouse-right to fire the sidearm, `H` to use a medkit, `F5` to save, `F9` to load, `R` to reset the run, `P` or `Escape` to pause, and camera buttons for rotation.
-- Android: use the on-screen movement, camera, `MEDKIT`, `ATTACK`, `FIRE`, `SAVE`, `LOAD`, `RESET RUN`, and `PAUSE` controls. `FIRE` spends ammunition and uses the review-only sidearm; the pause panel freezes the encounter and offers `RESUME`; a depleted health bar opens a `RUN LOST` panel with `RETRY ROUTE` and `LOAD CHECKPOINT`.
+- Desktop: `WASD` or arrow keys to move, `I` to open the prototype inventory, mouse-left or `Space` to attack, `E` or mouse-right to fire the sidearm, `H` to use a medkit, `F5` to save, `F9` to load, `R` to reset the run, `P` or `Escape` to pause, and camera buttons for rotation.
+- Android: use the on-screen movement, camera, `INVENTORY`, `MEDKIT`, `ATTACK`, `FIRE`, `SAVE`, `LOAD`, `RESET RUN`, and `PAUSE` controls. The inventory panel pauses gameplay logic while open and supports touch selection and local equip. `FIRE` spends ammunition and uses the review-only sidearm; the pause panel freezes the encounter and offers `RESUME`; a depleted health bar opens a `RUN LOST` panel with `RETRY ROUTE` and `LOAD CHECKPOINT`.
 - Walk into the marked review-only pickups to add scrap or ammunition to the inventory.
 - Reach the signal beacon, defeat the infected, and use `R` or `RESET RUN` to replay the route after completion.
-- The save file records health, position, camera yaw, inventory, infected health and position, collected pickups, beacon progress, and completion state. A defeat state is intentionally not persisted, so `LOAD CHECKPOINT` returns to the last valid save. Save schema 3 accepts schema 1 and 2 saves; older files default fields introduced by later schemas.
+- The save file records health, position, camera yaw, pickup inventory, local prototype loadout IDs, infected health and position, collected pickups, beacon progress, and completion state. A defeat state is intentionally not persisted, so `LOAD CHECKPOINT` returns to the last valid save. Save schema 5 accepts schemas 1 through 5; older files default fields introduced by later schemas.
 
 ## Renderer compatibility gate
 
