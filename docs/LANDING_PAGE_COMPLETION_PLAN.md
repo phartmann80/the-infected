@@ -1,77 +1,92 @@
 # Landing Page Completion Plan
 
-Status: Planned work after the production-readiness foundation PR.
+Status: Active Phase 2 product-development plan
 
-Current implementation slice: `feat/early-access-registration-v1` adds the feature-flagged Early Access contract, Node route, privacy-safe storage boundary, consent form wiring, and the cinematic chapter rhythm from `feat/landing-page-production-v1`. It does not add a production hero candidate, a broad roster, or enable public registration.
+Snapshot date: 2026-07-17
 
-The landing page should grow from the approved cinematic direction, not become a generic feature grid. The next visual gate is one approved production hero composition. No large character or enemy roster should be generated before that gate.
+The landing page is being developed as a cinematic product surface, not a generic feature grid. The current work is distributed across focused Draft PRs and must not be described as merged, public, canonical, or final until the relevant review gates pass.
 
-## Phase 1: Hero production candidate
+## Current implementation slice
 
-1. Approve the creative brief and shot list for one hero composition.
-2. Produce final-candidate key art, poster, and cinematic loop variants from approved or explicitly internal-review assets.
-3. Preserve the existing reduced-motion, mobile fallback, audio opt-in, narration caption, WebGL boundary, and temporary-asset lifecycle.
-4. Review browser captures at desktop and mobile widths, with sound muted, sound enabled, and reduced motion enabled.
-5. Record provenance and review results before any asset becomes approved or canonical.
+The current Draft PR chain includes:
+
+- cinematic hero behavior with reduced motion, audio opt-in, mobile and low-bandwidth fallbacks, and internal-review hero media;
+- story and outbreak/world chapters with the Environment 001 internal-review candidate;
+- separate Survivor and Infected chapters, with one Survivor candidate and one Infected placeholder governed by registry state;
+- prototype-labelled arsenal, levels, mission, progression, loot, and currency surfaces;
+- responsive chapter navigation, legal/contact routes, production-style footer links, and accessible page landmarks;
+- Early Access form wiring with an explicit closed state and no submission or storage in the current preview.
+
+This is visible progress, but it is not the final landing page. No final asset, economy value, support address, legal policy, or release date is implied.
+
+## Phase 1: Creative hero gate
+
+1. Review one exceptional hero composition against the creative direction and mobile crop requirements.
+2. Review Environment 001 and Survivor 001 as shared web/Android visual references.
+3. Approve provenance, usage, crop, poster, video, audio, and canonical status before promotion.
+4. Do not generate a broad character, enemy, or environment roster before this gate.
 
 ## Phase 2: Cinematic chapter structure
 
-Build the page as a descent through the city, following `docs/CHAPTER_STRUCTURE.md`:
+The page should guide a visitor through:
 
 - Arrival: hero and the first unanswered question.
-- The Outbreak: environmental traces, not a lore dump.
-- Survivors: human stakes and the first approved survivor presentation.
-- The Infected: threat language and the first approved infected presentation.
-- Arsenal: scarce, practical equipment and weapons.
-- The Mission: the survival objective and why the player keeps moving.
-- Join the Survivors: early-access conversion after the world has earned attention.
+- The Outbreak: environmental traces and the remaining signal.
+- Survivor: one grounded human presentation, governed by registry state.
+- The Infected: one readable threat presentation, with no implied roster.
+- Arsenal: scarce, practical equipment.
+- Mission: the first playable route and gameplay loop.
+- Progression: carry, adapt, and salvage decisions.
+- Loot: prototype salvage and currency shape without invented final values.
+- Join the Survivors: Early Access after the world has earned attention.
 
-### Product slice v1 review
+## Phase 3: Game-information completion
 
-- Story and world sections now carry the visitor from the first silence to the remaining signal.
-- Survivor and infected presentation slots remain registry-governed and visibly marked as placeholders until approved assets exist.
-- Arsenal, levels, progression, and loot are present as prototype-labelled systems rather than invented final canon.
-- Early Access persistence and consent handling are implemented behind `EARLY_ACCESS_ENABLED=false`; retention, private data requests, and deployment enablement remain review gates.
-- Cookies and Contact routes are present as prototype legal surfaces; ownership and support details require final project review before public launch.
+Complete each surface with approved data or clearly labelled prototype copy:
 
-## Phase 3: Game-information surfaces
+- story and world premise;
+- levels and environments;
+- weapons and equipment;
+- Survivor and Infected presentation;
+- progression, loot, and currency;
+- screenshots and gameplay media when stable, approved assets are available.
 
-Add restrained, source-grounded sections for:
+No final names, factions, enemy roster, economy values, or lore should be invented before the related approval gate.
 
-- Story and world premise.
-- Levels and environmental progression.
-- Weapons and equipment.
-- Character presentation.
-- Enemy presentation.
-- Progression, loot, and currency.
+## Phase 4: Early Access and legal release gate
 
-Each surface must use approved game data or clearly marked prototype copy. No final names, factions, enemy roster, economy values, or lore should be invented in the landing page before the related approval gate.
-
-## Phase 4: Early access and legal surface
-
-- Define the signup contract, consent language, retention policy, and failure states.
-- Connect the form to an approved backend only after the contract and privacy handling are reviewed.
-- Add Terms, Privacy, Cookies, and Contact pages with real project ownership and support details.
-- Add a footer that links to the legal pages and clearly separates prototype status from release availability.
+- Review the signup contract, consent language, retention period, deletion process, and private data-request channel.
+- Keep the UI and route closed until the reviewed backend and privacy handling are ready.
+- Publish final Privacy, Terms, Cookies, and Contact content only after project ownership and support details are confirmed.
+- Enable persistence only in the reviewed server environment, never in a feature branch or public preview by accident.
 
 ## Phase 5: Responsive, accessibility, and performance completion
 
 - Test keyboard navigation, focus return, Escape handling, screen-reader names, contrast, and reduced motion.
 - Verify poster-only mobile behavior, lazy media loading, pause-on-hidden behavior, and audio opt-in.
-- Define budgets before final media lands: initial HTML/JS, hero poster, video bytes, audio bytes, Largest Contentful Paint, and interaction readiness on a representative mobile device.
-- Add image dimensions, responsive crops, WebM/MP4 strategy, cache headers, and a CDN decision when bandwidth evidence justifies it.
+- Measure representative mobile performance before calling the page complete.
+- Validate links, media fallbacks, legal routes, form states, and production-build behavior.
 
-### v1 performance gate
+### Performance targets
 
-- LCP: at or below 2.5 seconds on a representative mid-range mobile device.
-- Initial JavaScript: at or below 220 KB compressed before hero media.
-- Hero poster: at or below 350 KB; video and audio remain opt-in after first paint.
-- Interaction readiness: at or below 3.5 seconds on a throttled mobile connection.
-- These are review targets, not measured results. The production hero candidate must be measured against them before approval.
+These are review targets, not current results:
+
+- LCP at or below 2.5 seconds on a representative mid-range mobile device.
+- Initial JavaScript at or below 220 KB compressed before hero media.
+- Hero poster at or below 350 KB; video and audio remain opt-in after first paint.
+- Interaction readiness at or below 3.5 seconds on a throttled mobile connection.
 
 ## Phase 6: SEO and release review
 
-- Replace temporary social imagery with approved Open Graph and Twitter crops.
+- Replace temporary social imagery with an approved Open Graph and Twitter crop.
 - Validate title, description, canonical URL, robots, sitemap, structured metadata, and share previews.
-- Run accessibility, performance, responsive, media, and link checks against the production build.
-- Require a Vercel preview or private server preview and explicit creative review before merging the completed landing-page slice.
+- Require a private production preview and explicit creative review before merging the completed landing slice.
+- Record the final asset registry state and review evidence in the project notes.
+
+## Current blockers
+
+- Creative approval for the hero and candidate production assets.
+- Physical Android-device validation remains the highest technical gate for the gameplay slice.
+- Early Access privacy, retention, contact, and deployment review.
+
+Until those gates move, continue with focused player-visible polish and prototype-labelled content. Do not expand the Android gameplay scope or create a broad asset roster.
