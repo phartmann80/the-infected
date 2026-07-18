@@ -132,6 +132,32 @@
         "height": 941
       },
       "temporary": true
+    },
+    {
+      "id": "cinematic.environment-001.production-candidate.internal-review.v1",
+      "name": "Environment 001 Production Candidate Internal Review",
+      "type": "cinematic.key-art",
+      "status": "internal-review",
+      "canonical": false,
+      "version": "0.1.0",
+      "path": "apps/web/public/assets/cinematic/environment-001-production-candidate-internal-review.jpg",
+      "source": "openai-image-generation-internal-review",
+      "provenance": {
+        "owner": "The Infected project",
+        "approval": "internal review only; not approved or canonical",
+        "provider": "OpenAI built-in image generation tool",
+        "model": "Tool-managed; model identifier was not exposed in this run",
+        "notes": "Single wide Environment 001 quarantine-route candidate generated for the landing world chapter and future Android environment reference. No characters, creatures, logos, or readable text. Compressed to JPEG for web delivery; source remains an internal-review candidate."
+      },
+      "usedIn": [
+        "landing-world-chapter-environment-001-v1"
+      ],
+      "sha256": "f9dfd81231d7f6b9421eb1ad158e65b49037e5858461118c83cf95dbcb7336c1",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "temporary": true
     }
   ]
 }

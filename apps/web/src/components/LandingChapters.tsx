@@ -260,8 +260,8 @@ export function LandingChapters() {
           <div className="mt-16 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
             <figure className="relative min-h-[26rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0c0e] p-6 sm:p-8">
               <Image
-                src="/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg"
-                alt="Temporary review frame of the ruined quarantine route"
+                src="/assets/cinematic/environment-001-production-candidate-internal-review.jpg"
+                alt="Internal-review candidate frame of the ruined Environment 001 quarantine route"
                 fill
                 sizes="(min-width: 1024px) 58vw, 100vw"
                 loading="lazy"
@@ -274,15 +274,15 @@ export function LandingChapters() {
               <div className="relative z-10 flex h-full min-h-[24rem] flex-col justify-between">
                 <div className="flex items-center justify-between text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">
                   <span>Field record / environment 001</span>
-                  <span className="rounded-full border border-sky-200/20 bg-sky-100/10 px-3 py-1 text-sky-100/80">Temporary frame</span>
+                  <span className="rounded-full border border-orange-200/20 bg-orange-100/10 px-3 py-1 text-orange-100/80">Internal review candidate</span>
                 </div>
                 <div>
                   <p className="text-[0.65rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">The arrival route</p>
                   <h3 className="mt-4 max-w-lg text-4xl font-black uppercase leading-[0.9] tracking-[-0.07em] text-white sm:text-6xl">The road in is the first thing to disappear.</h3>
-                  <p className="mt-5 max-w-md text-sm leading-7 text-stone-400">One canonical environment will carry the first web and Android milestone. The scene is intentionally not presented as final art yet.</p>
+                  <p className="mt-5 max-w-md text-sm leading-7 text-stone-400">This Environment 001 candidate is the first shared visual reference for the web and Android milestone. It remains unapproved and non-canonical until creative review.</p>
                 </div>
               </div>
-              <figcaption className="sr-only">Temporary non-canonical reference frame. Environment 001 production art is still awaiting approval.</figcaption>
+              <figcaption className="sr-only">Internal-review, non-canonical Environment 001 candidate. Final production art is still awaiting approval.</figcaption>
             </figure>
             <div className="grid gap-5">
               <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
