@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { LegalPageShell } from '@/components/LegalPageShell';
 
 export const metadata: Metadata = {
   title: 'Cookie notice',
@@ -9,17 +9,24 @@ export const metadata: Metadata = {
 
 export default function CookiesPage() {
   return (
-    <main className="min-h-screen bg-[#060606] px-5 py-10 text-stone-200 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-3xl">
-        <Link href="/" className="text-xs font-bold uppercase tracking-[0.2em] text-orange-100/70 hover:text-white">← Return to The Infected</Link>
-        <p className="mt-16 text-xs uppercase tracking-[0.42em] text-orange-100/60">Legal / Cookies</p>
-        <h1 className="mt-5 text-5xl font-black uppercase leading-none tracking-[-0.07em] text-white">Cookie notice</h1>
-        <div className="mt-8 space-y-6 text-lg leading-8 text-stone-400">
-          <p>This private prototype preview does not currently use advertising cookies or third-party tracking cookies. The site may use browser capabilities required to play media and remember temporary interface state during a visit.</p>
-          <p>Analytics and marketing storage will not be enabled without a documented purpose, consent behavior, retention period, and an updated privacy notice.</p>
-          <p>This notice is a prototype surface and will be reviewed before public launch.</p>
-        </div>
-      </div>
-    </main>
+    <LegalPageShell
+      activePage="cookies"
+      eyebrow="Legal / Cookies"
+      title="Cookie notice"
+      summary="This private prototype preview keeps storage intentionally limited. Analytics and marketing storage remain disabled pending a documented consent review."
+    >
+      <section aria-labelledby="cookies-current-heading">
+        <h2 id="cookies-current-heading" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Current preview behavior</h2>
+        <p className="mt-4">This private prototype preview does not currently use advertising cookies or third-party tracking cookies. The site may use browser capabilities required to play media and remember temporary interface state during a visit.</p>
+      </section>
+      <section aria-labelledby="cookies-future-heading">
+        <h2 id="cookies-future-heading" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Future storage</h2>
+        <p className="mt-4">Analytics and marketing storage will not be enabled without a documented purpose, consent behavior, retention period, and an updated privacy notice.</p>
+      </section>
+      <section aria-labelledby="cookies-review-heading">
+        <h2 id="cookies-review-heading" className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Review status</h2>
+        <p className="mt-4">This notice is a prototype surface and will be reviewed before public launch.</p>
+      </section>
+    </LegalPageShell>
   );
 }
