@@ -16,6 +16,7 @@ export function LandingFooter({ onJoin }: LandingFooterProps) {
 
           <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-[0.18em]">
             <a href="#chapters" className="transition hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70">Chapters</a>
+            <a href="#field-manual" className="transition hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70">Field manual</a>
             <a href="#arrival" className="transition hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70">Back to arrival</a>
             <button type="button" onClick={onJoin} className="text-left transition hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70">Join the survivors</button>
           </nav>
