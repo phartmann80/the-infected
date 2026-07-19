@@ -9,6 +9,7 @@ The landing page is the first production surface for the Android game. Assets, d
 ```bash
 npm install
 npm run validate:registry
+npm run validate:game-data
 npm run secrets:scan
 npm run test:game-data
 npm run lint
