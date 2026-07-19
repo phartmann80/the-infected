@@ -7,3 +7,5 @@ The current prototype writes schema `6` to `user://save_v1.json`. It accepts sch
 The `prototype_loadout` field records only the locally selected weapon and gear IDs. It does not record or infer ownership, purchase, entitlement, unlock, price, or payment-provider state. Invalid or removed item IDs fall back to the reviewed prototype defaults during load.
 
 The `prototype_weapon_state` field is separate from both catalog definitions and loadout selection. It records only the selected weapon ID, active melee/firearm mode, magazine rounds, and reserve rounds. Reload progress and fire cooldown are intentionally transient and restart safely after load.
+
+Infected alert, pursuit, wind-up, recovery, and stagger states are also transient. Loading a checkpoint reconstructs the encounter from the saved objective and infected state instead of resuming halfway through an attack.

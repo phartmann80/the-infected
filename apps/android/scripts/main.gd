@@ -4,6 +4,7 @@ const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
 const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 const PrototypeWeaponStateScript := preload("res://scripts/prototype_weapon_state.gd")
+const PrototypeInfectedBrainScript := preload("res://scripts/prototype_infected_brain.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
@@ -11,9 +12,6 @@ const SAVE_SCHEMA_VERSION := 6
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
 const INFECTED_SPEED := 1.15
-const INFECTED_ATTACK_RANGE := 1.8
-const INFECTED_ATTACK_WINDUP := 0.42
-const INFECTED_ATTACK_RECOVERY := 0.72
 const INFECTED_ATTACK_DAMAGE := 10
 const ATTACK_RANGE := 2.4
 const ATTACK_DAMAGE := 25
@@ -32,14 +30,12 @@ var game_data: Dictionary = {}
 var item_catalog = ItemCatalogScript.new()
 var prototype_loadout = PrototypeLoadoutScript.new()
 var prototype_weapon_state = PrototypeWeaponStateScript.new()
+var prototype_infected_brain = PrototypeInfectedBrainScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
 var health := STARTING_HEALTH
 var infected_health := 100
-var infected_attack_cooldown := 0.0
-var infected_attack_timer := 0.0
-var infected_attack_phase := 0
 var attack_cooldown := 0.0
 var save_timer := 0.0
 var camera_yaw := 0.0
@@ -158,7 +154,6 @@ func _physics_process(delta: float) -> void:
 	_update_objective()
 
 	attack_cooldown = maxf(attack_cooldown - delta, 0.0)
-	infected_attack_cooldown = maxf(infected_attack_cooldown - delta, 0.0)
 	save_timer += delta
 	if save_timer >= 2.0:
 		_save_game()
@@ -549,44 +544,53 @@ func _movement_input() -> Vector2:
 
 func _move_infected(delta: float) -> void:
 	if infected_knockback_timer > 0.0:
-		_reset_infected_attack()
 		infected.velocity = infected_knockback_velocity
 		infected.move_and_slide()
 		infected_knockback_velocity = infected_knockback_velocity.move_toward(Vector3.ZERO, INFECTED_KNOCKBACK_DECELERATION * delta)
 		infected_knockback_timer = maxf(infected_knockback_timer - delta, 0.0)
 		return
-	if infected_attack_phase != 0:
-		infected.velocity = Vector3.ZERO
-		infected_attack_timer = maxf(infected_attack_timer - delta, 0.0)
-		if infected_attack_timer <= 0.0:
-			if infected_attack_phase == 1:
-				_resolve_infected_attack()
-				infected_attack_phase = 2
-				infected_attack_timer = INFECTED_ATTACK_RECOVERY
-			else:
-				infected_attack_phase = 0
-		return
 	var to_player := player.global_position - infected.global_position
 	to_player.y = 0.0
 	var distance := to_player.length()
-	if distance > INFECTED_ATTACK_RANGE:
-		infected.velocity = to_player.normalized() * INFECTED_SPEED
-		infected.move_and_slide()
-	elif infected_attack_cooldown <= 0.0:
+	var decision := prototype_infected_brain.advance(delta, distance, beacon_reached)
+	_handle_infected_state_change(decision)
+	if bool(decision.get("attack_requested", false)):
+		_resolve_infected_attack()
+	var speed_scale := float(decision.get("speed_scale", 0.0))
+	if speed_scale <= 0.0 or to_player.length_squared() <= 0.001:
 		infected.velocity = Vector3.ZERO
-		infected_attack_phase = 1
-		infected_attack_timer = INFECTED_ATTACK_WINDUP
-		infected_attack_cooldown = INFECTED_ATTACK_WINDUP + INFECTED_ATTACK_RECOVERY
-		_set_feedback("The infected is winding up. Move.", 0.8)
-	else:
-		infected.velocity = Vector3.ZERO
+		_face_infected_toward(to_player, delta, 7.0)
+		return
+	var pursuit_direction := to_player.normalized()
+	var lateral_direction := Vector3(-pursuit_direction.z, 0.0, pursuit_direction.x)
+	var steering := (pursuit_direction + lateral_direction * float(decision.get("strafe_weight", 0.0))).normalized()
+	infected.velocity = steering * INFECTED_SPEED * speed_scale
+	infected.move_and_slide()
+	_face_infected_toward(to_player, delta, 9.0)
+
+
+func _handle_infected_state_change(decision: Dictionary) -> void:
+	if not bool(decision.get("state_changed", false)):
+		return
+	match String(decision.get("state", "")):
+		PrototypeInfectedBrainScript.STATE_ALERT:
+			_set_feedback("Movement ahead. The infected has noticed you.", 1.2)
+		PrototypeInfectedBrainScript.STATE_WINDUP:
+			_set_feedback("The infected is winding up. Move.", 0.9)
+
+
+func _face_infected_toward(to_player: Vector3, delta: float, turn_speed: float) -> void:
+	if infected == null or to_player.length_squared() <= 0.001:
+		return
+	var target_yaw := atan2(-to_player.x, -to_player.z)
+	infected.rotation.y = lerp_angle(infected.rotation.y, target_yaw, clampf(delta * turn_speed, 0.0, 1.0))
 
 
 func _resolve_infected_attack() -> void:
 	if infected == null or player == null or run_failed:
 		return
 	var distance := player.global_position.distance_to(infected.global_position)
-	if distance > INFECTED_ATTACK_RANGE:
+	if distance > PrototypeInfectedBrainScript.ATTACK_RESOLVE_RANGE:
 		_set_feedback("You escaped the strike.", 0.8)
 		return
 	health = maxi(health - INFECTED_ATTACK_DAMAGE, 0)
@@ -600,10 +604,8 @@ func _resolve_infected_attack() -> void:
 		_save_game()
 
 
-func _reset_infected_attack() -> void:
-	infected_attack_cooldown = 0.0
-	infected_attack_timer = 0.0
-	infected_attack_phase = 0
+func _reset_infected_behavior(start_engaged: bool = false) -> void:
+	prototype_infected_brain.reset(start_engaged)
 
 
 func _update_combat_feedback(delta: float) -> void:
@@ -614,18 +616,48 @@ func _update_combat_feedback(delta: float) -> void:
 	infected_reaction_timer = maxf(infected_reaction_timer - delta, 0.0)
 	if infected != null:
 		var reaction_weight := infected_reaction_timer / HIT_FLASH_DURATION if infected_reaction_timer > 0.0 else 0.0
-		infected.rotation_degrees.z = -12.0 * reaction_weight
-		infected.scale = Vector3(1.0 + reaction_weight * 0.08, 1.0 - reaction_weight * 0.08, 1.0 + reaction_weight * 0.08)
+		if reaction_weight > 0.0:
+			infected.rotation_degrees.z = -12.0 * reaction_weight
+			infected.scale = Vector3(1.0 + reaction_weight * 0.08, 1.0 - reaction_weight * 0.08, 1.0 + reaction_weight * 0.08)
+		else:
+			_apply_infected_state_pose()
 	if infected_material == null:
 		return
 	var combat_color := INFECTED_COLOR
+	var infected_state := prototype_infected_brain.state()
 	if hit_flash_timer > 0.0:
 		combat_color = Color("ffbd86")
-	elif infected_attack_phase == 1:
+	elif infected_state == PrototypeInfectedBrainScript.STATE_ALERT:
+		combat_color = Color("b9a36f")
+	elif infected_state == PrototypeInfectedBrainScript.STATE_WINDUP:
 		combat_color = Color("ed9d63")
-	elif infected_attack_phase == 2:
+	elif infected_state == PrototypeInfectedBrainScript.STATE_RECOVERY:
 		combat_color = Color("c87c5b")
+	elif infected_state == PrototypeInfectedBrainScript.STATE_STAGGERED:
+		combat_color = Color("d9b08a")
 	infected_material.albedo_color = combat_color
+
+
+func _apply_infected_state_pose() -> void:
+	if infected == null:
+		return
+	var state := prototype_infected_brain.state()
+	infected.rotation_degrees.z = 0.0
+	infected.scale = Vector3.ONE
+	match state:
+		PrototypeInfectedBrainScript.STATE_DORMANT:
+			infected.rotation_degrees.z = sin(environment_time * 1.4) * 1.4
+		PrototypeInfectedBrainScript.STATE_ALERT:
+			var pulse := 1.0 + sin(environment_time * 12.0) * 0.025
+			infected.scale = Vector3(pulse, 0.94, pulse)
+		PrototypeInfectedBrainScript.STATE_PURSUIT:
+			infected.scale.y = 1.0 + sin(environment_time * 9.0) * 0.025
+		PrototypeInfectedBrainScript.STATE_WINDUP:
+			infected.rotation_degrees.z = -7.0
+			infected.scale = Vector3(1.08, 0.88, 1.08)
+		PrototypeInfectedBrainScript.STATE_RECOVERY:
+			infected.rotation_degrees.z = 6.0
+			infected.scale = Vector3(0.96, 1.04, 0.96)
 
 
 func _update_weapon_state(delta: float) -> void:
@@ -788,7 +820,7 @@ func _restart_run() -> void:
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
 	attack_cooldown = 0.0
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
-	_reset_infected_attack()
+	_reset_infected_behavior(false)
 	save_timer = 0.0
 	beacon_reached = false
 	run_complete = false
@@ -923,7 +955,9 @@ func _damage_infected(damage: int, feedback: String) -> void:
 		infected_knockback_timer = INFECTED_KNOCKBACK_DURATION
 	hit_flash_timer = HIT_FLASH_DURATION
 	infected_reaction_timer = HIT_FLASH_DURATION
-	_set_feedback("%s Infected health: %d" % [feedback, infected_health], 0.9)
+	var interrupted_attack := prototype_infected_brain.apply_stagger()
+	var reaction_note := " Attack interrupted." if interrupted_attack else ""
+	_set_feedback("%s%s Infected health: %d" % [feedback, reaction_note, infected_health], 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
 
@@ -987,7 +1021,7 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 	var defeated := infected
 	var defeated_position := defeated.global_position
 	infected = null
-	_reset_infected_attack()
+	_reset_infected_behavior(false)
 	if award_salvage:
 		var death_tween := create_tween()
 		death_tween.set_parallel(true)
@@ -1516,11 +1550,7 @@ func _update_hud() -> void:
 	var renderer_note := "Renderer: %s" % renderer
 	if renderer != "mobile":
 		renderer_note += " | compatibility gate active"
-	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100" % infected_health
-	if infected != null and infected_attack_phase == 1:
-		threat_note += " | WIND-UP"
-	elif infected != null and infected_attack_phase == 2:
-		threat_note += " | RECOVERING"
+	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100 | %s" % [infected_health, prototype_infected_brain.state().to_upper()]
 	var objective_note := ""
 	if run_failed:
 		objective_note = "RUN LOST - RETRY ROUTE or LOAD CHECKPOINT"
@@ -1574,13 +1604,13 @@ func _load_save() -> bool:
 	held_actions.clear()
 	_remove_salvage_drop()
 	pause_was_down = false
-	_reset_infected_attack()
 	fire_was_down = false
 	switch_was_down = false
 	reload_was_down = false
 	health = clampi(int(parsed.get("health", STARTING_HEALTH)), 0, STARTING_HEALTH)
 	infected_health = clampi(int(parsed.get("infected_health", 100)), 0, 100)
 	beacon_reached = bool(parsed.get("beacon_reached", false))
+	_reset_infected_behavior(beacon_reached)
 	run_complete = false
 	var saved_position = parsed.get("position", [])
 	if saved_position is Array and saved_position.size() == 3 and player != null:
