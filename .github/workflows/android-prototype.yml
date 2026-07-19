@@ -63,6 +63,7 @@ jobs:
           timeout 180s "$GODOT" --headless --path apps/android --editor --quit
           timeout 120s "$GODOT" --headless --path apps/android --script res://tests/item_inventory_test.gd
           timeout 120s "$GODOT" --headless --path apps/android --script res://tests/weapon_interaction_test.gd
+          timeout 120s "$GODOT" --headless --path apps/android --script res://tests/infected_brain_test.gd
 
       - name: Import and export debug APK
         env:
