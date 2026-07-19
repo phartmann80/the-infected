@@ -79,13 +79,13 @@ export function CinematicChapters({ onJoin }: CinematicChaptersProps) {
               The landing page is being built as a descent into the city, not a brochure. These chapter beats define the reveal while final lore and production media remain under review.
             </p>
 
-            <nav aria-label="Cinematic chapters" className="mt-9 border-l border-white/12 pl-4">
-              <ol className="space-y-1">
+            <nav aria-label="Cinematic chapters" className="mt-9 overflow-x-auto border-y border-white/12 py-3 lg:border-y-0 lg:border-l lg:py-0 lg:pl-4">
+              <ol className="flex min-w-max gap-1 lg:block lg:min-w-0 lg:space-y-1">
                 {chapterLinks.map((chapter) => (
                   <li key={chapter.id}>
                     <a
                       href={`#${chapter.id}`}
-                      className="group flex min-h-10 items-center gap-3 rounded-r-xl px-3 text-xs font-bold uppercase tracking-[0.18em] text-stone-500 transition hover:bg-white/6 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70"
+                      className="group flex min-h-10 items-center gap-3 whitespace-nowrap rounded-xl px-3 text-xs font-bold uppercase tracking-[0.18em] text-stone-500 transition hover:bg-white/6 hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70 lg:rounded-r-xl"
                     >
                       <span className="font-mono text-[0.65rem] text-orange-200/55 group-hover:text-orange-200">{chapter.number}</span>
                       <span>{chapter.name}</span>

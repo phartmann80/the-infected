@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LandingFooter } from './LandingFooter';
 import { SceneBoundary } from './hero/SceneBoundary';
 import { CinematicChapters } from './CinematicChapters';
 
@@ -151,6 +152,9 @@ export function CinematicHero() {
 
   return (
     <>
+      <a href="#chapters" className="sr-only fixed left-4 top-4 z-[60] rounded-full bg-orange-500 px-5 py-3 text-sm font-black uppercase tracking-[0.16em] text-black focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-orange-200">
+        Skip to chapters
+      </a>
       <section id="arrival" ref={heroRef} className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
         <video
           ref={videoRef}
@@ -332,6 +336,7 @@ export function CinematicHero() {
       </section>
 
       <CinematicChapters onJoin={openSignup} />
+      <LandingFooter onJoin={openSignup} />
     </>
   );
 }

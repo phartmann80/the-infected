@@ -7,6 +7,9 @@ const socialImage = '/assets/cinematic/temporary-cinematic-poster-noncanonical.j
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  applicationName: 'The Infected',
+  category: 'games',
+  keywords: ['The Infected', 'cinematic survival game', 'Android game'],
   title: {
     default: 'The Infected | Coming Soon',
     template: '%s | The Infected',
