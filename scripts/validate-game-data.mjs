@@ -73,7 +73,11 @@ for (const cue of audioCatalog.cues ?? []) {
   requireString(cue.soundIdentity, `audio cue ${cue.id}.soundIdentity`);
   if (!stableId.test(cue.id)) fail(`audio cue ${cue.id} does not use a stable ID`);
   if (cue.status !== 'placeholder' || cue.assetRegistryId !== null) fail(`audio cue ${cue.id} must remain an unresolved placeholder`);
-  if (!isObject(cue.playback)) fail(`audio cue ${cue.id}.playback must be an object`);
+  if (!isObject(cue.playback)) {
+    fail(`audio cue ${cue.id}.playback must be an object`);
+  } else if (!['music', 'ui', 'weapons', 'gear', 'foley'].includes(cue.playback.bus)) {
+    fail(`audio cue ${cue.id}.playback.bus is unsupported`);
+  }
 }
 
 for (const item of items) {

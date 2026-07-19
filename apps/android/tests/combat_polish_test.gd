@@ -2,6 +2,7 @@ extends SceneTree
 
 const CombatMotionScript := preload("res://scripts/prototype_combat_motion.gd")
 const CombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
+const ActorAnimationScript := preload("res://scripts/prototype_actor_animation.gd")
 const MainScript := preload("res://scripts/main.gd")
 
 
@@ -37,6 +38,33 @@ func _initialize() -> void:
 		return
 	if bool(motion.advance(0.10, 0.0).get("melee_impact", false)):
 		_fail("Melee impact fired more than once during one swing.")
+		return
+	if motion.melee_progress() <= 0.0 or motion.melee_progress() > 1.0:
+		_fail("Combat motion did not expose bounded melee progress for the articulated rig.")
+		return
+
+	var survivor_animation := ActorAnimationScript.new(ActorAnimationScript.ROLE_SURVIVOR)
+	var survivor_pose: Dictionary = {}
+	var survivor_step_observed := false
+	for frame in range(8):
+		survivor_pose = survivor_animation.advance(0.1, 1.0)
+		survivor_step_observed = survivor_step_observed or bool(survivor_pose.get("footstep", false))
+	var left_leg: Vector3 = survivor_pose.get("left_leg_rotation", Vector3.ZERO)
+	var right_leg: Vector3 = survivor_pose.get("right_leg_rotation", Vector3.ZERO)
+	if not survivor_step_observed or absf(left_leg.x + right_leg.x) > 0.01:
+		_fail("Survivor locomotion did not produce synchronized opposite-leg motion and a footstep event.")
+		return
+	var melee_pose := survivor_animation.advance(0.016, 0.0, "idle", 0.0, ActorAnimationScript.ACTION_MELEE, 0.5)
+	var melee_torso: Vector3 = melee_pose.get("torso_rotation", Vector3.ZERO)
+	var melee_arm: Vector3 = melee_pose.get("right_arm_rotation", Vector3.ZERO)
+	if absf(melee_torso.y) < 25.0 or melee_arm.x > -60.0:
+		_fail("Survivor melee animation did not coordinate torso twist and striking arm pose.")
+		return
+	var infected_animation := ActorAnimationScript.new(ActorAnimationScript.ROLE_INFECTED)
+	var windup_pose := infected_animation.advance(0.016, 0.0, "wind-up", 0.75)
+	var windup_arm: Vector3 = windup_pose.get("right_arm_rotation", Vector3.ZERO)
+	if float(windup_pose.get("root_position_y", 0.0)) > -0.10 or windup_arm.x > -90.0:
+		_fail("Infected wind-up animation did not create a readable crouch and raised strike pose.")
 		return
 
 	var feedback := CombatFeedbackScript.new()
@@ -89,7 +117,7 @@ func _initialize() -> void:
 		_fail("Buffered fire did not resolve when a low frame rate crossed both timer boundaries.")
 		return
 	main.free()
-	print("Android combat polish test passed: blended recoil, reload, melee impact timing, low-frame-rate fire buffering, hit markers, damage overlay, and camera response.")
+	print("Android combat polish test passed: articulated locomotion, synchronized footsteps, state-driven attack poses, blended weapon motion, low-frame-rate fire buffering, hit markers, damage overlay, and camera response.")
 	quit(0)
 
 

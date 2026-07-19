@@ -37,6 +37,8 @@ The landscape touch layer uses a fixed analog movement pad with a remapped dead 
 
 Action-button feedback uses the equipped prototype item's existing `audio.select` reference and a short generated placeholder cue. It does not add or approve production audio.
 
+The character-presentation layer now replaces single capsule visuals with seven-part articulated primitive rigs for the survivor and infected. A deterministic animation driver produces locomotion, opposite-leg gait, torso counter-motion, survivor melee/reload/fire poses, and infected dormant/alert/pursuit/wind-up/recovery/stagger poses. Gait phase emits synchronized footstep events into a dedicated generated foley channel so production skeletal clips and surface-aware sound assets can later replace the placeholders without changing combat timing. These rigs and tones are review-only runtime hooks, not final characters, motion capture, voice, or audio.
+
 ## Prototype controls
 
 - Desktop: `WASD` or arrow keys to move, `I` to open the prototype inventory, `Q` to switch between melee and the equipped firearm, mouse-left or `Space` to attack, `E` or mouse-right to fire, `F` to reload, `H` to use a medkit, `F5` to save, `F9` to load, `R` to reset the run, and `P` or `Escape` to pause.

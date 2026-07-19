@@ -135,7 +135,7 @@ export interface AudioCueDefinition {
   readonly status: 'placeholder';
   readonly assetRegistryId: null;
   readonly playback: {
-    readonly bus: 'music' | 'ui' | 'weapons' | 'gear';
+    readonly bus: 'music' | 'ui' | 'weapons' | 'gear' | 'foley';
     readonly loop: boolean;
     readonly spatial: boolean;
     readonly volumeDb: number;

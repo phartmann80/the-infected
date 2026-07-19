@@ -56,4 +56,18 @@ describe('item-system foundation', () => {
       }
     }
   });
+
+  it('reserves stable foley cues for synchronized actor footsteps', () => {
+    const cues = new Map(audioCueCatalog.cues.map((cue) => [cue.id, cue]));
+    for (const cueId of [
+      'audio.foley.survivor.footstep.concrete',
+      'audio.foley.infected.footstep.concrete',
+    ]) {
+      const cue = cues.get(cueId);
+      expect(cue?.status).toBe('placeholder');
+      expect(cue?.assetRegistryId).toBeNull();
+      expect(cue?.playback.bus).toBe('foley');
+      expect(cue?.playback.loop).toBe(false);
+    }
+  });
 });
