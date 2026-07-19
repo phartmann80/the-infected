@@ -6,6 +6,14 @@ type CinematicChaptersProps = {
   onJoin: () => void;
 };
 
+const chapterGlows = {
+  outbreak: 'bg-[radial-gradient(circle_at_72%_28%,rgba(255,91,37,0.34),transparent_26%),linear-gradient(135deg,#101719,#050606_65%)]',
+  survivors: 'bg-[radial-gradient(circle_at_30%_60%,rgba(238,171,83,0.28),transparent_24%),linear-gradient(145deg,#17130f,#050606_68%)]',
+  infected: 'bg-[radial-gradient(circle_at_68%_66%,rgba(156,45,29,0.42),transparent_25%),linear-gradient(135deg,#130d0d,#050606_66%)]',
+  arsenal: 'bg-[radial-gradient(circle_at_42%_30%,rgba(87,111,126,0.35),transparent_25%),linear-gradient(145deg,#10171a,#050606_70%)]',
+  mission: 'bg-[radial-gradient(circle_at_76%_42%,rgba(221,107,51,0.3),transparent_24%),linear-gradient(135deg,#17110d,#050606_68%)]',
+} as const satisfies Record<(typeof landingChapters)[number]['id'], string>;
+
 const chapterLinks = [
   { id: 'arrival', number: '01', name: 'Arrival' },
   ...landingChapters.map(({ id, number, name }) => ({ id, number, name })),
@@ -55,7 +63,7 @@ export function CinematicChapters({ onJoin }: CinematicChaptersProps) {
                 </div>
 
                 <div className="mt-5 grid gap-7 md:grid-cols-[minmax(0,1.05fr)_minmax(260px,0.95fr)] md:items-center">
-                  <div className={`relative aspect-[16/10] overflow-hidden rounded-[1.75rem] border border-white/12 ${chapter.glow}`}>
+                  <div className={`relative aspect-[16/10] overflow-hidden rounded-[1.75rem] border border-white/12 ${chapterGlows[chapter.id]}`}>
                     <div aria-hidden className="absolute inset-5 rounded-[1.2rem] border border-white/12" />
                     <div aria-hidden className="absolute inset-x-8 top-1/2 h-px bg-gradient-to-r from-transparent via-orange-200/50 to-transparent" />
                     <div aria-hidden className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-orange-100/30 shadow-[0_0_70px_rgba(255,84,32,0.2)]" />
