@@ -11,3 +11,5 @@ The `prototype_weapon_state` field is separate from both catalog definitions and
 Infected alert, pursuit, wind-up, recovery, and stagger states are also transient. Loading a checkpoint reconstructs the encounter from the saved objective and infected state instead of resuming halfway through an attack.
 
 Combat presentation state—input buffering, recoil, reload pose, melee swing progress, hit markers, damage overlay, and camera impulses—is transient and resets on load. It never changes catalog, loadout, ownership, or entitlement data.
+
+Touch pointer ownership, analog movement, pending camera drag, and pressed-button state are transient. They reset on pause, inventory, restart, load, or focus loss and are never written to the save file.

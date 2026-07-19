@@ -7,6 +7,7 @@ const PrototypeWeaponStateScript := preload("res://scripts/prototype_weapon_stat
 const PrototypeInfectedBrainScript := preload("res://scripts/prototype_infected_brain.gd")
 const PrototypeCombatMotionScript := preload("res://scripts/prototype_combat_motion.gd")
 const PrototypeCombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
+const PrototypeTouchInputScript := preload("res://scripts/prototype_touch_input.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
@@ -31,6 +32,8 @@ const CAMERA_SMOOTHING := 9.0
 const CAMERA_LOOK_AHEAD := 0.16
 const CAMERA_TURN_SPEED := 1.45
 const FIRE_BUFFER_WINDOW := 0.12
+const TOUCH_LOOK_YAW_SCALE := 2.2
+const MOUSE_TOUCH_POINTER_ID := 10000
 const SIGNAL_BEACON_REACH := 2.2
 const INFECTED_COLOR := Color("8b9b73")
 
@@ -41,6 +44,7 @@ var prototype_weapon_state = PrototypeWeaponStateScript.new()
 var prototype_infected_brain = PrototypeInfectedBrainScript.new()
 var prototype_combat_motion = PrototypeCombatMotionScript.new()
 var prototype_combat_feedback = PrototypeCombatFeedbackScript.new()
+var prototype_touch_input = PrototypeTouchInputScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -73,10 +77,14 @@ var pickups: Array[Node3D] = []
 var status_label: Label
 var health_label: Label
 var inventory_label: Label
+var threat_label: Label
 var feedback_label: Label
 var combat_status_label: Label
 var hit_marker_label: Label
 var damage_overlay: ColorRect
+var movement_pad: Control
+var movement_thumb: Control
+var look_pad: Control
 var health_bar: ProgressBar
 var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
@@ -124,6 +132,86 @@ func _ready() -> void:
 	_apply_equipped_weapon_presentation()
 	_build_touch_controls()
 	_update_hud()
+
+
+func _input(event: InputEvent) -> void:
+	if movement_pad == null or look_pad == null:
+		return
+	var handled := false
+	if event is InputEventScreenTouch:
+		if not event.pressed:
+			handled = prototype_touch_input.end_pointer(event.index)
+		else:
+			handled = _begin_touch_pointer(event.index, event.position)
+	elif event is InputEventScreenDrag:
+		if event.index == prototype_touch_input.movement_pointer_id():
+			handled = prototype_touch_input.update_movement(
+				event.index,
+				_to_control_position(movement_pad, event.position),
+				movement_pad.size * 0.5,
+				_movement_pad_radius(),
+			)
+		elif event.index == prototype_touch_input.look_pointer_id():
+			handled = prototype_touch_input.update_look(event.index, event.relative, look_pad.size.x)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			handled = _begin_touch_pointer(MOUSE_TOUCH_POINTER_ID, event.position)
+		else:
+			handled = prototype_touch_input.end_pointer(MOUSE_TOUCH_POINTER_ID)
+	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		if prototype_touch_input.movement_pointer_id() == MOUSE_TOUCH_POINTER_ID:
+			handled = prototype_touch_input.update_movement(
+				MOUSE_TOUCH_POINTER_ID,
+				_to_control_position(movement_pad, event.position),
+				movement_pad.size * 0.5,
+				_movement_pad_radius(),
+			)
+		elif prototype_touch_input.look_pointer_id() == MOUSE_TOUCH_POINTER_ID:
+			handled = prototype_touch_input.update_look(MOUSE_TOUCH_POINTER_ID, event.relative, look_pad.size.x)
+	if handled:
+		_update_touch_pad_visuals()
+		get_viewport().set_input_as_handled()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		held_actions.clear()
+		_reset_touch_controls()
+
+
+func _begin_touch_pointer(pointer_id: int, screen_position: Vector2) -> bool:
+	if is_paused or inventory_screen_open or run_failed or run_complete:
+		return false
+	if movement_pad.get_global_rect().has_point(screen_position):
+		return prototype_touch_input.begin_movement(
+			pointer_id,
+			_to_control_position(movement_pad, screen_position),
+			movement_pad.size * 0.5,
+			_movement_pad_radius(),
+		)
+	if look_pad.get_global_rect().has_point(screen_position):
+		return prototype_touch_input.begin_look(pointer_id)
+	return false
+
+
+func _to_control_position(control: Control, screen_position: Vector2) -> Vector2:
+	return control.get_global_transform_with_canvas().affine_inverse() * screen_position
+
+
+func _movement_pad_radius() -> float:
+	return maxf(minf(movement_pad.size.x, movement_pad.size.y) * 0.34, 1.0)
+
+
+func _update_touch_pad_visuals() -> void:
+	if movement_pad == null or movement_thumb == null:
+		return
+	var thumb_center := movement_pad.size * 0.5 + prototype_touch_input.movement_vector() * _movement_pad_radius()
+	movement_thumb.position = thumb_center - movement_thumb.size * 0.5
+
+
+func _reset_touch_controls() -> void:
+	prototype_touch_input.reset()
+	_update_touch_pad_visuals()
 
 
 func _physics_process(delta: float) -> void:
@@ -540,6 +628,8 @@ func _play_prototype_audio(action: String, layered: bool = false) -> void:
 	match action:
 		"reload":
 			duration = 0.18
+		"select":
+			duration = 0.045
 		"player_hit", "enemy_attack":
 			duration = 0.16
 		"death":
@@ -566,6 +656,8 @@ func _play_prototype_audio(action: String, layered: bool = false) -> void:
 				sample = sin(TAU * 420.0 * time) * (click_one + click_two) * 0.32
 			"empty":
 				sample = sin(TAU * 240.0 * time) * envelope * 0.24
+			"select":
+				sample = (sin(TAU * 920.0 * time) * 0.16 + sin(TAU * 1380.0 * time) * 0.08) * envelope
 			"hit":
 				sample = (sin(TAU * 1450.0 * time) * 0.25 + sin(TAU * 210.0 * time) * 0.18) * envelope
 			"player_hit":
@@ -622,10 +714,7 @@ func _movement_input() -> Vector2:
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
 		keyboard.y += 1.0
 
-	var touch := Vector2(
-		float(held_actions.get("right", false)) - float(held_actions.get("left", false)),
-		float(held_actions.get("down", false)) - float(held_actions.get("up", false)),
-	)
+	var touch := prototype_touch_input.movement_vector()
 	return (keyboard + touch).limit_length(1.0)
 
 
@@ -853,7 +942,9 @@ func _update_objective() -> void:
 
 
 func _handle_attack_input() -> void:
-	var attack_down := Input.is_key_pressed(KEY_SPACE) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or bool(held_actions.get("attack", false))
+	var mouse_surface_active := prototype_touch_input.movement_pointer_id() == MOUSE_TOUCH_POINTER_ID or prototype_touch_input.look_pointer_id() == MOUSE_TOUCH_POINTER_ID
+	var mouse_attack_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_surface_active
+	var attack_down := Input.is_key_pressed(KEY_SPACE) or mouse_attack_down or bool(held_actions.get("attack", false))
 	if attack_down and not attack_was_down:
 		_try_attack()
 	attack_was_down = attack_down
@@ -933,6 +1024,7 @@ func _toggle_inventory() -> void:
 		return
 	inventory_screen_open = not inventory_screen_open
 	held_actions.clear()
+	_reset_touch_controls()
 	if inventory_panel != null:
 		inventory_panel.visible = inventory_screen_open
 	if inventory_screen_open:
@@ -957,6 +1049,7 @@ func _toggle_pause() -> void:
 		return
 	is_paused = not is_paused
 	held_actions.clear()
+	_reset_touch_controls()
 	pause_was_down = false
 	inventory_was_down = false
 	inventory_screen_open = false
@@ -1004,6 +1097,7 @@ func _restart_run() -> void:
 	is_paused = false
 	run_failed = false
 	held_actions.clear()
+	_reset_touch_controls()
 	_apply_equipped_weapon_presentation()
 	_remove_salvage_drop()
 	player.position = Vector3(0.0, 1.0, 4.0)
@@ -1269,6 +1363,7 @@ func _collect_pickups() -> void:
 func _update_camera(delta: float = 1.0) -> void:
 	if camera == null or player == null:
 		return
+	camera_yaw -= prototype_touch_input.consume_look_delta() * TOUCH_LOOK_YAW_SCALE
 	if held_actions.get("camera_left", false):
 		camera_yaw -= CAMERA_TURN_SPEED * delta
 	if held_actions.get("camera_right", false):
@@ -1299,9 +1394,10 @@ func _build_touch_controls() -> void:
 
 	status_label = Label.new()
 	status_label.position = Vector2(24.0, 20.0)
-	status_label.size = Vector2(560.0, 68.0)
+	status_label.size = Vector2(620.0, 64.0)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", 20)
+	status_label.add_theme_color_override("font_color", Color("f0e7d8"))
 	hud_root.add_child(status_label)
 
 	health_label = Label.new()
@@ -1310,15 +1406,21 @@ func _build_touch_controls() -> void:
 	hud_root.add_child(health_label)
 	health_bar = _build_progress_bar(hud_root, Vector2(24.0, 124.0), Color("d98263"))
 
+	threat_label = Label.new()
+	threat_label.position = Vector2(24.0, 154.0)
+	threat_label.add_theme_font_size_override("font_size", 18)
+	threat_label.add_theme_color_override("font_color", Color("c4d4ad"))
+	hud_root.add_child(threat_label)
+	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 184.0), Color("9eb27e"))
+
 	inventory_label = Label.new()
-	inventory_label.position = Vector2(24.0, 154.0)
+	inventory_label.position = Vector2(24.0, 214.0)
 	inventory_label.size = Vector2(860.0, 68.0)
 	inventory_label.add_theme_font_size_override("font_size", 18)
 	hud_root.add_child(inventory_label)
-	infected_bar = _build_progress_bar(hud_root, Vector2(24.0, 230.0), Color("9eb27e"))
 
 	feedback_label = Label.new()
-	feedback_label.position = Vector2(24.0, 260.0)
+	feedback_label.position = Vector2(24.0, 278.0)
 	feedback_label.size = Vector2(620.0, 46.0)
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("ffd2ae"))
@@ -1350,18 +1452,7 @@ func _build_touch_controls() -> void:
 	hit_marker_label.visible = false
 	hud_root.add_child(hit_marker_label)
 
-	var dpad := GridContainer.new()
-	dpad.columns = 3
-	dpad.add_theme_constant_override("h_separation", 4)
-	dpad.add_theme_constant_override("v_separation", 4)
-	_set_bottom_left(dpad, 24.0, 26.0, 224.0, 176.0)
-	hud_root.add_child(dpad)
-	_add_touch_spacer(dpad)
-	_add_touch_button(dpad, "▲", "up")
-	_add_touch_spacer(dpad)
-	_add_touch_button(dpad, "◀", "left")
-	_add_touch_button(dpad, "▼", "down")
-	_add_touch_button(dpad, "▶", "right")
+	_build_movement_pad(hud_root)
 
 	var action_panel := VBoxContainer.new()
 	action_panel.add_theme_constant_override("separation", 8)
@@ -1374,12 +1465,8 @@ func _build_touch_controls() -> void:
 	_add_touch_button(weapon_row, "SWITCH", "switch_weapon", Vector2(108.0, 52.0))
 	_add_touch_button(weapon_row, "RELOAD", "reload", Vector2(108.0, 52.0))
 	_add_touch_button(action_panel, "ATTACK", "attack", Vector2(224.0, 58.0))
-	_add_touch_button(action_panel, "FIRE", "fire", Vector2(224.0, 58.0))
-	var camera_row := HBoxContainer.new()
-	camera_row.add_theme_constant_override("separation", 8)
-	action_panel.add_child(camera_row)
-	_add_touch_button(camera_row, "LOOK ◀", "camera_left", Vector2(108.0, 56.0))
-	_add_touch_button(camera_row, "LOOK ▶", "camera_right", Vector2(108.0, 56.0))
+	_add_touch_button(action_panel, "FIRE", "fire", Vector2(224.0, 58.0), true)
+	_build_look_pad(action_panel)
 	var save_load_row := HBoxContainer.new()
 	save_load_row.add_theme_constant_override("separation", 8)
 	action_panel.add_child(save_load_row)
@@ -1388,7 +1475,7 @@ func _build_touch_controls() -> void:
 	_add_touch_button(action_panel, "RESET RUN", "restart", Vector2(224.0, 48.0))
 
 	var instructions := Label.new()
-	instructions.text = "WASD / touch move   |   Q / SWITCH   |   Space / ATTACK   |   E / FIRE   |   F / RELOAD   |   I / INVENTORY"
+	instructions.text = "LEFT PAD: MOVE   |   DRAG: TURN   |   ATTACK / FIRE / RELOAD"
 	instructions.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	instructions.offset_left = 24.0
 	instructions.offset_top = -34.0
@@ -1459,6 +1546,70 @@ func _build_touch_controls() -> void:
 	hud_root.add_child(pause_panel)
 	_build_inventory_panel(hud_root)
 	_build_defeat_panel(hud_root)
+
+
+func _build_movement_pad(parent: Control) -> void:
+	movement_pad = Control.new()
+	movement_pad.name = "MovementPad"
+	movement_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_set_bottom_left(movement_pad, 24.0, 34.0, 208.0, 208.0)
+	parent.add_child(movement_pad)
+
+	var pad_background := Panel.new()
+	pad_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pad_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad_background.add_theme_stylebox_override("panel", _touch_surface_style(Color(0.06, 0.09, 0.11, 0.68), Color(0.76, 0.82, 0.78, 0.34), 104))
+	movement_pad.add_child(pad_background)
+
+	var move_label := Label.new()
+	move_label.text = "MOVE"
+	move_label.set_anchors_preset(Control.PRESET_CENTER)
+	move_label.offset_left = -48.0
+	move_label.offset_top = -14.0
+	move_label.offset_right = 48.0
+	move_label.offset_bottom = 14.0
+	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	move_label.add_theme_color_override("font_color", Color(0.84, 0.88, 0.84, 0.52))
+	move_label.add_theme_font_size_override("font_size", 16)
+	move_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	movement_pad.add_child(move_label)
+
+	movement_thumb = Panel.new()
+	movement_thumb.name = "MovementThumb"
+	movement_thumb.size = Vector2(62.0, 62.0)
+	movement_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	movement_thumb.add_theme_stylebox_override("panel", _touch_surface_style(Color(0.74, 0.80, 0.74, 0.82), Color(0.95, 0.90, 0.78, 0.80), 31))
+	movement_pad.add_child(movement_thumb)
+	_update_touch_pad_visuals()
+
+
+func _build_look_pad(parent: Control) -> void:
+	look_pad = PanelContainer.new()
+	look_pad.name = "LookPad"
+	look_pad.custom_minimum_size = Vector2(224.0, 72.0)
+	look_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	look_pad.add_theme_stylebox_override("panel", _touch_surface_style(Color(0.07, 0.10, 0.12, 0.76), Color(0.82, 0.72, 0.55, 0.44), 12))
+	var look_label := Label.new()
+	look_label.text = "DRAG TO TURN   ↔"
+	look_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	look_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	look_label.add_theme_color_override("font_color", Color("eadcc7"))
+	look_label.add_theme_font_size_override("font_size", 17)
+	look_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	look_pad.add_child(look_label)
+	parent.add_child(look_pad)
+
+
+func _touch_surface_style(background: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	return style
 
 
 func _build_inventory_panel(parent: Control) -> void:
@@ -1741,13 +1892,23 @@ func _add_touch_spacer(parent: Control) -> void:
 	parent.add_child(spacer)
 
 
-func _add_touch_button(parent: Control, label: String, action: String, button_size: Vector2 = Vector2(72.0, 56.0)) -> void:
+func _add_touch_button(parent: Control, label: String, action: String, button_size: Vector2 = Vector2(72.0, 56.0), emphasis: bool = false) -> void:
 	var button := Button.new()
 	button.text = label
 	button.custom_minimum_size = button_size
 	button.size = button_size
 	button.focus_mode = Control.FOCUS_NONE
-	button.button_down.connect(func() -> void: held_actions[action] = true)
+	var normal_color := Color(0.24, 0.12, 0.08, 0.94) if emphasis else Color(0.07, 0.10, 0.12, 0.92)
+	var pressed_color := Color(0.48, 0.20, 0.10, 1.0) if emphasis else Color(0.19, 0.25, 0.27, 1.0)
+	var border_color := Color(0.96, 0.60, 0.34, 0.82) if emphasis else Color(0.74, 0.78, 0.73, 0.46)
+	button.add_theme_stylebox_override("normal", _touch_surface_style(normal_color, border_color, 8))
+	button.add_theme_stylebox_override("hover", _touch_surface_style(normal_color.lightened(0.08), border_color, 8))
+	button.add_theme_stylebox_override("pressed", _touch_surface_style(pressed_color, border_color.lightened(0.12), 8))
+	button.add_theme_font_size_override("font_size", 17)
+	button.button_down.connect(func() -> void:
+		held_actions[action] = true
+		_play_prototype_audio("select", true)
+	)
 	button.button_up.connect(func() -> void: held_actions[action] = false)
 	parent.add_child(button)
 
@@ -1761,35 +1922,32 @@ func _update_hud() -> void:
 		defeat_panel.visible = run_failed
 	if inventory_panel != null:
 		inventory_panel.visible = inventory_screen_open
-	var renderer: String = String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "unknown"))
-	var renderer_note := "Renderer: %s" % renderer
-	if renderer != "mobile":
-		renderer_note += " | compatibility gate active"
-	var threat_note := "Threat: defeated" if infected == null else "Threat: %d / 100 | %s" % [infected_health, prototype_infected_brain.state().to_upper()]
 	var objective_note := ""
 	if run_failed:
-		objective_note = "RUN LOST - RETRY ROUTE or LOAD CHECKPOINT"
+		objective_note = "RUN LOST - RETRY ROUTE OR LOAD CHECKPOINT"
 	elif is_paused:
-		objective_note = "RUN PAUSED - press P, ESC, or RESUME to continue"
+		objective_note = "RUN PAUSED - RESUME WHEN READY"
 	elif run_complete:
-		objective_note = "RUN COMPLETE — press R or RESET RUN to replay"
+		objective_note = "RUN COMPLETE - RESET THE ROUTE TO REPLAY"
 	elif not beacon_reached and signal_beacon != null:
 		var beacon_distance := maxi(int(player.global_position.distance_to(signal_beacon.global_position)), 0)
-		objective_note = "Objective: reach the signal beacon (%dm)" % beacon_distance
+		objective_note = "REACH THE SIGNAL BEACON   %dm" % beacon_distance
 	elif infected != null:
 		var infected_distance := maxi(int(player.global_position.distance_to(infected.global_position)), 0)
-		objective_note = "Objective: neutralize the infected (%dm)" % infected_distance
+		objective_note = "NEUTRALIZE THE INFECTED   %dm" % infected_distance
 	elif salvage_drop != null:
 		var salvage_distance := maxi(int(player.global_position.distance_to(salvage_drop.global_position)), 0)
-		objective_note = "Objective: collect salvage (%dm)" % salvage_distance
+		objective_note = "COLLECT THE SALVAGE   %dm" % salvage_distance
 	else:
-		objective_note = "Objective complete — securing route"
-	status_label.text = "The Infected prototype\n%s\nData: %s | Items: %s\n%s\n%s" % [renderer_note, game_data.get("content_version", "unknown"), item_catalog.content_version(), threat_note, objective_note]
-	health_label.text = "Health: %d / %d   |   Save schema: %d" % [health, STARTING_HEALTH, SAVE_SCHEMA_VERSION]
-	var weapon_status := "%s   |   Magazine: %d / %d   |   Reserve: %d %s" % [prototype_weapon_state.active_mode().to_upper(), prototype_weapon_state.magazine_ammo(), prototype_weapon_state.magazine_capacity(), prototype_weapon_state.reserve_ammo(), prototype_weapon_state.ammo_type()]
+		objective_note = "ROUTE SECURED"
+	status_label.text = "OBJECTIVE\n%s" % objective_note
+	health_label.text = "SURVIVOR   %d / %d" % [health, STARTING_HEALTH]
+	if threat_label != null:
+		threat_label.text = "THREAT CLEARED" if infected == null else "INFECTED   %d / 100   %s" % [infected_health, prototype_infected_brain.state().to_upper()]
+	var weapon_status := "%s   MAG %d / %d   RES %d %s" % [prototype_weapon_state.active_mode().to_upper(), prototype_weapon_state.magazine_ammo(), prototype_weapon_state.magazine_capacity(), prototype_weapon_state.reserve_ammo(), prototype_weapon_state.ammo_type().to_upper()]
 	if prototype_weapon_state.is_reloading():
-		weapon_status += "   |   RELOADING %.1fs" % prototype_weapon_state.reload_remaining()
-	inventory_label.text = "Inventory   Scrap: %d   Medkits: %d\nLoadout   %s   |   %s\n%s" % [inventory.get("scrap", 0), inventory.get("medkits", 0), prototype_loadout.equipped_item_name("weapon", item_catalog), prototype_loadout.equipped_item_name("gear", item_catalog), weapon_status]
+		weapon_status += "   RELOADING %.1fs" % prototype_weapon_state.reload_remaining()
+	inventory_label.text = "LOADOUT   %s   |   %s\n%s   |   SCRAP %d   MEDKITS %d" % [prototype_loadout.equipped_item_name("weapon", item_catalog), prototype_loadout.equipped_item_name("gear", item_catalog), weapon_status, inventory.get("scrap", 0), inventory.get("medkits", 0)]
 	health_bar.value = health
 	infected_bar.value = infected_health
 	infected_bar.visible = infected != null
@@ -1820,6 +1978,7 @@ func _load_save() -> bool:
 	prototype_combat_motion.reset()
 	prototype_combat_feedback.reset()
 	held_actions.clear()
+	_reset_touch_controls()
 	_remove_salvage_drop()
 	pause_was_down = false
 	fire_was_down = false
