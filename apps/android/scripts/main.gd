@@ -8,6 +8,7 @@ const PrototypeInfectedBrainScript := preload("res://scripts/prototype_infected_
 const PrototypeCombatMotionScript := preload("res://scripts/prototype_combat_motion.gd")
 const PrototypeCombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
 const PrototypeTouchInputScript := preload("res://scripts/prototype_touch_input.gd")
+const PrototypeActorAnimationScript := preload("res://scripts/prototype_actor_animation.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
@@ -45,6 +46,8 @@ var prototype_infected_brain = PrototypeInfectedBrainScript.new()
 var prototype_combat_motion = PrototypeCombatMotionScript.new()
 var prototype_combat_feedback = PrototypeCombatFeedbackScript.new()
 var prototype_touch_input = PrototypeTouchInputScript.new()
+var prototype_player_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_SURVIVOR)
+var prototype_infected_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_INFECTED)
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -93,6 +96,8 @@ var muzzle_flash: MeshInstance3D
 var muzzle_light: OmniLight3D
 var prototype_audio_player: AudioStreamPlayer
 var prototype_feedback_audio_player: AudioStreamPlayer
+var prototype_foley_audio_player: AudioStreamPlayer
+var prototype_infected_foley_audio_player: AudioStreamPlayer
 var infected_material: StandardMaterial3D
 var infected_telegraph: MeshInstance3D
 var hit_flash_timer := 0.0
@@ -120,6 +125,8 @@ var inventory_equip_button: Button
 var inventory_category_label: Label
 var inventory_category := "weapon"
 var inventory_selected_item_id := ""
+var player_rig: Dictionary = {}
+var infected_rig: Dictionary = {}
 
 
 func _ready() -> void:
@@ -261,6 +268,7 @@ func _physics_process(delta: float) -> void:
 	_handle_restart_input()
 	_update_camera(delta)
 	_update_combat_feedback(delta)
+	_update_actor_animation(delta)
 	_update_environment(delta)
 	_update_objective()
 
@@ -457,14 +465,7 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 	actor.set_meta("is_infected", is_infected)
 	add_child(actor)
 
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := CapsuleMesh.new()
-	mesh.height = 1.8
-	mesh.radius = 0.45
-	mesh_instance.mesh = mesh
-	var material := _material(color)
-	mesh_instance.material_override = material
-	actor.add_child(mesh_instance)
+	var rig := _build_actor_rig(actor, color, is_infected)
 
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
@@ -474,13 +475,56 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 	actor.add_child(collision)
 
 	if is_infected:
-		mesh_instance.scale = Vector3(1.0, 1.15, 1.0)
-		infected_material = material
+		infected_rig = rig
+		infected_material = rig.get("material") as StandardMaterial3D
 		_build_infected_telegraph(actor.global_position)
 	else:
+		player_rig = rig
 		player_weapon = _build_weapon(actor)
 		player_sidearm = _build_sidearm(actor)
 	return actor
+
+
+func _build_actor_rig(parent: Node3D, color: Color, is_infected: bool) -> Dictionary:
+	var rig_root := Node3D.new()
+	rig_root.name = "InfectedArticulatedRig" if is_infected else "SurvivorArticulatedRig"
+	parent.add_child(rig_root)
+	var material := _material(color)
+	var torso := _build_rig_part(rig_root, "Torso", Vector3(0.0, 0.24, 0.0), Vector3(0.66, 0.78, 0.38), Vector3.ZERO, material)
+	_build_rig_part(rig_root, "Pelvis", Vector3(0.0, -0.24, 0.0), Vector3(0.52, 0.28, 0.34), Vector3.ZERO, material)
+	var head := _build_rig_part(rig_root, "Head", Vector3(0.0, 0.72, 0.0), Vector3(0.38, 0.42, 0.36), Vector3(0.0, 0.18, 0.0), material)
+	var left_arm := _build_rig_part(rig_root, "LeftArm", Vector3(-0.43, 0.54, 0.0), Vector3(0.20, 0.72, 0.22), Vector3(0.0, -0.34, 0.0), material)
+	var right_arm := _build_rig_part(rig_root, "RightArm", Vector3(0.43, 0.54, 0.0), Vector3(0.20, 0.72, 0.22), Vector3(0.0, -0.34, 0.0), material)
+	var left_leg := _build_rig_part(rig_root, "LeftLeg", Vector3(-0.19, -0.28, 0.0), Vector3(0.24, 0.76, 0.28), Vector3(0.0, -0.37, 0.0), material)
+	var right_leg := _build_rig_part(rig_root, "RightLeg", Vector3(0.19, -0.28, 0.0), Vector3(0.24, 0.76, 0.28), Vector3(0.0, -0.37, 0.0), material)
+	if is_infected:
+		rig_root.scale = Vector3(1.04, 1.06, 1.0)
+		head.rotation_degrees = Vector3(5.0, -12.0, 4.0)
+	return {
+		"root": rig_root,
+		"torso": torso,
+		"head": head,
+		"left_arm": left_arm,
+		"right_arm": right_arm,
+		"left_leg": left_leg,
+		"right_leg": right_leg,
+		"material": material,
+	}
+
+
+func _build_rig_part(parent: Node3D, part_name: String, pivot_position: Vector3, size: Vector3, mesh_offset: Vector3, material: StandardMaterial3D) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.name = part_name
+	pivot.position = pivot_position
+	parent.add_child(pivot)
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh_instance.mesh = mesh
+	mesh_instance.position = mesh_offset
+	mesh_instance.material_override = material
+	pivot.add_child(mesh_instance)
+	return pivot
 
 
 func _build_weapon(parent: Node3D) -> MeshInstance3D:
@@ -598,6 +642,8 @@ func _sync_ammo_inventory() -> void:
 func _build_prototype_audio() -> void:
 	prototype_audio_player = _create_prototype_audio_player("PrototypeWeaponAudio", -9.0)
 	prototype_feedback_audio_player = _create_prototype_audio_player("PrototypeCombatFeedbackAudio", -11.0)
+	prototype_foley_audio_player = _create_prototype_audio_player("PrototypeSurvivorFoleyAudio", -14.0)
+	prototype_infected_foley_audio_player = _create_prototype_audio_player("PrototypeInfectedFoleyAudio", -13.0)
 
 
 func _create_prototype_audio_player(player_name: String, volume_db: float) -> AudioStreamPlayer:
@@ -612,13 +658,22 @@ func _create_prototype_audio_player(player_name: String, volume_db: float) -> Au
 	return player_node
 
 
-func _play_prototype_audio(action: String, layered: bool = false) -> void:
+func _play_prototype_audio(action: String, layered: bool = false, foley: bool = false) -> void:
 	var player_node := prototype_feedback_audio_player if layered else prototype_audio_player
+	if foley:
+		player_node = prototype_infected_foley_audio_player if action == "footstep_infected" else prototype_foley_audio_player
 	if player_node == null:
 		return
 	var item := _equipped_weapon_item()
 	var audio: Dictionary = item.get("audio", {})
-	player_node.set_meta("catalog_audio_id", String(audio.get(action, "prototype.%s" % action)))
+	var audio_id := String(audio.get(action, "prototype.%s" % action))
+	if foley:
+		audio_id = (
+			"audio.foley.infected.footstep.concrete"
+			if action == "footstep_infected"
+			else "audio.foley.survivor.footstep.concrete"
+		)
+	player_node.set_meta("catalog_audio_id", audio_id)
 	player_node.stop()
 	player_node.play()
 	var playback := player_node.get_stream_playback() as AudioStreamGeneratorPlayback
@@ -632,10 +687,14 @@ func _play_prototype_audio(action: String, layered: bool = false) -> void:
 			duration = 0.045
 		"player_hit", "enemy_attack":
 			duration = 0.16
+		"enemy_alert":
+			duration = 0.20
 		"death":
 			duration = 0.22
 		"empty", "hit":
 			duration = 0.08
+		"footstep_survivor", "footstep_infected":
+			duration = 0.075
 	var frame_count := int(22050.0 * duration)
 	var frames := PackedVector2Array()
 	frames.resize(frame_count)
@@ -664,10 +723,16 @@ func _play_prototype_audio(action: String, layered: bool = false) -> void:
 				sample = (sin(TAU * 64.0 * time) * 0.45 + sin(TAU * 118.0 * time) * 0.20) * envelope
 			"enemy_attack":
 				sample = sin(TAU * (78.0 + progress * 34.0) * time) * envelope * 0.38
+			"enemy_alert":
+				sample = (sin(TAU * (62.0 + progress * 58.0) * time) * 0.34 + sin(TAU * 188.0 * time) * 0.10) * envelope
 			"death":
 				sample = (sin(TAU * (105.0 - progress * 48.0) * time) * 0.45) * envelope
 			"melee":
 				sample = (sin(TAU * 170.0 * time) * 0.34 + sin(TAU * 520.0 * time) * 0.12) * envelope
+			"footstep_survivor":
+				sample = (sin(TAU * 92.0 * time) * 0.24 + sin(TAU * 176.0 * time) * 0.08) * envelope
+			"footstep_infected":
+				sample = (sin(TAU * 66.0 * time) * 0.30 + sin(TAU * 123.0 * time) * 0.10) * envelope
 			_:
 				sample = sin(TAU * 360.0 * time) * envelope * 0.20
 		frames[index] = Vector2(sample, sample)
@@ -864,6 +929,50 @@ func _update_combat_motion(delta: float) -> void:
 		player_weapon.rotation_degrees = player_weapon.rotation_degrees.lerp(melee_rotation, blend_weight)
 	if bool(motion.get("melee_impact", false)):
 		_resolve_melee_attack()
+
+
+func _update_actor_animation(delta: float) -> void:
+	if player != null and not player_rig.is_empty():
+		var movement_ratio := clampf(Vector2(player.velocity.x, player.velocity.z).length() / PLAYER_SPEED, 0.0, 1.0)
+		var action := PrototypeActorAnimationScript.ACTION_NONE
+		var action_progress := 0.0
+		if prototype_combat_motion.is_melee_active():
+			action = PrototypeActorAnimationScript.ACTION_MELEE
+			action_progress = prototype_combat_motion.melee_progress()
+		elif prototype_combat_motion.is_reload_active():
+			action = PrototypeActorAnimationScript.ACTION_RELOAD
+			action_progress = prototype_combat_motion.reload_progress()
+		elif prototype_combat_motion.recoil_weight() > 0.01:
+			action = PrototypeActorAnimationScript.ACTION_FIRE
+			action_progress = prototype_combat_motion.recoil_weight()
+		var player_pose := prototype_player_animation.advance(delta, movement_ratio, "locomotion", 0.0, action, action_progress)
+		_apply_actor_pose(player_rig, player_pose)
+		if bool(player_pose.get("footstep", false)):
+			_play_prototype_audio("footstep_survivor", false, true)
+
+	if infected != null and not infected_rig.is_empty():
+		var infected_movement_ratio := clampf(Vector2(infected.velocity.x, infected.velocity.z).length() / INFECTED_SPEED, 0.0, 1.0)
+		var infected_pose := prototype_infected_animation.advance(
+			delta,
+			infected_movement_ratio,
+			prototype_infected_brain.state(),
+			prototype_infected_brain.state_progress(),
+		)
+		_apply_actor_pose(infected_rig, infected_pose)
+		if bool(infected_pose.get("footstep", false)):
+			_play_prototype_audio("footstep_infected", false, true)
+
+
+func _apply_actor_pose(rig: Dictionary, pose: Dictionary) -> void:
+	var root := rig.get("root") as Node3D
+	if root == null:
+		return
+	root.position = Vector3(0.0, float(pose.get("root_position_y", 0.0)), 0.0)
+	root.rotation_degrees = pose.get("root_rotation", Vector3.ZERO)
+	for part_name: String in ["torso", "head", "left_arm", "right_arm", "left_leg", "right_leg"]:
+		var part := rig.get(part_name) as Node3D
+		if part != null:
+			part.rotation_degrees = pose.get("%s_rotation" % part_name, Vector3.ZERO)
 
 
 func _update_infected_telegraph() -> void:
@@ -1081,6 +1190,8 @@ func _restart_run() -> void:
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
 	prototype_combat_motion.reset()
 	prototype_combat_feedback.reset()
+	prototype_player_animation.reset()
+	prototype_infected_animation.reset()
 	_reset_infected_behavior(false)
 	save_timer = 0.0
 	beacon_reached = false
@@ -1977,6 +2088,8 @@ func _load_save() -> bool:
 	fire_buffer_timer = 0.0
 	prototype_combat_motion.reset()
 	prototype_combat_feedback.reset()
+	prototype_player_animation.reset()
+	prototype_infected_animation.reset()
 	held_actions.clear()
 	_reset_touch_controls()
 	_remove_salvage_drop()

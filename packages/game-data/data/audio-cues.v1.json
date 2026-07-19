@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "0.1.0-item-foundation",
+  "contentVersion": "0.2.0-actor-foley-foundation",
   "status": "prototype",
   "cues": [
     { "id": "music.main_menu", "purpose": "Main-menu atmosphere", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "music", "loop": true, "spatial": false, "volumeDb": -12 }, "soundIdentity": "Sparse low strings, distant emergency-band texture, and restrained industrial pulse." },
@@ -8,6 +8,9 @@
     { "id": "ui.shop.select", "purpose": "Item selection", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "ui", "loop": false, "spatial": false, "volumeDb": -7 }, "soundIdentity": "Short tactile relay click with a soft low confirmation body." },
     { "id": "ui.shop.purchase_confirm", "purpose": "Verified purchase confirmation", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "ui", "loop": false, "spatial": false, "volumeDb": -5 }, "soundIdentity": "Two-stage secure latch followed by a restrained warm confirmation tone." },
     { "id": "ui.inventory.navigate", "purpose": "Inventory navigation", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "ui", "loop": false, "spatial": false, "volumeDb": -9 }, "soundIdentity": "Quiet fabric-and-interface tick designed for rapid repetition without fatigue." },
+
+    { "id": "audio.foley.survivor.footstep.concrete", "purpose": "Survivor concrete footstep", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "foley", "loop": false, "spatial": false, "volumeDb": -14 }, "soundIdentity": "Close dry boot impact with a compact concrete scrape, synchronized to the survivor gait event." },
+    { "id": "audio.foley.infected.footstep.concrete", "purpose": "Infected concrete footstep", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "foley", "loop": false, "spatial": false, "volumeDb": -13 }, "soundIdentity": "Uneven heavy impact with a loose dragging grit tail, synchronized to the infected gait event." },
 
     { "id": "audio.weapon.raven12.fire", "purpose": "Raven-12 fire", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "weapons", "loop": false, "spatial": true, "volumeDb": -2 }, "soundIdentity": "Compressed low-frequency shotgun blast with a short urban tail." },
     { "id": "audio.weapon.raven12.reload", "purpose": "Raven-12 reload", "status": "placeholder", "assetRegistryId": null, "playback": { "bus": "weapons", "loop": false, "spatial": false, "volumeDb": -6 }, "soundIdentity": "Heavy pump action and individually readable shell insertions." },

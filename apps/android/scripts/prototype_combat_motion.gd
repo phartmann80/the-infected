@@ -99,3 +99,19 @@ func is_melee_active() -> bool:
 
 func is_reload_active() -> bool:
 	return _reload_remaining > 0.0
+
+
+func melee_progress() -> float:
+	if _melee_total <= 0.0:
+		return 0.0
+	return clampf(1.0 - (_melee_remaining / _melee_total), 0.0, 1.0)
+
+
+func reload_progress() -> float:
+	if _reload_total <= 0.0:
+		return 0.0
+	return clampf(1.0 - (_reload_remaining / _reload_total), 0.0, 1.0)
+
+
+func recoil_weight() -> float:
+	return _recoil_weight
