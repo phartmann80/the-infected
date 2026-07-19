@@ -1,7 +1,7 @@
 # Game AI Gateway
 
-This package defines the server-side contract between The Infected and future
-Mastra/Voicebox services. It intentionally has no runtime AI dependency yet.
+This package defines the server-side contract between The Infected and the
+Mastra/Voicebox services. It has no cloud AI dependency.
 
 ## Boundary
 
@@ -12,12 +12,19 @@ Mastra/Voicebox services. It intentionally has no runtime AI dependency yet.
   receives Mastra or Voicebox credentials.
 - `MockVoiceProvider` is the only provider enabled by default for tests.
 
+## Local Voicebox transport
+
+`VoiceboxLocalProvider` is an opt-in server adapter. It sends `profile_id`,
+`text`, `language`, and the optional engine to Voicebox at
+`VOICEBOX_LOCAL_URL` (default `http://127.0.0.1:17493`), polls the returned
+generation status, and exposes the completed local `/audio/{generation_id}`
+resource as a gateway descriptor. It does not send a cloud API key.
+
 ## Why no live adapter yet?
 
 The exact Voicebox deployment mode, profile identifiers, output storage, and
-approval workflow still need to be selected. The interface supports Voicebox's
-local REST, MCP, or direct-process integration without committing the game to
-one transport.
+approval workflow still need to be selected. The gateway keeps the local REST
+adapter replaceable with Voicebox MCP or a direct local process later.
 
 The local Voicebox project is documented at https://voicebox.sh/ and
 https://docs.voicebox.sh/. Mastra's workflow and server boundaries are

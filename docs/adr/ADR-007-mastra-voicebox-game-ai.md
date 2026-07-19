@@ -29,8 +29,8 @@ or remote provider is required.
 - Android can work offline with packaged, approved voice assets.
 - Live or generated lines can be cached and delivered without exposing model
   credentials in the APK.
-- Voice generation remains replaceable: Voicebox REST, MCP, or a direct process
-  can implement the local provider port.
+- Voice generation remains replaceable: the current adapter uses Voicebox
+  local REST, while MCP or a direct process can be added later.
 - The exact Voicebox profile, model, output format, storage policy, and runtime
   hosting still need approval.
 - Mastra is not installed in the current foundation package; the contract is
@@ -39,8 +39,8 @@ or remote provider is required.
 ## Current implementation
 
 `@the-infected/ai-gateway` contains the server boundary, a Mastra workflow port,
-the local Voicebox provider port, and a mock provider. The mock provider is the
-only active provider and produces dry-run descriptors without audio generation.
+an opt-in Voicebox local REST adapter, and a mock provider. The mock provider is
+the default and produces dry-run descriptors without audio generation.
 
 ## Related references
 
