@@ -17,7 +17,7 @@ This is the Godot 4.7.1 evaluation prototype. It is not a production game projec
 ## Run locally
 
 1. Run `npm ci` at the repository root.
-2. Run `npm run android:data:check` to verify both the foundation and item catalogs are synchronized from `packages/game-data`.
+2. Run `npm run android:data:check` to verify the foundation, item, and scene-audio catalogs are synchronized from `packages/game-data`.
 3. Open `apps/android/project.godot` in Godot 4.7.1.
 4. Run the `AndroidPrototype` scene on desktop for the input and save-schema smoke test.
 
@@ -38,6 +38,8 @@ The landscape touch layer uses a fixed analog movement pad with a remapped dead 
 Action-button feedback uses the equipped prototype item's existing `audio.select` reference and a short generated placeholder cue. It does not add or approve production audio.
 
 The character-presentation layer now replaces single capsule visuals with seven-part articulated primitive rigs for the survivor and infected. A deterministic animation driver produces locomotion, opposite-leg gait, torso counter-motion, survivor melee/reload/fire poses, and infected dormant/alert/pursuit/wind-up/recovery/stagger poses. Gait phase emits synchronized footstep events into a dedicated generated foley channel so production skeletal clips and surface-aware sound assets can later replace the placeholders without changing combat timing. These rigs and tones are review-only runtime hooks, not final characters, motion capture, voice, or audio.
+
+Scene audio now resolves concrete, checkpoint-plate, and roadside-gravel zones through shared data, varies each left/right gait event deterministically, and positions infected footsteps in 3D. A continuously fed ambience bed crossfades between route, engaged-threat, and secured states, ducks smoothly under active narration, and keeps synthesis work frame-bounded, while the signal beacon emits a directional locator pulse. Externalized narration events drive a priority queue, readable subtitles, and stable voice cue IDs; the generated radio chirp is only a timing placeholder so a future local Voicebox render can replace it without coupling gameplay to a provider or API. Dialogue, recordings, final mix, and canonical scene writing remain unapproved.
 
 ## Prototype controls
 

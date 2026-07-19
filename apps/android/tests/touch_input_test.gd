@@ -72,6 +72,18 @@ func _initialize() -> void:
 		runtime.queue_free()
 		_fail("Movement and look surfaces overlap in the landscape layout.")
 		return
+	if runtime.narration_label == null or not viewport_rect.encloses(runtime.narration_label.get_global_rect()):
+		runtime.queue_free()
+		_fail("Narration subtitles were not contained by the landscape safe area.")
+		return
+	if not (runtime.prototype_infected_foley_audio_player is AudioStreamPlayer3D) or not (runtime.prototype_beacon_audio_player is AudioStreamPlayer3D):
+		runtime.queue_free()
+		_fail("Infected foley and beacon locator cues were not configured as spatial audio emitters.")
+		return
+	if runtime.find_child("zone_checkpoint_metal", true, false) == null or runtime.find_child("zone_vehicle_gravel", true, false) == null:
+		runtime.queue_free()
+		_fail("Scene surface zones were not represented in the runtime environment.")
+		return
 	if runtime.status_label.text.contains("Renderer:") or runtime.status_label.text.contains("Data:"):
 		runtime.queue_free()
 		_fail("Player HUD still exposes technical diagnostics in the objective hierarchy.")
@@ -83,7 +95,8 @@ func _initialize() -> void:
 			_fail("A touch button is smaller than the 48 pixel prototype minimum: %s." % button.name)
 			return
 	runtime.queue_free()
-	print("Android touch input test passed: analog dead zone, bounded multitouch, drag look, release recovery, landscape containment, readable HUD hierarchy, and touch target sizing.")
+	await process_frame
+	print("Android touch input test passed: analog dead zone, bounded multitouch, drag look, release recovery, landscape subtitle containment, spatial scene-audio emitters, readable HUD hierarchy, and touch target sizing.")
 	quit(0)
 
 

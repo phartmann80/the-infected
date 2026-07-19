@@ -9,8 +9,10 @@ const PrototypeCombatMotionScript := preload("res://scripts/prototype_combat_mot
 const PrototypeCombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
 const PrototypeTouchInputScript := preload("res://scripts/prototype_touch_input.gd")
 const PrototypeActorAnimationScript := preload("res://scripts/prototype_actor_animation.gd")
+const PrototypeSceneAudioScript := preload("res://scripts/prototype_scene_audio.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
+const SCENE_AUDIO_PATH := "res://data/scene_audio.v1.json"
 const SAVE_PATH := "user://save_v1.json"
 const SAVE_SCHEMA_VERSION := 6
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
@@ -37,6 +39,9 @@ const TOUCH_LOOK_YAW_SCALE := 2.2
 const MOUSE_TOUCH_POINTER_ID := 10000
 const SIGNAL_BEACON_REACH := 2.2
 const INFECTED_COLOR := Color("8b9b73")
+const AUDIO_SAMPLE_RATE := 22050.0
+const AMBIENCE_FILL_FRAME_LIMIT := 2048
+const BEACON_PULSE_INTERVAL := 1.55
 
 var game_data: Dictionary = {}
 var item_catalog = ItemCatalogScript.new()
@@ -48,6 +53,7 @@ var prototype_combat_feedback = PrototypeCombatFeedbackScript.new()
 var prototype_touch_input = PrototypeTouchInputScript.new()
 var prototype_player_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_SURVIVOR)
 var prototype_infected_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_INFECTED)
+var prototype_scene_audio = PrototypeSceneAudioScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -97,7 +103,10 @@ var muzzle_light: OmniLight3D
 var prototype_audio_player: AudioStreamPlayer
 var prototype_feedback_audio_player: AudioStreamPlayer
 var prototype_foley_audio_player: AudioStreamPlayer
-var prototype_infected_foley_audio_player: AudioStreamPlayer
+var prototype_infected_foley_audio_player: AudioStreamPlayer3D
+var prototype_ambience_audio_player: AudioStreamPlayer
+var prototype_voice_audio_player: AudioStreamPlayer
+var prototype_beacon_audio_player: AudioStreamPlayer3D
 var infected_material: StandardMaterial3D
 var infected_telegraph: MeshInstance3D
 var hit_flash_timer := 0.0
@@ -127,18 +136,33 @@ var inventory_category := "weapon"
 var inventory_selected_item_id := ""
 var player_rig: Dictionary = {}
 var infected_rig: Dictionary = {}
+var narration_label: Label
+var narration_queue: Array[Dictionary] = []
+var active_narration: Dictionary = {}
+var narration_remaining := 0.0
+var ambience_sample_cursor := 0.0
+var ambience_voice_duck := 1.0
+var beacon_pulse_timer := 0.25
 
 
 func _ready() -> void:
 	_load_game_data()
 	_load_item_catalog()
+	_load_scene_audio()
 	prototype_loadout.initialize(item_catalog)
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
 	_build_world()
-	_load_save()
+	var restored_checkpoint := _load_save()
 	_apply_equipped_weapon_presentation()
 	_build_touch_controls()
 	_update_hud()
+	_queue_narration("route_resumed" if restored_checkpoint else "route_start")
+
+
+func _process(delta: float) -> void:
+	_update_scene_audio(delta)
+	if not is_paused and not inventory_screen_open:
+		_update_narration(delta)
 
 
 func _input(event: InputEvent) -> void:
@@ -184,6 +208,22 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		held_actions.clear()
 		_reset_touch_controls()
+
+
+func _exit_tree() -> void:
+	for player_node in [
+		prototype_audio_player,
+		prototype_feedback_audio_player,
+		prototype_foley_audio_player,
+		prototype_ambience_audio_player,
+		prototype_voice_audio_player,
+	]:
+		if player_node != null and is_instance_valid(player_node):
+			player_node.stop()
+	if prototype_infected_foley_audio_player != null and is_instance_valid(prototype_infected_foley_audio_player):
+		prototype_infected_foley_audio_player.stop()
+	if prototype_beacon_audio_player != null and is_instance_valid(prototype_beacon_audio_player):
+		prototype_beacon_audio_player.stop()
 
 
 func _begin_touch_pointer(pointer_id: int, screen_position: Vector2) -> bool:
@@ -296,11 +336,17 @@ func _load_item_catalog() -> void:
 		push_error("Prototype item catalog unavailable: %s" % item_catalog.error_message)
 
 
+func _load_scene_audio() -> void:
+	if not prototype_scene_audio.load_from_path(SCENE_AUDIO_PATH):
+		push_error("Prototype scene audio unavailable: %s" % prototype_scene_audio.error_message)
+
+
 func _build_world() -> void:
 	environment_root = Node3D.new()
 	environment_root.name = String(game_data.get("environment_id", "environment-001-review"))
 	add_child(environment_root)
 	_build_box(environment_root, Vector3(0.0, -0.15, 0.0), Vector3(24.0, 0.3, 24.0), Color("24313a"))
+	_build_surface_zones(environment_root)
 	_build_box(environment_root, Vector3(-5.0, 1.0, -3.0), Vector3(2.0, 2.0, 2.0), Color("45515a"))
 	_build_box(environment_root, Vector3(5.0, 0.75, 1.0), Vector3(3.0, 1.5, 1.5), Color("5b4740"))
 	_build_checkpoint(environment_root)
@@ -366,6 +412,26 @@ func _build_box(parent: Node3D, position: Vector3, size: Vector3, color: Color) 
 	collision.shape = shape
 	body.add_child(collision)
 	return body
+
+
+func _build_surface_zones(parent: Node3D) -> void:
+	for zone_value in prototype_scene_audio.surface_zones():
+		var zone := zone_value as Dictionary
+		var center := zone.get("center", []) as Array
+		var size := zone.get("size", []) as Array
+		if center.size() != 2 or size.size() != 2:
+			continue
+		var surface_id := String(zone.get("surfaceId", "surface.concrete"))
+		var surface := prototype_scene_audio.surface_definition(surface_id)
+		var patch := MeshInstance3D.new()
+		patch.name = String(zone.get("id", "SurfaceZone")).replace(".", "_")
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(float(size[0]), 0.025, float(size[1]))
+		patch.mesh = mesh
+		patch.position = Vector3(float(center[0]), float(zone.get("visualElevation", 0.012)), float(center[1]))
+		patch.material_override = _material(Color(String(surface.get("visualColor", "34434a"))))
+		patch.set_meta("surface_id", surface_id)
+		parent.add_child(patch)
 
 
 func _build_checkpoint(parent: Node3D) -> void:
@@ -478,6 +544,8 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 		infected_rig = rig
 		infected_material = rig.get("material") as StandardMaterial3D
 		_build_infected_telegraph(actor.global_position)
+		if prototype_audio_player != null:
+			_attach_infected_foley_player(actor)
 	else:
 		player_rig = rig
 		player_weapon = _build_weapon(actor)
@@ -640,39 +708,90 @@ func _sync_ammo_inventory() -> void:
 
 
 func _build_prototype_audio() -> void:
-	prototype_audio_player = _create_prototype_audio_player("PrototypeWeaponAudio", -9.0)
-	prototype_feedback_audio_player = _create_prototype_audio_player("PrototypeCombatFeedbackAudio", -11.0)
-	prototype_foley_audio_player = _create_prototype_audio_player("PrototypeSurvivorFoleyAudio", -14.0)
-	prototype_infected_foley_audio_player = _create_prototype_audio_player("PrototypeInfectedFoleyAudio", -13.0)
+	prototype_audio_player = _create_prototype_audio_player("PrototypeWeaponAudio", -9.0, "weapons")
+	prototype_feedback_audio_player = _create_prototype_audio_player("PrototypeCombatFeedbackAudio", -11.0, "combat")
+	prototype_foley_audio_player = _create_prototype_audio_player("PrototypeSurvivorFoleyAudio", -14.0, "foley")
+	prototype_ambience_audio_player = _create_prototype_audio_player("PrototypeRouteAmbience", -4.0, "ambience", 0.6)
+	prototype_voice_audio_player = _create_prototype_audio_player("PrototypeNarrationCue", -8.0, "voice")
+	_attach_infected_foley_player()
+	_attach_beacon_audio_player()
+	if _audio_playback_enabled():
+		prototype_ambience_audio_player.play()
 
 
-func _create_prototype_audio_player(player_name: String, volume_db: float) -> AudioStreamPlayer:
+func _audio_playback_enabled() -> bool:
+	return DisplayServer.get_name() != "headless"
+
+
+func _ensure_audio_bus(bus_name: String) -> void:
+	if AudioServer.get_bus_index(bus_name) >= 0:
+		return
+	AudioServer.add_bus()
+	AudioServer.set_bus_name(AudioServer.bus_count - 1, bus_name)
+
+
+func _create_prototype_audio_player(player_name: String, volume_db: float, bus_name: String = "Master", buffer_length: float = 0.3) -> AudioStreamPlayer:
+	_ensure_audio_bus(bus_name)
 	var player_node := AudioStreamPlayer.new()
 	player_node.name = player_name
 	var stream := AudioStreamGenerator.new()
-	stream.mix_rate = 22050.0
-	stream.buffer_length = 0.3
+	stream.mix_rate = AUDIO_SAMPLE_RATE
+	stream.buffer_length = buffer_length
 	player_node.stream = stream
 	player_node.volume_db = volume_db
+	player_node.bus = bus_name
 	add_child(player_node)
 	return player_node
 
 
-func _play_prototype_audio(action: String, layered: bool = false, foley: bool = false) -> void:
+func _attach_infected_foley_player(target_infected: CharacterBody3D = null) -> void:
+	var audio_parent := target_infected if target_infected != null else infected
+	if audio_parent == null:
+		return
+	if prototype_infected_foley_audio_player != null and is_instance_valid(prototype_infected_foley_audio_player) and prototype_infected_foley_audio_player.get_parent() == audio_parent:
+		return
+	_ensure_audio_bus("foley")
+	var player_node := AudioStreamPlayer3D.new()
+	player_node.name = "PrototypeInfectedFoleyAudio"
+	var stream := AudioStreamGenerator.new()
+	stream.mix_rate = AUDIO_SAMPLE_RATE
+	stream.buffer_length = 0.3
+	player_node.stream = stream
+	player_node.volume_db = -7.0
+	player_node.bus = "foley"
+	player_node.unit_size = 2.2
+	player_node.max_distance = 18.0
+	audio_parent.add_child(player_node)
+	prototype_infected_foley_audio_player = player_node
+
+
+func _attach_beacon_audio_player() -> void:
+	if signal_beacon == null:
+		return
+	if prototype_beacon_audio_player != null and is_instance_valid(prototype_beacon_audio_player):
+		return
+	_ensure_audio_bus("environment")
+	var player_node := AudioStreamPlayer3D.new()
+	player_node.name = "PrototypeBeaconAudio"
+	var stream := AudioStreamGenerator.new()
+	stream.mix_rate = AUDIO_SAMPLE_RATE
+	stream.buffer_length = 0.3
+	player_node.stream = stream
+	player_node.volume_db = -5.0
+	player_node.bus = "environment"
+	player_node.unit_size = 2.5
+	player_node.max_distance = 22.0
+	signal_beacon.add_child(player_node)
+	prototype_beacon_audio_player = player_node
+
+
+func _play_prototype_audio(action: String, layered: bool = false) -> void:
 	var player_node := prototype_feedback_audio_player if layered else prototype_audio_player
-	if foley:
-		player_node = prototype_infected_foley_audio_player if action == "footstep_infected" else prototype_foley_audio_player
 	if player_node == null:
 		return
 	var item := _equipped_weapon_item()
 	var audio: Dictionary = item.get("audio", {})
 	var audio_id := String(audio.get(action, "prototype.%s" % action))
-	if foley:
-		audio_id = (
-			"audio.foley.infected.footstep.concrete"
-			if action == "footstep_infected"
-			else "audio.foley.survivor.footstep.concrete"
-		)
 	player_node.set_meta("catalog_audio_id", audio_id)
 	player_node.stop()
 	player_node.play()
@@ -693,15 +812,13 @@ func _play_prototype_audio(action: String, layered: bool = false, foley: bool = 
 			duration = 0.22
 		"empty", "hit":
 			duration = 0.08
-		"footstep_survivor", "footstep_infected":
-			duration = 0.075
-	var frame_count := int(22050.0 * duration)
+	var frame_count := int(AUDIO_SAMPLE_RATE * duration)
 	var frames := PackedVector2Array()
 	frames.resize(frame_count)
 	var stats: Dictionary = item.get("stats", {})
 	var damage_ratio := clampf(float(stats.get("damage", 38)) / 100.0, 0.0, 1.0)
 	for index in range(frame_count):
-		var time := float(index) / 22050.0
+		var time := float(index) / AUDIO_SAMPLE_RATE
 		var progress := time / duration
 		var envelope := pow(1.0 - progress, 2.4)
 		var sample := 0.0
@@ -729,12 +846,88 @@ func _play_prototype_audio(action: String, layered: bool = false, foley: bool = 
 				sample = (sin(TAU * (105.0 - progress * 48.0) * time) * 0.45) * envelope
 			"melee":
 				sample = (sin(TAU * 170.0 * time) * 0.34 + sin(TAU * 520.0 * time) * 0.12) * envelope
-			"footstep_survivor":
-				sample = (sin(TAU * 92.0 * time) * 0.24 + sin(TAU * 176.0 * time) * 0.08) * envelope
-			"footstep_infected":
-				sample = (sin(TAU * 66.0 * time) * 0.30 + sin(TAU * 123.0 * time) * 0.10) * envelope
 			_:
 				sample = sin(TAU * 360.0 * time) * envelope * 0.20
+		frames[index] = Vector2(sample, sample)
+	playback.push_buffer(frames)
+
+
+func _play_surface_footstep(role: String, world_position: Vector3, foot_side: String) -> void:
+	var profile := prototype_scene_audio.footstep_profile(role, world_position, foot_side)
+	if profile.is_empty():
+		return
+	var frames := _synthesize_footstep(profile)
+	if role == PrototypeSceneAudioScript.ROLE_INFECTED:
+		_attach_infected_foley_player()
+		if prototype_infected_foley_audio_player == null:
+			return
+		prototype_infected_foley_audio_player.set_meta("catalog_audio_id", profile.get("cueId", ""))
+		prototype_infected_foley_audio_player.set_meta("surface_id", profile.get("surfaceId", ""))
+		prototype_infected_foley_audio_player.set_meta("foot_side", foot_side)
+		prototype_infected_foley_audio_player.stop()
+		prototype_infected_foley_audio_player.play()
+		var infected_playback := prototype_infected_foley_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+		if infected_playback != null:
+			infected_playback.push_buffer(frames)
+		return
+	if prototype_foley_audio_player == null:
+		return
+	prototype_foley_audio_player.set_meta("catalog_audio_id", profile.get("cueId", ""))
+	prototype_foley_audio_player.set_meta("surface_id", profile.get("surfaceId", ""))
+	prototype_foley_audio_player.set_meta("foot_side", foot_side)
+	prototype_foley_audio_player.stop()
+	prototype_foley_audio_player.play()
+	var survivor_playback := prototype_foley_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if survivor_playback != null:
+		survivor_playback.push_buffer(frames)
+
+
+func _synthesize_footstep(profile: Dictionary) -> PackedVector2Array:
+	var synthesis := profile.get("synthesis", {}) as Dictionary
+	var duration := clampf(float(synthesis.get("durationSeconds", 0.075)), 0.04, 0.18)
+	var decay := clampf(float(synthesis.get("decay", 2.2)), 1.0, 4.0)
+	var gain := clampf(float(synthesis.get("gain", 0.22)), 0.0, 0.5)
+	var base_frequency := float(synthesis.get("baseFrequencyHz", 92.0))
+	var secondary_frequency := float(synthesis.get("secondaryFrequencyHz", 176.0))
+	var texture_frequency := float(synthesis.get("textureFrequencyHz", 430.0))
+	var frame_count := int(AUDIO_SAMPLE_RATE * duration)
+	var frames := PackedVector2Array()
+	frames.resize(frame_count)
+	for index in range(frame_count):
+		var time := float(index) / AUDIO_SAMPLE_RATE
+		var progress := time / duration
+		var envelope := pow(1.0 - progress, decay)
+		var texture := sin(TAU * texture_frequency * time + sin(TAU * 17.0 * time) * 0.7)
+		var sample := (
+			sin(TAU * base_frequency * time) * 0.62
+			+ sin(TAU * secondary_frequency * time) * 0.24
+			+ texture * 0.14
+		) * envelope * gain
+		frames[index] = Vector2(sample, sample)
+	return frames
+
+
+func _play_beacon_pulse() -> void:
+	if not _audio_playback_enabled():
+		return
+	_attach_beacon_audio_player()
+	if prototype_beacon_audio_player == null:
+		return
+	prototype_beacon_audio_player.set_meta("catalog_audio_id", prototype_scene_audio.beacon_cue_id())
+	prototype_beacon_audio_player.stop()
+	prototype_beacon_audio_player.play()
+	var playback := prototype_beacon_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback == null:
+		return
+	var duration := 0.18
+	var frame_count := int(AUDIO_SAMPLE_RATE * duration)
+	var frames := PackedVector2Array()
+	frames.resize(frame_count)
+	for index in range(frame_count):
+		var time := float(index) / AUDIO_SAMPLE_RATE
+		var progress := time / duration
+		var envelope := pow(1.0 - progress, 2.0)
+		var sample := (sin(TAU * (640.0 + progress * 180.0) * time) * 0.18 + sin(TAU * 1180.0 * time) * 0.06) * envelope
 		frames[index] = Vector2(sample, sample)
 	playback.push_buffer(frames)
 
@@ -817,6 +1010,7 @@ func _handle_infected_state_change(decision: Dictionary) -> void:
 		PrototypeInfectedBrainScript.STATE_ALERT:
 			_play_prototype_audio("enemy_alert", true)
 			_set_feedback("Movement ahead. The infected has noticed you.", 1.2)
+			_queue_narration("threat_spotted")
 		PrototypeInfectedBrainScript.STATE_WINDUP:
 			_play_prototype_audio("enemy_attack", true)
 			_set_feedback("The infected is winding up. Move.", 0.9)
@@ -948,7 +1142,11 @@ func _update_actor_animation(delta: float) -> void:
 		var player_pose := prototype_player_animation.advance(delta, movement_ratio, "locomotion", 0.0, action, action_progress)
 		_apply_actor_pose(player_rig, player_pose)
 		if bool(player_pose.get("footstep", false)):
-			_play_prototype_audio("footstep_survivor", false, true)
+			_play_surface_footstep(
+				PrototypeSceneAudioScript.ROLE_SURVIVOR,
+				player.global_position,
+				String(player_pose.get("footstep_side", "left")),
+			)
 
 	if infected != null and not infected_rig.is_empty():
 		var infected_movement_ratio := clampf(Vector2(infected.velocity.x, infected.velocity.z).length() / INFECTED_SPEED, 0.0, 1.0)
@@ -960,7 +1158,11 @@ func _update_actor_animation(delta: float) -> void:
 		)
 		_apply_actor_pose(infected_rig, infected_pose)
 		if bool(infected_pose.get("footstep", false)):
-			_play_prototype_audio("footstep_infected", false, true)
+			_play_surface_footstep(
+				PrototypeSceneAudioScript.ROLE_INFECTED,
+				infected.global_position,
+				String(infected_pose.get("footstep_side", "left")),
+			)
 
 
 func _apply_actor_pose(rig: Dictionary, pose: Dictionary) -> void:
@@ -1037,16 +1239,157 @@ func _update_environment(delta: float) -> void:
 	signal_light.light_energy = 1.05 + sin(environment_time * 2.4) * 0.25
 
 
+func _update_scene_audio(delta: float) -> void:
+	var duck_target := 0.52 if not active_narration.is_empty() else 1.0
+	ambience_voice_duck = move_toward(ambience_voice_duck, duck_target, maxf(delta, 0.0) * 2.8)
+	if not prototype_scene_audio.is_loaded() or prototype_ambience_audio_player == null:
+		return
+	var ambience := prototype_scene_audio.advance_ambience(delta, _scene_ambience_state())
+	prototype_ambience_audio_player.set_meta("catalog_audio_id", ambience.get("cueId", ""))
+	prototype_ambience_audio_player.set_meta("ambience_state", ambience.get("state", "route"))
+	if not _audio_playback_enabled():
+		return
+	if not prototype_ambience_audio_player.playing:
+		prototype_ambience_audio_player.play()
+	var playback := prototype_ambience_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback != null:
+		_fill_ambience_buffer(playback, ambience)
+
+	if not beacon_reached and not run_complete:
+		beacon_pulse_timer -= maxf(delta, 0.0)
+		if beacon_pulse_timer <= 0.0:
+			_play_beacon_pulse()
+			beacon_pulse_timer += BEACON_PULSE_INTERVAL
+	else:
+		beacon_pulse_timer = 0.25
+
+
+func _scene_ambience_state() -> String:
+	if run_complete:
+		return PrototypeSceneAudioScript.AMBIENCE_SECURED
+	if infected != null and prototype_infected_brain.is_engaged():
+		return PrototypeSceneAudioScript.AMBIENCE_THREAT
+	return PrototypeSceneAudioScript.AMBIENCE_ROUTE
+
+
+func _fill_ambience_buffer(playback: AudioStreamGeneratorPlayback, profile: Dictionary) -> void:
+	var frame_count := mini(playback.get_frames_available(), AMBIENCE_FILL_FRAME_LIMIT)
+	if frame_count <= 0:
+		return
+	var low_frequency := float(profile.get("lowFrequencyHz", 34.0))
+	var high_frequency := float(profile.get("highFrequencyHz", 71.0))
+	var pulse_frequency := float(profile.get("pulseFrequencyHz", 0.18))
+	var gain := clampf(float(profile.get("gain", 0.045)), 0.0, 0.12) * ambience_voice_duck
+	var frames := PackedVector2Array()
+	frames.resize(frame_count)
+	for index in range(frame_count):
+		var time := (ambience_sample_cursor + float(index)) / AUDIO_SAMPLE_RATE
+		var pressure_pulse := 0.72 + (sin(TAU * pulse_frequency * time) * 0.5 + 0.5) * 0.28
+		var wind_modulation := sin(TAU * 0.11 * time) * 0.42
+		var sample := (
+			sin(TAU * low_frequency * time + wind_modulation) * 0.48
+			+ sin(TAU * high_frequency * time + sin(TAU * 0.07 * time)) * 0.20
+			+ sin(TAU * 17.0 * time + sin(TAU * 3.1 * time)) * 0.07
+		) * gain * pressure_pulse
+		frames[index] = Vector2(sample, sample)
+	ambience_sample_cursor += float(frame_count)
+	playback.push_buffer(frames)
+
+
+func _queue_narration(event_id: String) -> void:
+	var cue := prototype_scene_audio.narration_for_event(event_id)
+	if cue.is_empty():
+		return
+	var cue_id := String(cue.get("id", event_id))
+	if String(active_narration.get("id", "")) == cue_id:
+		return
+	for queued_cue: Dictionary in narration_queue:
+		if String(queued_cue.get("id", "")) == cue_id:
+			return
+	if not active_narration.is_empty() and int(cue.get("priority", 0)) > int(active_narration.get("priority", 0)):
+		active_narration.clear()
+		narration_remaining = 0.0
+		if narration_label != null:
+			narration_label.text = ""
+			narration_label.visible = false
+	narration_queue.append(cue)
+	narration_queue.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
+		return int(left.get("priority", 0)) > int(right.get("priority", 0))
+	)
+	if active_narration.is_empty():
+		_start_next_narration()
+
+
+func _update_narration(delta: float) -> void:
+	if active_narration.is_empty():
+		_start_next_narration()
+		return
+	narration_remaining = maxf(narration_remaining - maxf(delta, 0.0), 0.0)
+	if narration_remaining > 0.0:
+		return
+	active_narration.clear()
+	if narration_label != null:
+		narration_label.text = ""
+		narration_label.visible = false
+	_start_next_narration()
+
+
+func _start_next_narration() -> void:
+	if narration_queue.is_empty():
+		return
+	active_narration = narration_queue.pop_front()
+	narration_remaining = maxf(float(active_narration.get("durationSeconds", 2.0)), 0.5)
+	if narration_label != null:
+		narration_label.text = "%s  //  %s" % [active_narration.get("speaker", "OPERATOR"), active_narration.get("subtitle", "")]
+		narration_label.visible = true
+	_play_narration_placeholder(active_narration)
+
+
+func _play_narration_placeholder(cue: Dictionary) -> void:
+	if prototype_voice_audio_player == null or not _audio_playback_enabled():
+		return
+	prototype_voice_audio_player.set_meta("catalog_audio_id", cue.get("audioCueId", ""))
+	prototype_voice_audio_player.set_meta("narration_cue_id", cue.get("id", ""))
+	prototype_voice_audio_player.stop()
+	prototype_voice_audio_player.play()
+	var playback := prototype_voice_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback == null:
+		return
+	var duration := 0.16
+	var frame_count := int(AUDIO_SAMPLE_RATE * duration)
+	var frames := PackedVector2Array()
+	frames.resize(frame_count)
+	for index in range(frame_count):
+		var time := float(index) / AUDIO_SAMPLE_RATE
+		var progress := time / duration
+		var envelope := pow(1.0 - progress, 2.2)
+		var gate := 1.0 if fmod(time, 0.052) < 0.032 else 0.35
+		var sample := (sin(TAU * 820.0 * time) * 0.12 + sin(TAU * 1240.0 * time) * 0.05) * envelope * gate
+		frames[index] = Vector2(sample, sample)
+	playback.push_buffer(frames)
+
+
+func _clear_narration() -> void:
+	narration_queue.clear()
+	active_narration.clear()
+	narration_remaining = 0.0
+	if narration_label != null:
+		narration_label.text = ""
+		narration_label.visible = false
+
+
 func _update_objective() -> void:
 	if player == null or run_complete:
 		return
 	if not beacon_reached and signal_beacon != null and player.global_position.distance_to(signal_beacon.global_position) <= SIGNAL_BEACON_REACH:
 		beacon_reached = true
 		_set_feedback("Signal acquired. Neutralize the infected.", 2.5)
+		_queue_narration("signal_acquired")
 		_save_game()
 	if beacon_reached and infected == null and salvage_drop == null:
 		run_complete = true
 		_set_feedback("Route secured. Run complete. Press R or RESET RUN to replay.", 4.0)
+		_queue_narration("route_secured")
 		_save_game()
 
 
@@ -1113,6 +1456,7 @@ func _handle_save_load_input() -> void:
 	if load_down and not load_was_down:
 		if _load_save():
 			_set_feedback("Checkpoint loaded.", 1.5)
+			_queue_narration("route_resumed")
 		else:
 			_set_feedback("No compatible checkpoint found.", 1.5)
 	load_was_down = load_down
@@ -1177,11 +1521,13 @@ func _toggle_pause() -> void:
 func _load_checkpoint_from_defeat() -> void:
 	if _load_save():
 		_set_feedback("Last checkpoint loaded.", 1.5)
+		_queue_narration("route_resumed")
 	else:
 		_set_feedback("No compatible checkpoint found.", 1.5)
 
 
 func _restart_run() -> void:
+	_clear_narration()
 	health = STARTING_HEALTH
 	infected_health = 100
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
@@ -1192,9 +1538,11 @@ func _restart_run() -> void:
 	prototype_combat_feedback.reset()
 	prototype_player_animation.reset()
 	prototype_infected_animation.reset()
+	prototype_scene_audio.reset_ambience(PrototypeSceneAudioScript.AMBIENCE_ROUTE)
 	_reset_infected_behavior(false)
 	save_timer = 0.0
 	beacon_reached = false
+	beacon_pulse_timer = 0.25
 	run_complete = false
 	infected_knockback_timer = 0.0
 	infected_knockback_velocity = Vector3.ZERO
@@ -1227,6 +1575,7 @@ func _restart_run() -> void:
 	camera_yaw = 0.0
 	_update_camera(1.0)
 	_set_feedback("Run reset. Reach the signal beacon.", 2.0)
+	_queue_narration("route_start")
 	_save_game()
 
 
@@ -1403,6 +1752,7 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 		return
 	var defeated := infected
 	var defeated_position := defeated.global_position
+	prototype_infected_foley_audio_player = null
 	infected = null
 	_reset_infected_behavior(false)
 	if infected_telegraph != null:
@@ -1418,6 +1768,7 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 	if award_salvage:
 		_spawn_salvage_drop(defeated_position)
 		_set_feedback("Threat neutralized. Salvage dropped nearby.", 3.0)
+		_queue_narration("threat_neutralized")
 	if persist_state:
 		_save_game()
 
@@ -1549,6 +1900,34 @@ func _build_touch_controls() -> void:
 	combat_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	combat_status_label.visible = false
 	hud_root.add_child(combat_status_label)
+
+	narration_label = Label.new()
+	narration_label.name = "NarrationSubtitle"
+	narration_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	narration_label.offset_left = 260.0
+	narration_label.offset_top = -168.0
+	narration_label.offset_right = -260.0
+	narration_label.offset_bottom = -104.0
+	narration_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	narration_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	narration_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	narration_label.add_theme_font_size_override("font_size", 19)
+	narration_label.add_theme_color_override("font_color", Color("f3e8d8"))
+	narration_label.add_theme_color_override("font_outline_color", Color(0.02, 0.03, 0.04, 0.95))
+	narration_label.add_theme_constant_override("outline_size", 5)
+	var narration_style := StyleBoxFlat.new()
+	narration_style.bg_color = Color(0.025, 0.04, 0.05, 0.84)
+	narration_style.border_color = Color(0.72, 0.55, 0.37, 0.58)
+	narration_style.set_border_width_all(1)
+	narration_style.set_corner_radius_all(8)
+	narration_style.content_margin_left = 18.0
+	narration_style.content_margin_right = 18.0
+	narration_style.content_margin_top = 10.0
+	narration_style.content_margin_bottom = 10.0
+	narration_label.add_theme_stylebox_override("normal", narration_style)
+	narration_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	narration_label.visible = false
+	hud_root.add_child(narration_label)
 
 	hit_marker_label = Label.new()
 	hit_marker_label.set_anchors_preset(Control.PRESET_CENTER)
@@ -2090,6 +2469,7 @@ func _load_save() -> bool:
 	prototype_combat_feedback.reset()
 	prototype_player_animation.reset()
 	prototype_infected_animation.reset()
+	_clear_narration()
 	held_actions.clear()
 	_reset_touch_controls()
 	_remove_salvage_drop()
@@ -2134,6 +2514,8 @@ func _load_save() -> bool:
 		if saved_infected_position is Array and saved_infected_position.size() == 3:
 			infected.position = Vector3(float(saved_infected_position[0]), float(saved_infected_position[1]), float(saved_infected_position[2]))
 		infected.velocity = Vector3.ZERO
+	prototype_scene_audio.reset_ambience(_scene_ambience_state())
+	beacon_pulse_timer = 0.25
 	_update_camera(1.0)
 	return true
 

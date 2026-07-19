@@ -3,7 +3,9 @@ extends SceneTree
 const CombatMotionScript := preload("res://scripts/prototype_combat_motion.gd")
 const CombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
 const ActorAnimationScript := preload("res://scripts/prototype_actor_animation.gd")
+const SceneAudioScript := preload("res://scripts/prototype_scene_audio.gd")
 const MainScript := preload("res://scripts/main.gd")
+const SCENE_AUDIO_PATH := "res://data/scene_audio.v1.json"
 
 
 func _initialize() -> void:
@@ -67,6 +69,42 @@ func _initialize() -> void:
 		_fail("Infected wind-up animation did not create a readable crouch and raised strike pose.")
 		return
 
+	var scene_audio := SceneAudioScript.new()
+	if not scene_audio.load_from_path(SCENE_AUDIO_PATH):
+		_fail("Scene audio catalog did not load: %s" % scene_audio.error_message)
+		return
+	if scene_audio.surface_id_at(Vector3(0.0, 0.0, 4.0)) != "surface.concrete":
+		_fail("Default route position did not resolve to concrete foley.")
+		return
+	if scene_audio.surface_id_at(Vector3(0.0, 0.0, -7.0)) != "surface.metal":
+		_fail("Checkpoint zone did not resolve to metal foley.")
+		return
+	if scene_audio.surface_id_at(Vector3(-6.5, 0.0, -2.0)) != "surface.gravel":
+		_fail("Vehicle zone did not resolve to gravel foley.")
+		return
+	if scene_audio.beacon_cue_id() != "audio.environment.beacon.pulse":
+		_fail("Scene audio catalog did not expose the spatial beacon cue.")
+		return
+	var survivor_metal := scene_audio.footstep_profile(SceneAudioScript.ROLE_SURVIVOR, Vector3(0.0, 0.0, -7.0), "left")
+	var infected_metal := scene_audio.footstep_profile(SceneAudioScript.ROLE_INFECTED, Vector3(0.0, 0.0, -7.0), "right")
+	if survivor_metal.get("cueId", "") != "audio.foley.survivor.footstep.metal" or infected_metal.get("cueId", "") != "audio.foley.infected.footstep.metal":
+		_fail("Surface foley did not preserve distinct survivor and spatial infected cue IDs.")
+		return
+	var survivor_synthesis := survivor_metal.get("synthesis", {}) as Dictionary
+	var infected_synthesis := infected_metal.get("synthesis", {}) as Dictionary
+	if float(infected_synthesis.get("baseFrequencyHz", 0.0)) >= float(survivor_synthesis.get("baseFrequencyHz", 0.0)):
+		_fail("Infected foley profile did not retain its heavier deterministic pitch treatment.")
+		return
+	var route_ambience := scene_audio.reset_ambience(SceneAudioScript.AMBIENCE_ROUTE)
+	var threat_ambience := scene_audio.advance_ambience(0.5, SceneAudioScript.AMBIENCE_THREAT)
+	if threat_ambience.get("cueId", "") != "audio.ambience.checkpoint.threat" or float(threat_ambience.get("gain", 0.0)) <= float(route_ambience.get("gain", 0.0)):
+		_fail("Threat ambience did not crossfade toward the higher-pressure scene state.")
+		return
+	var narration := scene_audio.narration_for_event("threat_spotted")
+	if narration.get("audioCueId", "") != "audio.narration.operator.threat_spotted" or String(narration.get("subtitle", "")).length() < 20:
+		_fail("Narration event did not expose stable voice and subtitle timing data.")
+		return
+
 	var feedback := CombatFeedbackScript.new()
 	feedback.register_infected_hit(38, false, false)
 	if feedback.marker_text() != "HIT" or feedback.hit_marker_alpha() < 0.99:
@@ -116,8 +154,18 @@ func _initialize() -> void:
 		main.free()
 		_fail("Buffered fire did not resolve when a low frame rate crossed both timer boundaries.")
 		return
+	if not main.prototype_scene_audio.load_from_path(SCENE_AUDIO_PATH):
+		main.free()
+		_fail("Main runtime narration director could not load scene audio data.")
+		return
+	main._queue_narration("route_start")
+	main._queue_narration("threat_spotted")
+	if main.active_narration.get("id", "") != "narration.operator.threat_spotted":
+		main.free()
+		_fail("High-priority combat narration did not interrupt lower-priority route guidance.")
+		return
 	main.free()
-	print("Android combat polish test passed: articulated locomotion, synchronized footsteps, state-driven attack poses, blended weapon motion, low-frame-rate fire buffering, hit markers, damage overlay, and camera response.")
+	print("Android combat polish test passed: articulated motion, surface-aware spatial foley, adaptive ambience, narration cue contracts, blended weapon motion, low-frame-rate fire buffering, hit markers, damage overlay, and camera response.")
 	quit(0)
 
 

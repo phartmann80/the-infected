@@ -13,6 +13,10 @@ const bridges = [
     sourcePath: path.join(root, 'packages', 'game-data', 'data', 'item-catalog.v1.json'),
     targetPath: path.join(root, 'apps', 'android', 'data', 'item_catalog.v1.json'),
   },
+  {
+    sourcePath: path.join(root, 'packages', 'game-data', 'data', 'scene-audio.v1.json'),
+    targetPath: path.join(root, 'apps', 'android', 'data', 'scene_audio.v1.json'),
+  },
 ];
 
 for (const { sourcePath, targetPath } of bridges) {
