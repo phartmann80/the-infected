@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "0.1.0-scene-audio-foundation",
+  "status": "prototype",
+  "canonical": false,
+  "environmentId": "environment-001-review",
+  "defaultSurfaceId": "surface.concrete",
+  "beaconCueId": "audio.environment.beacon.pulse",
+  "surfaces": [
+    {
+      "id": "surface.concrete",
+      "displayName": "Weathered concrete",
+      "visualColor": "2c3b43",
+      "survivorCueId": "audio.foley.survivor.footstep.concrete",
+      "infectedCueId": "audio.foley.infected.footstep.concrete",
+      "synthesis": { "baseFrequencyHz": 92, "secondaryFrequencyHz": 176, "textureFrequencyHz": 430, "durationSeconds": 0.075, "decay": 2.4, "gain": 0.25 }
+    },
+    {
+      "id": "surface.metal",
+      "displayName": "Checkpoint plate",
+      "visualColor": "52636a",
+      "survivorCueId": "audio.foley.survivor.footstep.metal",
+      "infectedCueId": "audio.foley.infected.footstep.metal",
+      "synthesis": { "baseFrequencyHz": 138, "secondaryFrequencyHz": 420, "textureFrequencyHz": 760, "durationSeconds": 0.085, "decay": 2.1, "gain": 0.22 }
+    },
+    {
+      "id": "surface.gravel",
+      "displayName": "Roadside gravel",
+      "visualColor": "4b4841",
+      "survivorCueId": "audio.foley.survivor.footstep.gravel",
+      "infectedCueId": "audio.foley.infected.footstep.gravel",
+      "synthesis": { "baseFrequencyHz": 72, "secondaryFrequencyHz": 205, "textureFrequencyHz": 540, "durationSeconds": 0.105, "decay": 1.9, "gain": 0.24 }
+    }
+  ],
+  "zones": [
+    { "id": "zone.checkpoint.metal", "surfaceId": "surface.metal", "center": [0.0, -7.0], "size": [6.4, 2.4], "visualElevation": 0.016 },
+    { "id": "zone.vehicle.gravel", "surfaceId": "surface.gravel", "center": [-6.5, -2.0], "size": [5.0, 4.2], "visualElevation": 0.012 }
+  ],
+  "ambienceStates": [
+    { "id": "route", "cueId": "audio.ambience.checkpoint.route", "synthesis": { "lowFrequencyHz": 34, "highFrequencyHz": 71, "pulseFrequencyHz": 0.18, "gain": 0.045 } },
+    { "id": "threat", "cueId": "audio.ambience.checkpoint.threat", "synthesis": { "lowFrequencyHz": 43, "highFrequencyHz": 96, "pulseFrequencyHz": 1.15, "gain": 0.070 } },
+    { "id": "secured", "cueId": "audio.ambience.checkpoint.secured", "synthesis": { "lowFrequencyHz": 28, "highFrequencyHz": 62, "pulseFrequencyHz": 0.12, "gain": 0.034 } }
+  ],
+  "narrationCues": [
+    { "event": "route_start", "id": "narration.operator.route_start", "audioCueId": "audio.narration.operator.route_start", "speaker": "FIELD OPERATOR", "subtitle": "Signal beacon is ahead. Move quietly and stay off the open road.", "durationSeconds": 4.4, "priority": 1 },
+    { "event": "route_resumed", "id": "narration.operator.route_resumed", "audioCueId": "audio.narration.operator.route_resumed", "speaker": "FIELD OPERATOR", "subtitle": "Checkpoint restored. Reacquire the beacon and continue the route.", "durationSeconds": 3.6, "priority": 1 },
+    { "event": "signal_acquired", "id": "narration.operator.signal_acquired", "audioCueId": "audio.narration.operator.signal_acquired", "speaker": "FIELD OPERATOR", "subtitle": "Signal acquired. Movement is closing on your position.", "durationSeconds": 3.3, "priority": 2 },
+    { "event": "threat_spotted", "id": "narration.operator.threat_spotted", "audioCueId": "audio.narration.operator.threat_spotted", "speaker": "FIELD OPERATOR", "subtitle": "Contact. Watch the wind-up and break the strike before it lands.", "durationSeconds": 4.0, "priority": 3 },
+    { "event": "threat_neutralized", "id": "narration.operator.threat_neutralized", "audioCueId": "audio.narration.operator.threat_neutralized", "speaker": "FIELD OPERATOR", "subtitle": "Threat down. Recover the salvage before you leave.", "durationSeconds": 3.3, "priority": 2 },
+    { "event": "route_secured", "id": "narration.operator.route_secured", "audioCueId": "audio.narration.operator.route_secured", "speaker": "FIELD OPERATOR", "subtitle": "Salvage confirmed. The route is secure.", "durationSeconds": 2.8, "priority": 2 }
+  ]
+}

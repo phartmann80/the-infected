@@ -4,6 +4,7 @@ import {
   getItemDefinition,
   getShopOffer,
   itemCatalog,
+  sceneAudioCatalog,
   shopCatalog,
 } from '../../packages/game-data/src/index';
 
@@ -68,6 +69,41 @@ describe('item-system foundation', () => {
       expect(cue?.assetRegistryId).toBeNull();
       expect(cue?.playback.bus).toBe('foley');
       expect(cue?.playback.loop).toBe(false);
+    }
+  });
+
+  it('resolves every scene-audio reference without approving production assets', () => {
+    const cues = new Map(audioCueCatalog.cues.map((cue) => [cue.id, cue]));
+    const referencedCueIds = [
+      ...sceneAudioCatalog.surfaces.flatMap((surface) => [surface.survivorCueId, surface.infectedCueId]),
+      ...sceneAudioCatalog.ambienceStates.map((state) => state.cueId),
+      ...sceneAudioCatalog.narrationCues.map((cue) => cue.audioCueId),
+      sceneAudioCatalog.beaconCueId,
+    ];
+    for (const cueId of referencedCueIds) {
+      expect(cues.get(cueId)?.status).toBe('placeholder');
+      expect(cues.get(cueId)?.assetRegistryId).toBeNull();
+    }
+    expect(sceneAudioCatalog.canonical).toBe(false);
+    expect(sceneAudioCatalog.surfaces.map((surface) => surface.id)).toEqual([
+      'surface.concrete',
+      'surface.metal',
+      'surface.gravel',
+    ]);
+    for (const surface of sceneAudioCatalog.surfaces) {
+      expect(cues.get(surface.survivorCueId)?.playback).toMatchObject({ bus: 'foley', spatial: false });
+      expect(cues.get(surface.infectedCueId)?.playback).toMatchObject({ bus: 'foley', spatial: true });
+    }
+  });
+
+  it('keeps narration provider-neutral and subtitle-complete', () => {
+    expect(sceneAudioCatalog.narrationCues).toHaveLength(6);
+    for (const cue of sceneAudioCatalog.narrationCues) {
+      expect(cue.subtitle.trim().length).toBeGreaterThan(12);
+      expect(cue.durationSeconds).toBeGreaterThan(0);
+      expect(JSON.stringify(cue).toLowerCase()).not.toContain('voicebox');
+      expect(JSON.stringify(cue).toLowerCase()).not.toContain('api');
+      expect(JSON.stringify(cue).toLowerCase()).not.toContain('provider');
     }
   });
 });

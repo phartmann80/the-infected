@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (relativePath) => JSON.parse(readFileSync(path.join(root, relativePath), 'utf8'));
+const foundation = readJson('packages/game-data/data/foundation.json');
 const itemCatalog = readJson('packages/game-data/data/item-catalog.v1.json');
 const audioCatalog = readJson('packages/game-data/data/audio-cues.v1.json');
+const sceneAudioCatalog = readJson('packages/game-data/data/scene-audio.v1.json');
 const shopCatalog = readJson('packages/game-data/data/shop-catalog.v1.json');
 const errors = [];
 
@@ -44,6 +46,13 @@ if (audioCatalog.schemaVersion !== 1) fail('audio cue catalog schemaVersion must
 if (audioCatalog.status !== 'prototype') fail('audio cue catalog must remain prototype');
 if (!Array.isArray(audioCatalog.cues)) fail('audio cue catalog cues must be an array');
 
+if (sceneAudioCatalog.schemaVersion !== 1) fail('scene audio catalog schemaVersion must be 1');
+if (sceneAudioCatalog.status !== 'prototype' || sceneAudioCatalog.canonical !== false) fail('scene audio catalog must remain prototype and non-canonical');
+if (!Array.isArray(sceneAudioCatalog.surfaces)) fail('scene audio catalog surfaces must be an array');
+if (!Array.isArray(sceneAudioCatalog.zones)) fail('scene audio catalog zones must be an array');
+if (!Array.isArray(sceneAudioCatalog.ambienceStates)) fail('scene audio catalog ambienceStates must be an array');
+if (!Array.isArray(sceneAudioCatalog.narrationCues)) fail('scene audio catalog narrationCues must be an array');
+
 if (shopCatalog.schemaVersion !== 1) fail('shop catalog schemaVersion must be 1');
 if (shopCatalog.status !== 'prototype') fail('shop catalog must remain prototype');
 if (shopCatalog.provider !== 'unassigned') fail('shop catalog provider must remain unassigned before provider review');
@@ -63,6 +72,7 @@ requireUnique(items.map((item) => item.shopOfferId), 'item shop offer IDs');
 const cueIdList = (audioCatalog.cues ?? []).map((cue) => cue.id);
 requireUnique(cueIdList, 'audio cue IDs');
 const cueIds = new Set(cueIdList);
+const cueById = new Map((audioCatalog.cues ?? []).map((cue) => [cue.id, cue]));
 for (const requiredCue of ['music.main_menu', 'music.shop', 'ui.shop.select', 'ui.shop.purchase_confirm', 'ui.inventory.navigate']) {
   if (!cueIds.has(requiredCue)) fail(`missing required audio cue ${requiredCue}`);
 }
@@ -75,9 +85,76 @@ for (const cue of audioCatalog.cues ?? []) {
   if (cue.status !== 'placeholder' || cue.assetRegistryId !== null) fail(`audio cue ${cue.id} must remain an unresolved placeholder`);
   if (!isObject(cue.playback)) {
     fail(`audio cue ${cue.id}.playback must be an object`);
-  } else if (!['music', 'ui', 'weapons', 'gear', 'foley'].includes(cue.playback.bus)) {
-    fail(`audio cue ${cue.id}.playback.bus is unsupported`);
+  } else {
+    if (!['music', 'ui', 'weapons', 'gear', 'foley', 'ambience', 'environment', 'voice'].includes(cue.playback.bus)) fail(`audio cue ${cue.id}.playback.bus is unsupported`);
+    if (typeof cue.playback.loop !== 'boolean' || typeof cue.playback.spatial !== 'boolean') fail(`audio cue ${cue.id}.playback loop and spatial flags must be boolean`);
+    if (!Number.isFinite(cue.playback.volumeDb)) fail(`audio cue ${cue.id}.playback.volumeDb must be finite`);
   }
+}
+
+const surfaces = sceneAudioCatalog.surfaces ?? [];
+requireUnique(surfaces.map((surface) => surface.id), 'scene surface IDs');
+const surfaceIds = new Set(surfaces.map((surface) => surface.id));
+if (sceneAudioCatalog.environmentId !== foundation.environment_id) fail(`scene audio environment ${sceneAudioCatalog.environmentId} does not match foundation ${foundation.environment_id}`);
+if (!surfaceIds.has(sceneAudioCatalog.defaultSurfaceId)) fail(`scene default surface ${sceneAudioCatalog.defaultSurfaceId} is missing`);
+if (!cueIds.has(sceneAudioCatalog.beaconCueId)) fail(`scene beacon references missing cue ${sceneAudioCatalog.beaconCueId}`);
+const beaconCue = cueById.get(sceneAudioCatalog.beaconCueId);
+if (beaconCue && (beaconCue.playback?.bus !== 'environment' || beaconCue.playback?.spatial !== true || beaconCue.playback?.loop !== false)) fail('scene beacon cue must be a one-shot spatial environment cue');
+for (const surface of surfaces) {
+  requireString(surface.id, 'scene surface id');
+  requireString(surface.displayName, `scene surface ${surface.id}.displayName`);
+  requireString(surface.visualColor, `scene surface ${surface.id}.visualColor`);
+  if (!stableId.test(surface.id)) fail(`scene surface ${surface.id} does not use a stable ID`);
+  for (const cueKey of ['survivorCueId', 'infectedCueId']) {
+    if (!cueIds.has(surface[cueKey])) fail(`scene surface ${surface.id}.${cueKey} references missing cue ${surface[cueKey]}`);
+  }
+  const survivorCue = cueById.get(surface.survivorCueId);
+  const infectedCue = cueById.get(surface.infectedCueId);
+  if (survivorCue && (survivorCue.playback?.bus !== 'foley' || survivorCue.playback?.spatial !== false)) fail(`scene surface ${surface.id} survivor cue must be non-spatial foley`);
+  if (infectedCue && (infectedCue.playback?.bus !== 'foley' || infectedCue.playback?.spatial !== true)) fail(`scene surface ${surface.id} infected cue must be spatial foley`);
+  for (const key of ['baseFrequencyHz', 'secondaryFrequencyHz', 'textureFrequencyHz', 'durationSeconds', 'decay', 'gain']) {
+    if (!Number.isFinite(surface.synthesis?.[key]) || surface.synthesis[key] <= 0) fail(`scene surface ${surface.id}.synthesis.${key} must be positive`);
+  }
+}
+
+const zones = sceneAudioCatalog.zones ?? [];
+requireUnique(zones.map((zone) => zone.id), 'scene surface zone IDs');
+for (const zone of zones) {
+  if (!stableId.test(zone.id)) fail(`scene surface zone ${zone.id} does not use a stable ID`);
+  if (!surfaceIds.has(zone.surfaceId)) fail(`scene surface zone ${zone.id} references missing surface ${zone.surfaceId}`);
+  if (!Array.isArray(zone.center) || zone.center.length !== 2 || !zone.center.every(Number.isFinite)) fail(`scene surface zone ${zone.id}.center must contain two finite numbers`);
+  if (!Array.isArray(zone.size) || zone.size.length !== 2 || !zone.size.every((value) => Number.isFinite(value) && value > 0)) fail(`scene surface zone ${zone.id}.size must contain two positive numbers`);
+  if (!Number.isFinite(zone.visualElevation) || zone.visualElevation < 0) fail(`scene surface zone ${zone.id}.visualElevation must be non-negative`);
+}
+
+const ambienceStates = sceneAudioCatalog.ambienceStates ?? [];
+requireUnique(ambienceStates.map((state) => state.id), 'scene ambience state IDs');
+for (const requiredState of ['route', 'threat', 'secured']) {
+  if (!ambienceStates.some((state) => state.id === requiredState)) fail(`scene ambience state ${requiredState} is missing`);
+}
+for (const state of ambienceStates) {
+  if (!cueIds.has(state.cueId)) fail(`scene ambience state ${state.id} references missing cue ${state.cueId}`);
+  const ambienceCue = cueById.get(state.cueId);
+  if (ambienceCue && (ambienceCue.playback?.bus !== 'ambience' || ambienceCue.playback?.loop !== true || ambienceCue.playback?.spatial !== false)) fail(`scene ambience state ${state.id} must use looping non-spatial ambience`);
+  for (const key of ['lowFrequencyHz', 'highFrequencyHz', 'pulseFrequencyHz', 'gain']) {
+    if (!Number.isFinite(state.synthesis?.[key]) || state.synthesis[key] <= 0) fail(`scene ambience state ${state.id}.synthesis.${key} must be positive`);
+  }
+}
+
+const narrationCues = sceneAudioCatalog.narrationCues ?? [];
+requireUnique(narrationCues.map((cue) => cue.id), 'scene narration cue IDs');
+requireUnique(narrationCues.map((cue) => cue.event), 'scene narration events');
+for (const cue of narrationCues) {
+  requireString(cue.id, 'scene narration cue id');
+  requireString(cue.event, `scene narration cue ${cue.id}.event`);
+  requireString(cue.speaker, `scene narration cue ${cue.id}.speaker`);
+  requireString(cue.subtitle, `scene narration cue ${cue.id}.subtitle`);
+  if (!stableId.test(cue.id)) fail(`scene narration cue ${cue.id} does not use a stable ID`);
+  if (!cueIds.has(cue.audioCueId)) fail(`scene narration cue ${cue.id} references missing cue ${cue.audioCueId}`);
+  const audioCue = cueById.get(cue.audioCueId);
+  if (audioCue && (audioCue.playback?.bus !== 'voice' || audioCue.playback?.loop !== false || audioCue.playback?.spatial !== false)) fail(`scene narration cue ${cue.id} must use one-shot non-spatial voice playback`);
+  if (!Number.isFinite(cue.durationSeconds) || cue.durationSeconds <= 0) fail(`scene narration cue ${cue.id}.durationSeconds must be positive`);
+  if (!Number.isInteger(cue.priority) || cue.priority < 0) fail(`scene narration cue ${cue.id}.priority must be a non-negative integer`);
 }
 
 for (const item of items) {
@@ -168,4 +245,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Game-data validation passed: ${weapons.length} weapon(s), ${gear.length} gear item(s), ${offers.length} offer(s), ${audioCatalog.cues.length} audio cue(s).`);
+console.log(`Game-data validation passed: ${weapons.length} weapon(s), ${gear.length} gear item(s), ${offers.length} offer(s), ${audioCatalog.cues.length} audio cue(s), ${surfaces.length} scene surface(s), ${narrationCues.length} narration cue(s).`);

@@ -1,5 +1,6 @@
 import audioCueCatalogData from '../data/audio-cues.v1.json';
 import itemCatalogData from '../data/item-catalog.v1.json';
+import sceneAudioCatalogData from '../data/scene-audio.v1.json';
 import shopCatalogData from '../data/shop-catalog.v1.json';
 
 export const ITEM_SYSTEM_SCHEMA_VERSION = 1 as const;
@@ -135,7 +136,7 @@ export interface AudioCueDefinition {
   readonly status: 'placeholder';
   readonly assetRegistryId: null;
   readonly playback: {
-    readonly bus: 'music' | 'ui' | 'weapons' | 'gear' | 'foley';
+    readonly bus: 'music' | 'ui' | 'weapons' | 'gear' | 'foley' | 'ambience' | 'environment' | 'voice';
     readonly loop: boolean;
     readonly spatial: boolean;
     readonly volumeDb: number;
@@ -148,6 +149,65 @@ export interface AudioCueCatalog {
   readonly contentVersion: string;
   readonly status: 'prototype';
   readonly cues: readonly AudioCueDefinition[];
+}
+
+export interface SceneSurfaceDefinition {
+  readonly id: string;
+  readonly displayName: string;
+  readonly visualColor: string;
+  readonly survivorCueId: string;
+  readonly infectedCueId: string;
+  readonly synthesis: {
+    readonly baseFrequencyHz: number;
+    readonly secondaryFrequencyHz: number;
+    readonly textureFrequencyHz: number;
+    readonly durationSeconds: number;
+    readonly decay: number;
+    readonly gain: number;
+  };
+}
+
+export interface SceneSurfaceZone {
+  readonly id: string;
+  readonly surfaceId: string;
+  readonly center: readonly [number, number];
+  readonly size: readonly [number, number];
+  readonly visualElevation: number;
+}
+
+export interface SceneAmbienceState {
+  readonly id: 'route' | 'threat' | 'secured';
+  readonly cueId: string;
+  readonly synthesis: {
+    readonly lowFrequencyHz: number;
+    readonly highFrequencyHz: number;
+    readonly pulseFrequencyHz: number;
+    readonly gain: number;
+  };
+}
+
+export interface SceneNarrationCue {
+  readonly event: string;
+  readonly id: string;
+  readonly audioCueId: string;
+  readonly speaker: string;
+  readonly subtitle: string;
+  readonly durationSeconds: number;
+  readonly priority: number;
+}
+
+export interface SceneAudioCatalog {
+  readonly schemaVersion: 1;
+  readonly contentVersion: string;
+  readonly status: 'prototype';
+  readonly canonical: false;
+  readonly environmentId: string;
+  readonly defaultSurfaceId: string;
+  readonly beaconCueId: string;
+  readonly surfaces: readonly SceneSurfaceDefinition[];
+  readonly zones: readonly SceneSurfaceZone[];
+  readonly ambienceStates: readonly SceneAmbienceState[];
+  readonly narrationCues: readonly SceneNarrationCue[];
 }
 
 export type OwnershipStatus = 'owned' | 'revoked';
@@ -186,6 +246,7 @@ export interface PurchaseEntitlement {
 export const itemCatalog = itemCatalogData as unknown as ItemCatalog;
 export const shopCatalog = shopCatalogData as unknown as ShopCatalog;
 export const audioCueCatalog = audioCueCatalogData as unknown as AudioCueCatalog;
+export const sceneAudioCatalog = sceneAudioCatalogData as unknown as SceneAudioCatalog;
 
 export function getItemDefinition(itemId: string) {
   return itemCatalog.items.find((item) => item.id === itemId);
