@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LandingFooter } from './LandingFooter';
+import { GameBrief } from './GameBrief';
 import { SceneBoundary } from './hero/SceneBoundary';
 import { CinematicChapters } from './CinematicChapters';
 
@@ -336,6 +337,7 @@ export function CinematicHero() {
       </section>
 
       <CinematicChapters onJoin={openSignup} />
+      <GameBrief />
       <LandingFooter onJoin={openSignup} />
     </>
   );

@@ -21,6 +21,7 @@
     "test:image-generation": "vitest run --config scripts/image-generation/vitest.config.ts",
     "test:video-generation": "vitest run --dir scripts/video-generation/tests",
     "test:ai-gateway": "vitest run packages/ai-gateway/src/index.test.ts",
+    "test:game-data": "vitest run packages/game-data/src/index.test.ts",
     "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
     "image:generate": "tsx scripts/image-generation/generate.ts",
     "video:generate": "tsx scripts/video-generation/generate.ts"
