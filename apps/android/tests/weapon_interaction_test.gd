@@ -34,6 +34,10 @@ func _initialize() -> void:
 	if weapon_state.magazine_ammo() != 14 or weapon_state.reserve_ammo() != 6:
 		_fail("Firing did not consume exactly one magazine round.")
 		return
+	var cooldown_block := weapon_state.try_fire()
+	if String(cooldown_block.get("reason", "")) != "cooldown" or weapon_state.fire_cooldown_remaining() <= 0.0:
+		_fail("Weapon cooldown did not expose timing for responsive fire buffering.")
+		return
 	weapon_state.advance(1.0)
 	for shot_index in range(14):
 		if not bool(weapon_state.try_fire().get("fired", false)):

@@ -57,13 +57,14 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/templates
           cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
 
-      - name: Validate Godot catalog, loadout, and weapon interaction
+      - name: Validate Godot gameplay contracts
         run: |
           GODOT="/tmp/godot/Godot_v${GODOT_VERSION}_linux.x86_64"
           timeout 180s "$GODOT" --headless --path apps/android --editor --quit
           timeout 120s "$GODOT" --headless --path apps/android --script res://tests/item_inventory_test.gd
           timeout 120s "$GODOT" --headless --path apps/android --script res://tests/weapon_interaction_test.gd
           timeout 120s "$GODOT" --headless --path apps/android --script res://tests/infected_brain_test.gd
+          timeout 120s "$GODOT" --headless --path apps/android --script res://tests/combat_polish_test.gd
 
       - name: Import and export debug APK
         env:

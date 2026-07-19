@@ -5,12 +5,17 @@ const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
 const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 const PrototypeWeaponStateScript := preload("res://scripts/prototype_weapon_state.gd")
 const PrototypeInfectedBrainScript := preload("res://scripts/prototype_infected_brain.gd")
+const PrototypeCombatMotionScript := preload("res://scripts/prototype_combat_motion.gd")
+const PrototypeCombatFeedbackScript := preload("res://scripts/prototype_combat_feedback.gd")
 const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SAVE_PATH := "user://save_v1.json"
 const SAVE_SCHEMA_VERSION := 6
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
 const PLAYER_SPEED := 3.0
+const PLAYER_ACCELERATION := 26.0
+const PLAYER_DECELERATION := 34.0
+const PLAYER_TURN_RESPONSE := 14.0
 const INFECTED_SPEED := 1.15
 const INFECTED_ATTACK_DAMAGE := 10
 const ATTACK_RANGE := 2.4
@@ -23,6 +28,9 @@ const INFECTED_KNOCKBACK_DECELERATION := 18.0
 const STARTING_HEALTH := 100
 const MEDKIT_HEAL := 40
 const CAMERA_SMOOTHING := 9.0
+const CAMERA_LOOK_AHEAD := 0.16
+const CAMERA_TURN_SPEED := 1.45
+const FIRE_BUFFER_WINDOW := 0.12
 const SIGNAL_BEACON_REACH := 2.2
 const INFECTED_COLOR := Color("8b9b73")
 
@@ -31,12 +39,15 @@ var item_catalog = ItemCatalogScript.new()
 var prototype_loadout = PrototypeLoadoutScript.new()
 var prototype_weapon_state = PrototypeWeaponStateScript.new()
 var prototype_infected_brain = PrototypeInfectedBrainScript.new()
+var prototype_combat_motion = PrototypeCombatMotionScript.new()
+var prototype_combat_feedback = PrototypeCombatFeedbackScript.new()
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
 var health := STARTING_HEALTH
 var infected_health := 100
 var attack_cooldown := 0.0
+var fire_buffer_timer := 0.0
 var save_timer := 0.0
 var camera_yaw := 0.0
 var attack_was_down := false
@@ -63,6 +74,9 @@ var status_label: Label
 var health_label: Label
 var inventory_label: Label
 var feedback_label: Label
+var combat_status_label: Label
+var hit_marker_label: Label
+var damage_overlay: ColorRect
 var health_bar: ProgressBar
 var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
@@ -70,11 +84,17 @@ var player_sidearm: MeshInstance3D
 var muzzle_flash: MeshInstance3D
 var muzzle_light: OmniLight3D
 var prototype_audio_player: AudioStreamPlayer
+var prototype_feedback_audio_player: AudioStreamPlayer
 var infected_material: StandardMaterial3D
+var infected_telegraph: MeshInstance3D
 var hit_flash_timer := 0.0
 var muzzle_flash_timer := 0.0
 var camera_kick := 0.0
 var infected_reaction_timer := 0.0
+var infected_reaction_duration := HIT_FLASH_DURATION
+var player_sidearm_rest_position := Vector3.ZERO
+var player_sidearm_rest_rotation := Vector3.ZERO
+var player_melee_rest_rotation := Vector3(0.0, -25.0, 35.0)
 var signal_beacon: Node3D
 var signal_light: OmniLight3D
 var environment_root: Node3D
@@ -131,11 +151,14 @@ func _physics_process(delta: float) -> void:
 
 	var movement := _movement_input()
 	var direction := Vector3(movement.x, 0.0, movement.y).rotated(Vector3.UP, camera_yaw)
-	player.velocity = direction * PLAYER_SPEED
+	var target_velocity := direction * PLAYER_SPEED
+	var movement_response := PLAYER_ACCELERATION if direction.length_squared() > 0.001 else PLAYER_DECELERATION
+	player.velocity = player.velocity.move_toward(target_velocity, movement_response * delta)
 	player.move_and_slide()
 	if direction.length_squared() > 0.001:
 		var target_yaw := atan2(-direction.x, -direction.z)
-		player.rotation.y = lerp_angle(player.rotation.y, target_yaw, minf(delta * 10.0, 1.0))
+		var turn_weight := 1.0 - exp(-PLAYER_TURN_RESPONSE * delta)
+		player.rotation.y = lerp_angle(player.rotation.y, target_yaw, turn_weight)
 
 	if infected != null:
 		_move_infected(delta)
@@ -365,6 +388,7 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 	if is_infected:
 		mesh_instance.scale = Vector3(1.0, 1.15, 1.0)
 		infected_material = material
+		_build_infected_telegraph(actor.global_position)
 	else:
 		player_weapon = _build_weapon(actor)
 		player_sidearm = _build_sidearm(actor)
@@ -379,6 +403,7 @@ func _build_weapon(parent: Node3D) -> MeshInstance3D:
 	weapon.material_override = _material(Color("c7b8a1"))
 	weapon.position = Vector3(0.5, 0.2, -0.35)
 	weapon.rotation_degrees = Vector3(0.0, -25.0, 35.0)
+	player_melee_rest_rotation = weapon.rotation_degrees
 	parent.add_child(weapon)
 	return weapon
 
@@ -392,6 +417,8 @@ func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	sidearm.material_override = _material(Color("78858b"))
 	sidearm.position = Vector3(-0.42, 0.18, -0.35)
 	sidearm.rotation_degrees = Vector3(0.0, 18.0, -18.0)
+	player_sidearm_rest_position = sidearm.position
+	player_sidearm_rest_rotation = sidearm.rotation_degrees
 	parent.add_child(sidearm)
 
 	muzzle_flash = MeshInstance3D.new()
@@ -419,6 +446,23 @@ func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	return sidearm
 
 
+func _build_infected_telegraph(spawn_position: Vector3) -> void:
+	if infected_telegraph != null and is_instance_valid(infected_telegraph):
+		infected_telegraph.queue_free()
+	infected_telegraph = MeshInstance3D.new()
+	infected_telegraph.name = "InfectedAttackTelegraph"
+	var disc := CylinderMesh.new()
+	disc.height = 0.025
+	disc.top_radius = PrototypeInfectedBrainScript.ATTACK_RESOLVE_RANGE
+	disc.bottom_radius = PrototypeInfectedBrainScript.ATTACK_RESOLVE_RANGE
+	disc.radial_segments = 24
+	infected_telegraph.mesh = disc
+	infected_telegraph.material_override = _transparent_emissive_material(Color(1.0, 0.25, 0.12, 0.24))
+	infected_telegraph.position = Vector3(spawn_position.x, 0.025, spawn_position.z)
+	infected_telegraph.visible = false
+	add_child(infected_telegraph)
+
+
 func _apply_equipped_weapon_presentation() -> void:
 	if player_sidearm == null:
 		return
@@ -431,8 +475,10 @@ func _apply_equipped_weapon_presentation() -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = presentation.get("size", Vector3(0.18, 0.20, 0.56))
 	player_sidearm.mesh = mesh
-	player_sidearm.position = presentation.get("position", Vector3(-0.42, 0.18, -0.38))
-	player_sidearm.rotation_degrees = presentation.get("rotation_degrees", Vector3(0.0, 18.0, -18.0))
+	player_sidearm_rest_position = presentation.get("position", Vector3(-0.42, 0.18, -0.38))
+	player_sidearm_rest_rotation = presentation.get("rotation_degrees", Vector3(0.0, 18.0, -18.0))
+	player_sidearm.position = player_sidearm_rest_position
+	player_sidearm.rotation_degrees = player_sidearm_rest_rotation
 	player_sidearm.material_override = _material(presentation.get("color", Color("78858b")))
 	player_sidearm.set_meta("prototype_item_id", item_id)
 	player_sidearm.set_meta("prototype_profile", presentation.get("profile", "unknown"))
@@ -462,42 +508,76 @@ func _sync_ammo_inventory() -> void:
 
 
 func _build_prototype_audio() -> void:
-	prototype_audio_player = AudioStreamPlayer.new()
-	prototype_audio_player.name = "PrototypeWeaponAudio"
+	prototype_audio_player = _create_prototype_audio_player("PrototypeWeaponAudio", -9.0)
+	prototype_feedback_audio_player = _create_prototype_audio_player("PrototypeCombatFeedbackAudio", -11.0)
+
+
+func _create_prototype_audio_player(player_name: String, volume_db: float) -> AudioStreamPlayer:
+	var player_node := AudioStreamPlayer.new()
+	player_node.name = player_name
 	var stream := AudioStreamGenerator.new()
 	stream.mix_rate = 22050.0
 	stream.buffer_length = 0.3
-	prototype_audio_player.stream = stream
-	prototype_audio_player.volume_db = -10.0
-	add_child(prototype_audio_player)
+	player_node.stream = stream
+	player_node.volume_db = volume_db
+	add_child(player_node)
+	return player_node
 
 
-func _play_prototype_audio(action: String) -> void:
-	if prototype_audio_player == null:
+func _play_prototype_audio(action: String, layered: bool = false) -> void:
+	var player_node := prototype_feedback_audio_player if layered else prototype_audio_player
+	if player_node == null:
 		return
 	var item := _equipped_weapon_item()
 	var audio: Dictionary = item.get("audio", {})
-	prototype_audio_player.set_meta("catalog_audio_id", String(audio.get(action, "prototype.%s" % action)))
-	prototype_audio_player.stop()
-	prototype_audio_player.play()
-	var playback := prototype_audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	player_node.set_meta("catalog_audio_id", String(audio.get(action, "prototype.%s" % action)))
+	player_node.stop()
+	player_node.play()
+	var playback := player_node.get_stream_playback() as AudioStreamGeneratorPlayback
 	if playback == null:
 		return
-	var duration := 0.11 if action == "fire" else 0.18
+	var duration := 0.12
+	match action:
+		"reload":
+			duration = 0.18
+		"player_hit", "enemy_attack":
+			duration = 0.16
+		"death":
+			duration = 0.22
+		"empty", "hit":
+			duration = 0.08
 	var frame_count := int(22050.0 * duration)
 	var frames := PackedVector2Array()
 	frames.resize(frame_count)
+	var stats: Dictionary = item.get("stats", {})
+	var damage_ratio := clampf(float(stats.get("damage", 38)) / 100.0, 0.0, 1.0)
 	for index in range(frame_count):
 		var time := float(index) / 22050.0
 		var progress := time / duration
 		var envelope := pow(1.0 - progress, 2.4)
 		var sample := 0.0
-		if action == "fire":
-			sample = (sin(TAU * 92.0 * time) * 0.62 + sin(TAU * 780.0 * time) * 0.22) * envelope
-		else:
-			var click_one := maxf(0.0, 1.0 - absf(time - 0.025) * 42.0)
-			var click_two := maxf(0.0, 1.0 - absf(time - 0.125) * 42.0)
-			sample = sin(TAU * 420.0 * time) * (click_one + click_two) * 0.32
+		match action:
+			"fire":
+				var fire_base := lerpf(118.0, 72.0, damage_ratio)
+				sample = (sin(TAU * fire_base * time) * 0.66 + sin(TAU * 760.0 * time) * 0.20) * envelope
+			"reload":
+				var click_one := maxf(0.0, 1.0 - absf(time - 0.025) * 42.0)
+				var click_two := maxf(0.0, 1.0 - absf(time - 0.125) * 42.0)
+				sample = sin(TAU * 420.0 * time) * (click_one + click_two) * 0.32
+			"empty":
+				sample = sin(TAU * 240.0 * time) * envelope * 0.24
+			"hit":
+				sample = (sin(TAU * 1450.0 * time) * 0.25 + sin(TAU * 210.0 * time) * 0.18) * envelope
+			"player_hit":
+				sample = (sin(TAU * 64.0 * time) * 0.45 + sin(TAU * 118.0 * time) * 0.20) * envelope
+			"enemy_attack":
+				sample = sin(TAU * (78.0 + progress * 34.0) * time) * envelope * 0.38
+			"death":
+				sample = (sin(TAU * (105.0 - progress * 48.0) * time) * 0.45) * envelope
+			"melee":
+				sample = (sin(TAU * 170.0 * time) * 0.34 + sin(TAU * 520.0 * time) * 0.12) * envelope
+			_:
+				sample = sin(TAU * 360.0 * time) * envelope * 0.20
 		frames[index] = Vector2(sample, sample)
 	playback.push_buffer(frames)
 
@@ -521,6 +601,13 @@ func _emissive_material(color: Color) -> StandardMaterial3D:
 	material.emission_enabled = true
 	material.emission = color
 	material.emission_energy_multiplier = 3.2
+	return material
+
+
+func _transparent_emissive_material(color: Color) -> StandardMaterial3D:
+	var material := _emissive_material(color)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return material
 
 
@@ -574,8 +661,10 @@ func _handle_infected_state_change(decision: Dictionary) -> void:
 		return
 	match String(decision.get("state", "")):
 		PrototypeInfectedBrainScript.STATE_ALERT:
+			_play_prototype_audio("enemy_alert", true)
 			_set_feedback("Movement ahead. The infected has noticed you.", 1.2)
 		PrototypeInfectedBrainScript.STATE_WINDUP:
+			_play_prototype_audio("enemy_attack", true)
 			_set_feedback("The infected is winding up. Move.", 0.9)
 
 
@@ -594,6 +683,8 @@ func _resolve_infected_attack() -> void:
 		_set_feedback("You escaped the strike.", 0.8)
 		return
 	health = maxi(health - INFECTED_ATTACK_DAMAGE, 0)
+	prototype_combat_feedback.register_player_damage(INFECTED_ATTACK_DAMAGE)
+	_play_prototype_audio("player_hit", true)
 	_set_feedback("The infected hit you.", 1.0)
 	if health <= 0:
 		run_failed = true
@@ -609,16 +700,21 @@ func _reset_infected_behavior(start_engaged: bool = false) -> void:
 
 
 func _update_combat_feedback(delta: float) -> void:
+	prototype_combat_feedback.advance(delta)
+	_update_combat_motion(delta)
+	_update_infected_telegraph()
+	_update_combat_ui()
 	hit_flash_timer = maxf(hit_flash_timer - delta, 0.0)
 	muzzle_flash_timer = maxf(muzzle_flash_timer - delta, 0.0)
 	camera_kick = move_toward(camera_kick, 0.0, delta * 7.5)
 	_set_muzzle_flash_visible(muzzle_flash_timer > 0.0 and prototype_weapon_state.active_mode() == PrototypeWeaponStateScript.MODE_FIREARM)
 	infected_reaction_timer = maxf(infected_reaction_timer - delta, 0.0)
 	if infected != null:
-		var reaction_weight := infected_reaction_timer / HIT_FLASH_DURATION if infected_reaction_timer > 0.0 else 0.0
+		var reaction_weight := infected_reaction_timer / infected_reaction_duration if infected_reaction_timer > 0.0 else 0.0
 		if reaction_weight > 0.0:
-			infected.rotation_degrees.z = -12.0 * reaction_weight
-			infected.scale = Vector3(1.0 + reaction_weight * 0.08, 1.0 - reaction_weight * 0.08, 1.0 + reaction_weight * 0.08)
+			var reaction_strength := prototype_combat_feedback.hit_strength()
+			infected.rotation_degrees.z = -12.0 * reaction_weight * reaction_strength
+			infected.scale = Vector3(1.0 + reaction_weight * 0.08 * reaction_strength, 1.0 - reaction_weight * 0.08 * reaction_strength, 1.0 + reaction_weight * 0.08 * reaction_strength)
 		else:
 			_apply_infected_state_pose()
 	if infected_material == null:
@@ -660,12 +756,79 @@ func _apply_infected_state_pose() -> void:
 			infected.scale = Vector3(0.96, 1.04, 0.96)
 
 
+func _update_combat_motion(delta: float) -> void:
+	var movement_ratio := 0.0
+	if player != null:
+		movement_ratio = clampf(Vector2(player.velocity.x, player.velocity.z).length() / PLAYER_SPEED, 0.0, 1.0)
+	var motion := prototype_combat_motion.advance(delta, movement_ratio)
+	var blend_weight := 1.0 - exp(-24.0 * delta)
+	if player_sidearm != null:
+		var firearm_position_offset: Vector3 = motion.get("firearm_position_offset", Vector3.ZERO)
+		var firearm_rotation_offset: Vector3 = motion.get("firearm_rotation_offset", Vector3.ZERO)
+		var sidearm_position := player_sidearm_rest_position + firearm_position_offset
+		var sidearm_rotation := player_sidearm_rest_rotation + firearm_rotation_offset
+		player_sidearm.position = player_sidearm.position.lerp(sidearm_position, blend_weight)
+		player_sidearm.rotation_degrees = player_sidearm.rotation_degrees.lerp(sidearm_rotation, blend_weight)
+	if player_weapon != null:
+		var melee_rotation_offset: Vector3 = motion.get("melee_rotation_offset", Vector3.ZERO)
+		var melee_rotation := player_melee_rest_rotation + melee_rotation_offset
+		player_weapon.rotation_degrees = player_weapon.rotation_degrees.lerp(melee_rotation, blend_weight)
+	if bool(motion.get("melee_impact", false)):
+		_resolve_melee_attack()
+
+
+func _update_infected_telegraph() -> void:
+	if infected_telegraph == null:
+		return
+	var windup_active := infected != null and prototype_infected_brain.state() == PrototypeInfectedBrainScript.STATE_WINDUP
+	infected_telegraph.visible = windup_active
+	if not windup_active:
+		return
+	infected_telegraph.global_position = Vector3(infected.global_position.x, 0.025, infected.global_position.z)
+	var progress := prototype_infected_brain.state_progress()
+	var pulse_scale := 0.72 + progress * 0.28 + sin(environment_time * 22.0) * 0.025
+	infected_telegraph.scale = Vector3(pulse_scale, 1.0, pulse_scale)
+	infected_telegraph.rotation.y += 0.025
+
+
+func _update_combat_ui() -> void:
+	if hit_marker_label != null:
+		var marker_alpha := prototype_combat_feedback.hit_marker_alpha()
+		hit_marker_label.visible = marker_alpha > 0.0
+		hit_marker_label.text = prototype_combat_feedback.marker_text()
+		hit_marker_label.modulate = Color(1.0, 0.84, 0.64, marker_alpha)
+	if damage_overlay != null:
+		damage_overlay.color = Color(0.62, 0.05, 0.03, prototype_combat_feedback.damage_overlay_alpha())
+	if combat_status_label == null:
+		return
+	combat_status_label.text = ""
+	combat_status_label.visible = false
+	if infected != null and prototype_infected_brain.state() == PrototypeInfectedBrainScript.STATE_WINDUP:
+		combat_status_label.text = "MOVE - STRIKE IN %.1fs" % prototype_infected_brain.state_timer()
+		combat_status_label.add_theme_color_override("font_color", Color("ffb27d"))
+		combat_status_label.visible = true
+	elif prototype_weapon_state.is_reloading():
+		combat_status_label.text = "RELOADING %.1fs" % prototype_weapon_state.reload_remaining()
+		combat_status_label.add_theme_color_override("font_color", Color("d8e4e8"))
+		combat_status_label.visible = true
+	elif prototype_weapon_state.active_mode() == PrototypeWeaponStateScript.MODE_FIREARM and prototype_weapon_state.magazine_ammo() <= 0:
+		combat_status_label.text = "MAGAZINE EMPTY - RELOAD"
+		combat_status_label.add_theme_color_override("font_color", Color("ffb27d"))
+		combat_status_label.visible = true
+
+
 func _update_weapon_state(delta: float) -> void:
+	var had_buffered_fire := fire_buffer_timer > 0.0
 	var result := prototype_weapon_state.advance(delta)
+	fire_buffer_timer = maxf(fire_buffer_timer - delta, 0.0)
 	if bool(result.get("reload_completed", false)):
 		_sync_ammo_inventory()
 		_set_feedback("Reload complete. %d / %d." % [prototype_weapon_state.magazine_ammo(), prototype_weapon_state.reserve_ammo()], 1.2)
 		_save_game()
+	# Consume a queued input on the frame cooldown reaches zero, even when a
+	# low frame rate advances both timers past their boundary together.
+	if had_buffered_fire and prototype_weapon_state.fire_cooldown_remaining() <= 0.0:
+		_try_fire(false)
 
 
 func _update_environment(delta: float) -> void:
@@ -707,6 +870,8 @@ func _handle_weapon_switch_input() -> void:
 	var switch_down := Input.is_key_pressed(KEY_Q) or bool(held_actions.get("switch_weapon", false))
 	if switch_down and not switch_was_down:
 		var active_mode := prototype_weapon_state.switch_mode()
+		fire_buffer_timer = 0.0
+		prototype_combat_motion.trigger_equip()
 		_apply_weapon_mode_presentation()
 		_play_prototype_audio("equip")
 		_set_feedback("Active weapon: %s." % active_mode.capitalize(), 1.0)
@@ -819,7 +984,10 @@ func _restart_run() -> void:
 	infected_health = 100
 	inventory = {"scrap": 0, "medkits": 1, "ammo": 6}
 	attack_cooldown = 0.0
+	fire_buffer_timer = 0.0
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
+	prototype_combat_motion.reset()
+	prototype_combat_feedback.reset()
 	_reset_infected_behavior(false)
 	save_timer = 0.0
 	beacon_reached = false
@@ -892,25 +1060,43 @@ func _try_attack() -> void:
 		return
 	attack_cooldown = 0.55
 	_play_attack_feedback()
+
+
+func _resolve_melee_attack() -> void:
+	if infected == null:
+		return
 	var distance := player.global_position.distance_to(infected.global_position)
 	if distance > ATTACK_RANGE:
 		_set_feedback("Too far away.", 0.75)
 		return
+	_play_prototype_audio("melee")
 	_damage_infected(ATTACK_DAMAGE, "Hit confirmed. Threat staggered.")
 
 
-func _try_fire() -> void:
+func _try_fire(allow_buffer: bool = true) -> bool:
 	var result := prototype_weapon_state.try_fire()
 	if not bool(result.get("fired", false)):
+		if not allow_buffer:
+			fire_buffer_timer = 0.0
 		match String(result.get("reason", "blocked")):
 			"inactive":
 				_set_feedback("Switch to the equipped firearm before firing.", 1.0)
 			"reloading":
 				_set_feedback("Reload in progress.", 0.8)
 			"empty":
+				_play_prototype_audio("empty", true)
 				_set_feedback("Magazine empty. Press F or RELOAD.", 1.2)
-		return
-	_play_fire_feedback()
+			"cooldown":
+				if allow_buffer and float(result.get("cooldown_remaining", 1.0)) <= FIRE_BUFFER_WINDOW:
+					fire_buffer_timer = FIRE_BUFFER_WINDOW
+		return false
+	fire_buffer_timer = 0.0
+	_resolve_fire_result(result)
+	return true
+
+
+func _resolve_fire_result(result: Dictionary) -> void:
+	_play_fire_feedback(int(result.get("damage", 1)))
 	_sync_ammo_inventory()
 	var magazine := prototype_weapon_state.magazine_ammo()
 	if infected == null:
@@ -954,15 +1140,19 @@ func _damage_infected(damage: int, feedback: String) -> void:
 		infected_knockback_velocity = knockback_direction.normalized() * INFECTED_KNOCKBACK_SPEED
 		infected_knockback_timer = INFECTED_KNOCKBACK_DURATION
 	hit_flash_timer = HIT_FLASH_DURATION
-	infected_reaction_timer = HIT_FLASH_DURATION
 	var interrupted_attack := prototype_infected_brain.apply_stagger()
+	var defeated := infected_health <= 0
+	prototype_combat_feedback.register_infected_hit(damage, interrupted_attack, defeated)
+	infected_reaction_duration = lerpf(0.12, 0.24, clampf(prototype_combat_feedback.hit_strength() / 1.25, 0.0, 1.0))
+	infected_reaction_timer = infected_reaction_duration
+	_play_prototype_audio("death" if defeated else "hit", true)
 	var reaction_note := " Attack interrupted." if interrupted_attack else ""
 	_set_feedback("%s%s Infected health: %d" % [feedback, reaction_note, infected_health], 0.9)
 	if infected_health <= 0:
 		_defeat_infected()
 
 
-func _play_fire_feedback() -> void:
+func _play_fire_feedback(damage: int) -> void:
 	if player_sidearm == null:
 		return
 	muzzle_flash_timer = 0.075
@@ -970,22 +1160,13 @@ func _play_fire_feedback() -> void:
 	_set_muzzle_flash_visible(true)
 	_play_prototype_audio("fire")
 	_eject_prototype_shell()
-	var resting_position := player_sidearm.position
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(player_sidearm, "position", resting_position + Vector3(0.0, 0.04, 0.20), 0.055)
-	tween.tween_property(player_sidearm, "position", resting_position, 0.11)
+	prototype_combat_motion.trigger_fire(clampf(float(damage) / 60.0, 0.65, 1.35))
 
 
 func _play_reload_feedback(duration: float) -> void:
 	if player_sidearm == null:
 		return
-	var resting_rotation := player_sidearm.rotation_degrees
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(player_sidearm, "rotation_degrees", resting_rotation + Vector3(24.0, 0.0, 12.0), 0.16)
-	tween.tween_interval(maxf(duration - 0.32, 0.0))
-	tween.tween_property(player_sidearm, "rotation_degrees", resting_rotation, 0.16)
+	prototype_combat_motion.trigger_reload(duration)
 
 
 func _eject_prototype_shell() -> void:
@@ -1009,10 +1190,7 @@ func _eject_prototype_shell() -> void:
 func _play_attack_feedback() -> void:
 	if player_weapon == null:
 		return
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(player_weapon, "rotation_degrees", Vector3(-80.0, -25.0, 35.0), ATTACK_SWING_DURATION * 0.45)
-	tween.tween_property(player_weapon, "rotation_degrees", Vector3(0.0, -25.0, 35.0), ATTACK_SWING_DURATION * 0.55)
+	prototype_combat_motion.trigger_melee(ATTACK_SWING_DURATION)
 
 
 func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) -> void:
@@ -1022,6 +1200,8 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 	var defeated_position := defeated.global_position
 	infected = null
 	_reset_infected_behavior(false)
+	if infected_telegraph != null:
+		infected_telegraph.visible = false
 	if award_salvage:
 		var death_tween := create_tween()
 		death_tween.set_parallel(true)
@@ -1090,15 +1270,17 @@ func _update_camera(delta: float = 1.0) -> void:
 	if camera == null or player == null:
 		return
 	if held_actions.get("camera_left", false):
-		camera_yaw -= 0.025
+		camera_yaw -= CAMERA_TURN_SPEED * delta
 	if held_actions.get("camera_right", false):
-		camera_yaw += 0.025
+		camera_yaw += CAMERA_TURN_SPEED * delta
 	var offset := Vector3(0.0, 3.4, 6.5).rotated(Vector3.UP, camera_yaw)
-	var recoil_offset := Vector3(0.0, camera_kick * 0.08, camera_kick * 0.16).rotated(Vector3.UP, camera_yaw)
-	var target_position := player.global_position + offset + recoil_offset
-	var smoothing_weight := clampf(delta * CAMERA_SMOOTHING, 0.0, 1.0)
+	var look_ahead := Vector3(player.velocity.x, 0.0, player.velocity.z) * CAMERA_LOOK_AHEAD
+	var impact := prototype_combat_feedback.camera_impact()
+	var recoil_offset := Vector3(sin(environment_time * 37.0) * impact * 0.035, camera_kick * 0.08 + impact * 0.05, camera_kick * 0.16 + impact * 0.11).rotated(Vector3.UP, camera_yaw)
+	var target_position := player.global_position + offset + look_ahead + recoil_offset
+	var smoothing_weight := 1.0 - exp(-CAMERA_SMOOTHING * delta)
 	camera.global_position = camera.global_position.lerp(target_position, smoothing_weight)
-	camera.look_at(player.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
+	camera.look_at(player.global_position + look_ahead * 0.45 + Vector3(0.0, 0.9, 0.0), Vector3.UP)
 
 
 func _build_touch_controls() -> void:
@@ -1108,6 +1290,12 @@ func _build_touch_controls() -> void:
 	hud_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud_root.mouse_filter = Control.MOUSE_FILTER_PASS
 	canvas.add_child(hud_root)
+
+	damage_overlay = ColorRect.new()
+	damage_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	damage_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	damage_overlay.color = Color(0.62, 0.05, 0.03, 0.0)
+	hud_root.add_child(damage_overlay)
 
 	status_label = Label.new()
 	status_label.position = Vector2(24.0, 20.0)
@@ -1136,6 +1324,31 @@ func _build_touch_controls() -> void:
 	feedback_label.add_theme_color_override("font_color", Color("ffd2ae"))
 	feedback_label.add_theme_font_size_override("font_size", 18)
 	hud_root.add_child(feedback_label)
+
+	combat_status_label = Label.new()
+	combat_status_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	combat_status_label.offset_left = -260.0
+	combat_status_label.offset_top = 34.0
+	combat_status_label.offset_right = 260.0
+	combat_status_label.offset_bottom = 82.0
+	combat_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	combat_status_label.add_theme_font_size_override("font_size", 23)
+	combat_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	combat_status_label.visible = false
+	hud_root.add_child(combat_status_label)
+
+	hit_marker_label = Label.new()
+	hit_marker_label.set_anchors_preset(Control.PRESET_CENTER)
+	hit_marker_label.offset_left = -90.0
+	hit_marker_label.offset_top = -28.0
+	hit_marker_label.offset_right = 90.0
+	hit_marker_label.offset_bottom = 28.0
+	hit_marker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hit_marker_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hit_marker_label.add_theme_font_size_override("font_size", 28)
+	hit_marker_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hit_marker_label.visible = false
+	hud_root.add_child(hit_marker_label)
 
 	var dpad := GridContainer.new()
 	dpad.columns = 3
@@ -1402,6 +1615,8 @@ func _equip_selected_item() -> void:
 	var equipped_item := item_catalog.item_by_id(inventory_selected_item_id)
 	if String(equipped_item.get("category", "")) == "weapon":
 		prototype_weapon_state.equip(equipped_item, prototype_weapon_state.reserve_ammo())
+		fire_buffer_timer = 0.0
+		prototype_combat_motion.trigger_equip()
 		_sync_ammo_inventory()
 	_apply_equipped_weapon_presentation()
 	_save_game()
@@ -1601,6 +1816,9 @@ func _load_save() -> bool:
 		return false
 	run_failed = false
 	is_paused = false
+	fire_buffer_timer = 0.0
+	prototype_combat_motion.reset()
+	prototype_combat_feedback.reset()
 	held_actions.clear()
 	_remove_salvage_drop()
 	pause_was_down = false

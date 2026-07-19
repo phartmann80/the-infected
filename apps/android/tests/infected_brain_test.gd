@@ -26,6 +26,10 @@ func _initialize() -> void:
 	if brain.state() != InfectedBrainScript.STATE_WINDUP or not bool(windup.get("state_changed", false)):
 		_fail("Attack range did not enter wind-up.")
 		return
+	brain.advance(InfectedBrainScript.WINDUP_DURATION * 0.25, 1.6, false)
+	if brain.state_progress() < 0.24 or brain.state_progress() > 0.26:
+		_fail("Wind-up did not expose deterministic progress for the attack telegraph.")
+		return
 	if brain.apply_stagger() != true or brain.state() != InfectedBrainScript.STATE_STAGGERED:
 		_fail("Hit stagger did not interrupt the wind-up.")
 		return
