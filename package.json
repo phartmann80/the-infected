@@ -11,14 +11,17 @@
     "build": "npm run build --workspaces --if-present",
     "lint:web": "npm run lint --workspace @the-infected/web",
     "lint:image-generation": "eslint -c apps/web/eslint.config.mjs scripts/image-generation --max-warnings=0",
-    "lint": "npm run lint:web && npm run lint:image-generation",
+    "lint:video-generation": "eslint -c apps/web/eslint.config.mjs scripts/video-generation --max-warnings=0",
+    "lint": "npm run lint:web && npm run lint:image-generation && npm run lint:video-generation",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "validate:registry": "node scripts/validate-registry.mjs",
     "ci": "npm run validate:registry && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
     "secrets:scan": "node scripts/scan-secrets.mjs",
     "test:image-generation": "vitest run --config scripts/image-generation/vitest.config.ts",
+    "test:video-generation": "vitest run --dir scripts/video-generation/tests",
     "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
-    "image:generate": "tsx scripts/image-generation/generate.ts"
+    "image:generate": "tsx scripts/image-generation/generate.ts",
+    "video:generate": "tsx scripts/video-generation/generate.ts"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -29,6 +32,7 @@
   "packageManager": "npm@11.17.0",
   "devDependencies": {
     "@types/node": "20.19.43",
+    "dotenv": "^17.4.2",
     "tsx": "4.23.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
