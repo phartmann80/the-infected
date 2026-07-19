@@ -16,10 +16,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "validate:registry": "node scripts/validate-registry.mjs",
     "validate:hero-candidate": "node scripts/validate-hero-production-candidate.mjs",
-    "ci": "npm run validate:registry && npm run validate:hero-candidate && npm run secrets:scan && npm run lint && npm run typecheck && npm run build",
+    "ci": "npm run validate:registry && npm run validate:hero-candidate && npm run secrets:scan && npm run lint && npm run typecheck && npm run test:ai-gateway && npm run build",
     "secrets:scan": "node scripts/scan-secrets.mjs",
     "test:image-generation": "vitest run --config scripts/image-generation/vitest.config.ts",
     "test:video-generation": "vitest run --dir scripts/video-generation/tests",
+    "test:ai-gateway": "vitest run packages/ai-gateway/src/index.test.ts",
     "image:generate:self-check": "tsx scripts/image-generation/self-check.ts",
     "image:generate": "tsx scripts/image-generation/generate.ts",
     "video:generate": "tsx scripts/video-generation/generate.ts"
