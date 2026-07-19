@@ -4,7 +4,9 @@ import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LandingFooter } from './LandingFooter';
 import { SceneBoundary } from './hero/SceneBoundary';
+import { CinematicChapters } from './CinematicChapters';
 
 type EnvironmentalSceneComponentProps = {
   active: boolean;
@@ -136,6 +138,11 @@ export function CinematicHero() {
     setSignupStatus('success');
   }, []);
 
+  const openSignup = () => {
+    setSignupOpen(true);
+    setSignupStatus('idle');
+  };
+
   const audioStatus = useMemo(() => {
     if (!soundEnabled) return 'Sound muted. Narration captions available.';
     if (narrationState === 'playing') return 'Ambient sound active. Narration playing.';
@@ -145,7 +152,10 @@ export function CinematicHero() {
 
   return (
     <>
-      <section ref={heroRef} className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
+      <a href="#chapters" className="sr-only fixed left-4 top-4 z-[60] rounded-full bg-orange-500 px-5 py-3 text-sm font-black uppercase tracking-[0.16em] text-black focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-orange-200">
+        Skip to chapters
+      </a>
+      <section id="arrival" ref={heroRef} className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
@@ -250,10 +260,7 @@ export function CinematicHero() {
               >
                 <button
                   type="button"
-                  onClick={() => {
-                    setSignupOpen(true);
-                    setSignupStatus('idle');
-                  }}
+                  onClick={openSignup}
                   className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
                 >
                   Join the Survivors
@@ -291,7 +298,7 @@ export function CinematicHero() {
           </div>
 
           <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 border-t border-white/10 pb-2 pt-4 text-xs uppercase tracking-[0.22em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
-            <span>Descend into the city</span>
+            <a href="#chapters" className="rounded-sm transition hover:text-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200/70">Descend into the city</a>
             <span id="audio-status" role="status" aria-live="polite">{audioStatus}</span>
             <span>Android reveal in production</span>
           </div>
@@ -328,19 +335,8 @@ export function CinematicHero() {
         )}
       </section>
 
-      <section className="relative overflow-hidden bg-black px-5 py-28 text-stone-200 sm:px-8 lg:px-12">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-[#080403] to-transparent" />
-        <div aria-hidden className="absolute left-1/2 top-10 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-orange-950/20 blur-3xl" />
-        <div className="relative mx-auto max-w-4xl border-l border-orange-200/18 pl-6">
-          <p className="text-xs uppercase tracking-[0.42em] text-orange-100/60">Below the smoke</p>
-          <h2 className="mt-5 max-w-2xl text-4xl font-black uppercase leading-none tracking-[-0.06em] text-white sm:text-6xl">
-            Every street remembers what happened.
-          </h2>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-stone-400">
-            The next section will descend into the world: checkpoints, survivor traces, lost broadcasts, and the systems that shape the Android game.
-          </p>
-        </div>
-      </section>
+      <CinematicChapters onJoin={openSignup} />
+      <LandingFooter onJoin={openSignup} />
     </>
   );
 }

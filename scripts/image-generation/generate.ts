@@ -82,6 +82,10 @@ async function resolveProvider(name: string): Promise<ImageProvider> {
     const mod = await import('./providers/logicc');
     return new mod.default();
   }
+  if (name === 'muapi') {
+    const mod = await import('./providers/muapi');
+    return new mod.default();
+  }
   if (name === 'mock') {
     const mod = await import('./providers/mock');
     return new mod.default();
@@ -121,9 +125,13 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
   const negative = readLayerOptional('negative_prompt');
   const inputHash = reference ? hashFile(reference) : null;
 
+  const defaultModel = providerName === 'muapi'
+    ? process.env.MUAPI_IMAGE_MODEL || process.env.IMAGE_MODEL || 'flux-dev-image'
+    : process.env.IMAGE_MODEL || config.defaultModel || 'mock-model';
+
   const request: ImageGenerationRequest = {
     provider: providerName,
-    model: process.env.IMAGE_MODEL || config.defaultModel || 'mock-model',
+    model: defaultModel,
     prompt,
     negative_prompt: negative,
     reference_image_path: reference || undefined,
@@ -147,6 +155,9 @@ export async function run(options: RunOptions): Promise<{ provenance: string; re
       throw new Error('Missing --confirm flag for live generation');
     }
     const est = await provider.estimateCost(request);
+    if (providerName === 'muapi' && est == null && maxCost == null) {
+      throw new Error('MuAPI live generation requires --max-cost or MUAPI_ESTIMATED_COST_USD.');
+    }
     if (est != null && maxCost != null && est > maxCost) {
       throw new Error('Estimated cost exceeds max-cost limit: ' + est);
     }
