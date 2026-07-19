@@ -9,16 +9,17 @@ const STATE_RECOVERY := "recovery"
 const STATE_STAGGERED := "staggered"
 
 const PROXIMITY_DETECTION_RANGE := 5.6
-const ATTACK_ENTER_RANGE := 1.72
-const ATTACK_RESOLVE_RANGE := 2.05
+const ATTACK_ENTER_RANGE := 1.68
+const ATTACK_RESOLVE_RANGE := 1.95
 const ALERT_DURATION := 0.46
-const WINDUP_DURATION := 0.48
-const RECOVERY_DURATION := 0.76
+const WINDUP_DURATION := 0.55
+const RECOVERY_DURATION := 0.80
 const STAGGER_DURATION := 0.28
 const POST_STAGGER_GRACE := 0.24
 
 var _state := STATE_DORMANT
 var _state_timer := 0.0
+var _state_duration := 0.0
 var _attack_cooldown := 0.0
 var _elapsed := 0.0
 var _engaged := false
@@ -27,6 +28,7 @@ var _engaged := false
 func reset(start_engaged: bool = false) -> void:
 	_state = STATE_PURSUIT if start_engaged else STATE_DORMANT
 	_state_timer = 0.0
+	_state_duration = 0.0
 	_attack_cooldown = 0.0
 	_elapsed = 0.0
 	_engaged = start_engaged
@@ -94,13 +96,20 @@ func state_timer() -> float:
 	return _state_timer
 
 
+func state_progress() -> float:
+	if _state_duration <= 0.0:
+		return 0.0
+	return clampf(1.0 - (_state_timer / _state_duration), 0.0, 1.0)
+
+
 func is_engaged() -> bool:
 	return _engaged
 
 
 func _set_state(next_state: String, duration: float = 0.0) -> void:
 	_state = next_state
-	_state_timer = maxf(duration, 0.0)
+	_state_duration = maxf(duration, 0.0)
+	_state_timer = _state_duration
 
 
 func _tick_state_timer(delta: float) -> void:

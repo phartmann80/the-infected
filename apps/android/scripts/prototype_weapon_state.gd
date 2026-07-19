@@ -56,7 +56,7 @@ func try_fire() -> Dictionary:
 	if is_reloading():
 		return {"fired": false, "reason": "reloading"}
 	if _fire_cooldown > 0.0:
-		return {"fired": false, "reason": "cooldown"}
+		return {"fired": false, "reason": "cooldown", "cooldown_remaining": _fire_cooldown}
 	if _magazine_ammo <= 0:
 		return {"fired": false, "reason": "empty"}
 	_magazine_ammo -= 1
@@ -145,6 +145,10 @@ func reload_duration() -> float:
 
 func reload_remaining() -> float:
 	return _reload_remaining
+
+
+func fire_cooldown_remaining() -> float:
+	return _fire_cooldown
 
 
 func is_reloading() -> bool:

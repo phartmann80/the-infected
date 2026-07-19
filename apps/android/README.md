@@ -27,7 +27,11 @@ The inventory screen reads the approved prototype catalog without mutating it. I
 
 Weapon feedback is intentionally mobile-light: a brief emissive muzzle flash, procedural placeholder fire/reload cues keyed by the catalog audio IDs, a small recoil/camera impulse, one short-lived shell primitive, infected hit flash/knockback, and a simple death fall. These effects prove readability without claiming final animation, audio, balance, aiming, or asset quality.
 
+The combat-polish layer blends recoil, reload, equip, movement sway, and melee swing offsets every frame instead of stacking one-off tweens. Melee damage resolves at the visible impact point, near-ready fire input has a bounded 120 ms buffer, and generated weapon/impact cues use separate channels. HIT, BREAK, and DOWN markers, a brief player-damage overlay, a wind-up countdown, and a low-cost ground telegraph clarify each exchange without adding permanent effects or production media.
+
 The infected behavior is a deterministic prototype state machine. The threat remains dormant outside proximity until the objective activates, pauses in a visible alert state, pursues with bounded lateral steering and distance-based speed, faces the survivor, telegraphs each attack, recovers after a strike, and allows weapon hits to interrupt wind-up. State color and simple pose changes keep the encounter readable without navigation meshes, additional enemies, expensive pathfinding, or final animation assets.
+
+Player movement uses short acceleration/deceleration ramps, frame-rate-independent turning, camera look-ahead, and frame-rate-independent camera smoothing. These values are prototype tuning and still require physical-device touch and frame-time review.
 
 ## Prototype controls
 
