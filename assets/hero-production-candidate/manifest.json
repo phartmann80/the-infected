@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "hero-production-candidate.v1",
+  "name": "The Infected Hero Production Candidate V1",
+  "status": "planned",
+  "reviewStatus": "pending",
+  "canonical": false,
+  "generationMode": "dry-run-only",
+  "binaryStoragePolicy": "pending",
+  "sourceOfTruth": "assets/hero-production-candidate/manifest.json",
+  "creativeObjective": "Make a new visitor think: I want to know what happened here.",
+  "globalStyle": "Photorealistic cinematic AAA game language, grounded urban collapse, PBR materials, wet asphalt, teal-orange filmic grade, 35mm lens feel, shallow depth of field, volumetric fog, dense ash and smoke, restrained motion, no readable text, no watermark.",
+  "concepts": [
+    {
+      "id": "survivor-001",
+      "role": "survivor",
+      "provider": "muapi",
+      "model": "flux-dev-image",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "First approved Survivor 001 concept: practical weathered clothing, grounded survival equipment, restrained body language, face partly obscured by shadow and smoke, solemn hope, no text, no logo, no gore spectacle."
+    },
+    {
+      "id": "infected-001",
+      "role": "infected",
+      "provider": "muapi",
+      "model": "flux-dev-image",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "First approved Infected 001 concept: distant biological horror silhouette, human movement made uncanny, grounded anatomy, subtle asymmetry, restrained threat, no cartoon styling, no text, no logo, no gore spectacle."
+    },
+    {
+      "id": "environment-001",
+      "role": "environment",
+      "provider": "muapi",
+      "model": "flux-dev-image",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "First approved Environment 001 concept: ruined city checkpoint, abandoned vehicles, emergency lamps, burning debris, storm clouds, wet street reflections, drifting smoke and ash, no characters, no readable text."
+    }
+  ],
+  "sequence": [
+    {
+      "id": "hero-establishing-wide-v1",
+      "order": 1,
+      "purpose": "establish",
+      "medium": "video",
+      "provider": "blackbox",
+      "model": "blackboxai/google/veo-3-fast",
+      "durationSeconds": 5,
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Wide low street-level establishing frame of a ruined city at dawn, abandoned vehicles leading toward a damaged checkpoint, distant burning skyline, storm clouds, slow controlled camera push-in, ash and smoke drifting through the foreground."
+    },
+    {
+      "id": "hero-checkpoint-reveal-v1",
+      "order": 2,
+      "purpose": "reveal",
+      "medium": "video",
+      "provider": "blackbox",
+      "model": "blackboxai/google/veo-3-fast",
+      "durationSeconds": 4,
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Fog and ash slowly part to reveal the abandoned checkpoint, emergency lights flicker weakly, ruined signage remains unreadable, camera holds long enough to understand the world before moving."
+    },
+    {
+      "id": "hero-emergency-flicker-v1",
+      "order": 3,
+      "purpose": "build-tension",
+      "medium": "video",
+      "provider": "blackbox",
+      "model": "blackboxai/google/veo-3-fast",
+      "durationSeconds": 4,
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Hold on abandoned vehicles and wet metal as emergency lighting pulses across their surfaces, burning debris glows behind the checkpoint, fire flicker and fog movement are subtle, no rapid trailer cuts."
+    },
+    {
+      "id": "hero-survivor-presence-v1",
+      "order": 4,
+      "purpose": "reveal",
+      "medium": "video",
+      "provider": "blackbox",
+      "model": "blackboxai/google/veo-3-fast",
+      "durationSeconds": 4,
+      "conceptRef": "survivor-001",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Foreground obstruction and smoke reveal a partial survivor presence near the checkpoint, shoulder-level tension, practical silhouette and cautious movement, never fully explain the face or story."
+    },
+    {
+      "id": "hero-infected-distance-v1",
+      "order": 5,
+      "purpose": "surprise",
+      "medium": "video",
+      "provider": "blackbox",
+      "model": "blackboxai/google/veo-3-fast",
+      "durationSeconds": 4,
+      "conceptRef": "infected-001",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Distant infected movement appears between smoke columns beyond the checkpoint, almost missed at first, the camera holds instead of chasing, threat remains far away and ambiguous."
+    },
+    {
+      "id": "hero-logo-smoke-overlay-v1",
+      "order": 6,
+      "purpose": "transition",
+      "medium": "web-overlay",
+      "provider": "project",
+      "model": "n/a",
+      "durationSeconds": 3,
+      "inputAsset": "assets/branding/the-infected-logo.png",
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Composite the approved official logo through smoke and firelight after the world is established. Do not ask an image or video model to render the logo or readable text."
+    },
+    {
+      "id": "hero-cta-hold-v1",
+      "order": 7,
+      "purpose": "transition",
+      "medium": "web-overlay",
+      "provider": "project",
+      "model": "n/a",
+      "durationSeconds": 3,
+      "status": "planned",
+      "reviewStatus": "pending",
+      "promptBrief": "Hold on the established world with delayed headline and CTA fade-in, preserve smoke, ash, emergency light, and distant movement, keep reduced-motion and sound opt-in behavior."
+    }
+  ],
+  "reviewRequirements": [
+    "production-quality cinematic review",
+    "survivor-001 concept review",
+    "infected-001 concept review",
+    "environment-001 concept review",
+    "final hero composition review",
+    "production audio direction review",
+    "real browser capture",
+    "Lighthouse measurement",
+    "reviewer-accessible preview"
+  ]
+}
