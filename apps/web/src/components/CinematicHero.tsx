@@ -47,12 +47,17 @@ export function CinematicHero() {
   const videoActive = Boolean(!reduceMotion && !isMobile && heroVisible && pageVisible);
 
   useEffect(() => {
-    setWebglAvailable(hasWebGLSupport());
     const media = window.matchMedia('(max-width: 767px)');
     const updateMobile = () => setIsMobile(media.matches);
-    updateMobile();
+    const capabilityFrame = window.requestAnimationFrame(() => {
+      setWebglAvailable(hasWebGLSupport());
+      updateMobile();
+    });
     media.addEventListener('change', updateMobile);
-    return () => media.removeEventListener('change', updateMobile);
+    return () => {
+      window.cancelAnimationFrame(capabilityFrame);
+      media.removeEventListener('change', updateMobile);
+    };
   }, []);
 
   useEffect(() => {
@@ -65,9 +70,12 @@ export function CinematicHero() {
 
   useEffect(() => {
     const onVisibility = () => setPageVisible(document.visibilityState === 'visible');
-    onVisibility();
+    const visibilityFrame = window.requestAnimationFrame(onVisibility);
     document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.cancelAnimationFrame(visibilityFrame);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   useEffect(() => {
