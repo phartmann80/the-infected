@@ -4,6 +4,7 @@ const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const TEST_SAVE_PATH := "user://item_inventory_contract_test.json"
 const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
+const PrototypeFieldInventoryScript := preload("res://scripts/prototype_field_inventory.gd")
 const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 
 
@@ -40,6 +41,14 @@ func _initialize() -> void:
 
 	var loadout := PrototypeLoadoutScript.new()
 	loadout.initialize(catalog)
+	var field_inventory := PrototypeFieldInventoryScript.new()
+	field_inventory.initialize(catalog)
+	if not field_inventory.has_item("weapon.warden9") or not field_inventory.has_item("gear.fieldpack45"):
+		_fail("Field inventory did not include the starter loadout.")
+		return
+	if field_inventory.has_item("gear.bastion-vest") or not field_inventory.collect("gear.bastion-vest", catalog):
+		_fail("Field inventory did not separate and collect the milestone gear item.")
+		return
 	if not loadout.equip("weapon.raven12", catalog):
 		_fail("Prototype weapon equip failed.")
 		return
@@ -51,12 +60,17 @@ func _initialize() -> void:
 	if file == null:
 		_fail("Could not create local inventory test save.")
 		return
-	file.store_string(JSON.stringify(loadout.to_save_data()))
+	file.store_string(JSON.stringify({"loadout": loadout.to_save_data(), "field_inventory": field_inventory.to_save_data()}))
 	file.close()
 
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
 	var restored := PrototypeLoadoutScript.new()
-	restored.restore(parsed, catalog)
+	restored.restore(parsed.get("loadout", {}), catalog)
+	var restored_field_inventory := PrototypeFieldInventoryScript.new()
+	restored_field_inventory.restore(parsed.get("field_inventory", {}), catalog)
+	if not restored_field_inventory.has_item("gear.bastion-vest"):
+		_fail("Saved field inventory did not restore collected gear.")
+		return
 	if restored.equipped_item_id("weapon") != "weapon.raven12":
 		_fail("Saved weapon equip state did not restore.")
 		return
@@ -68,14 +82,14 @@ func _initialize() -> void:
 	if rejected.equipped_item_id("weapon") != "weapon.warden9" or rejected.equipped_item_id("gear") != "gear.fieldpack45":
 		_fail("Invalid saved item IDs did not fall back to prototype defaults.")
 		return
-	var local_save_text := JSON.stringify(loadout.to_save_data()).to_lower()
+	var local_save_text := JSON.stringify(parsed).to_lower()
 	for forbidden_term: String in ["ownership", "purchase", "entitlement", "price", "provider"]:
 		if local_save_text.contains(forbidden_term):
 			_fail("Local loadout save leaked commerce state: %s" % forbidden_term)
 			return
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
-	print("Android item inventory test passed: 10 weapons, 20 gear items, local equip, save, restore, and in-hand presentation mapping.")
+	print("Android item inventory test passed: immutable catalog, starter field inventory, collected gear, local equip, save, restore, and in-hand presentation mapping.")
 	quit(0)
 
 

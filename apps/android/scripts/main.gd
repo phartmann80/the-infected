@@ -2,6 +2,7 @@ extends Node3D
 
 const ItemCatalogScript := preload("res://scripts/item_catalog.gd")
 const PrototypeLoadoutScript := preload("res://scripts/prototype_loadout.gd")
+const PrototypeFieldInventoryScript := preload("res://scripts/prototype_field_inventory.gd")
 const WeaponPresentationScript := preload("res://scripts/prototype_weapon_presentation.gd")
 const PrototypeWeaponStateScript := preload("res://scripts/prototype_weapon_state.gd")
 const PrototypeInfectedBrainScript := preload("res://scripts/prototype_infected_brain.gd")
@@ -14,8 +15,9 @@ const DATA_PATH := "res://data/game_foundation.json"
 const ITEM_CATALOG_PATH := "res://data/item_catalog.v1.json"
 const SCENE_AUDIO_PATH := "res://data/scene_audio.v1.json"
 const SAVE_PATH := "user://save_v1.json"
-const SAVE_SCHEMA_VERSION := 6
+const SAVE_SCHEMA_VERSION := 7
 const MIN_SUPPORTED_SAVE_SCHEMA := 1
+const FIELD_LOOT_GEAR_ID := "gear.bastion-vest"
 const PLAYER_SPEED := 3.0
 const PLAYER_ACCELERATION := 26.0
 const PLAYER_DECELERATION := 34.0
@@ -46,6 +48,7 @@ const BEACON_PULSE_INTERVAL := 1.55
 var game_data: Dictionary = {}
 var item_catalog = ItemCatalogScript.new()
 var prototype_loadout = PrototypeLoadoutScript.new()
+var prototype_field_inventory = PrototypeFieldInventoryScript.new()
 var prototype_weapon_state = PrototypeWeaponStateScript.new()
 var prototype_infected_brain = PrototypeInfectedBrainScript.new()
 var prototype_combat_motion = PrototypeCombatMotionScript.new()
@@ -54,6 +57,7 @@ var prototype_touch_input = PrototypeTouchInputScript.new()
 var prototype_player_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_SURVIVOR)
 var prototype_infected_animation = PrototypeActorAnimationScript.new(PrototypeActorAnimationScript.ROLE_INFECTED)
 var prototype_scene_audio = PrototypeSceneAudioScript.new()
+var save_path := SAVE_PATH
 var player: CharacterBody3D
 var infected: CharacterBody3D
 var camera: Camera3D
@@ -98,6 +102,7 @@ var health_bar: ProgressBar
 var infected_bar: ProgressBar
 var player_weapon: MeshInstance3D
 var player_sidearm: MeshInstance3D
+var player_gear: MeshInstance3D
 var muzzle_flash: MeshInstance3D
 var muzzle_light: OmniLight3D
 var prototype_audio_player: AudioStreamPlayer
@@ -123,6 +128,7 @@ var environment_root: Node3D
 var salvage_drop: Node3D
 var salvage_drop_collected := false
 var salvage_drop_position := Vector3.ZERO
+var salvage_drop_item_id := ""
 var environment_time := 0.0
 var pause_panel: PanelContainer
 var pause_resume_button: Button
@@ -150,10 +156,12 @@ func _ready() -> void:
 	_load_item_catalog()
 	_load_scene_audio()
 	prototype_loadout.initialize(item_catalog)
+	prototype_field_inventory.initialize(item_catalog)
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)))
 	_build_world()
 	var restored_checkpoint := _load_save()
 	_apply_equipped_weapon_presentation()
+	_apply_equipped_gear_presentation()
 	_build_touch_controls()
 	_update_hud()
 	_queue_narration("route_resumed" if restored_checkpoint else "route_start")
@@ -227,7 +235,7 @@ func _exit_tree() -> void:
 
 
 func _begin_touch_pointer(pointer_id: int, screen_position: Vector2) -> bool:
-	if is_paused or inventory_screen_open or run_failed or run_complete:
+	if is_paused or inventory_screen_open or run_failed:
 		return false
 	if movement_pad.get_global_rect().has_point(screen_position):
 		return prototype_touch_input.begin_movement(
@@ -278,12 +286,6 @@ func _physics_process(delta: float) -> void:
 		_handle_restart_input()
 		_update_hud()
 		return
-	if run_complete:
-		_handle_save_load_input()
-		_handle_restart_input()
-		_update_hud()
-		return
-
 	var movement := _movement_input()
 	var direction := Vector3(movement.x, 0.0, movement.y).rotated(Vector3.UP, camera_yaw)
 	var target_velocity := direction * PLAYER_SPEED
@@ -550,6 +552,7 @@ func _build_actor(actor_name: String, position: Vector3, color: Color, is_infect
 		player_rig = rig
 		player_weapon = _build_weapon(actor)
 		player_sidearm = _build_sidearm(actor)
+		player_gear = _build_gear(actor)
 	return actor
 
 
@@ -646,6 +649,18 @@ func _build_sidearm(parent: Node3D) -> MeshInstance3D:
 	return sidearm
 
 
+func _build_gear(parent: Node3D) -> MeshInstance3D:
+	var gear := MeshInstance3D.new()
+	gear.name = "EquippedGearPrototype"
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.62, 0.74, 0.28)
+	gear.mesh = mesh
+	gear.material_override = _material(Color("46515a"))
+	gear.position = Vector3(0.0, 0.0, 0.38)
+	parent.add_child(gear)
+	return gear
+
+
 func _build_infected_telegraph(spawn_position: Vector3) -> void:
 	if infected_telegraph != null and is_instance_valid(infected_telegraph):
 		infected_telegraph.queue_free()
@@ -687,6 +702,30 @@ func _apply_equipped_weapon_presentation() -> void:
 	if muzzle_light != null:
 		muzzle_light.position = muzzle_flash.position
 	_apply_weapon_mode_presentation()
+
+
+func _apply_equipped_gear_presentation() -> void:
+	if player_gear == null:
+		return
+	var item_id := prototype_loadout.equipped_item_id("gear")
+	var item := item_catalog.item_by_id(item_id)
+	if item.is_empty():
+		player_gear.visible = false
+		return
+	var sub_category := String(item.get("subCategory", ""))
+	var mesh := BoxMesh.new()
+	if sub_category == "armor-vest":
+		mesh.size = Vector3(0.74, 0.82, 0.34)
+		player_gear.position = Vector3(0.0, 0.0, -0.08)
+		player_gear.material_override = _material(Color("343c42"))
+	else:
+		mesh.size = Vector3(0.62, 0.74, 0.28)
+		player_gear.position = Vector3(0.0, 0.0, 0.38)
+		player_gear.material_override = _material(Color("46515a"))
+	player_gear.mesh = mesh
+	player_gear.visible = true
+	player_gear.set_meta("prototype_item_id", item_id)
+	player_gear.set_meta("prototype_sub_category", sub_category)
 
 
 func _equipped_weapon_item() -> Dictionary:
@@ -785,11 +824,11 @@ func _attach_beacon_audio_player() -> void:
 	prototype_beacon_audio_player = player_node
 
 
-func _play_prototype_audio(action: String, layered: bool = false) -> void:
+func _play_prototype_audio(action: String, layered: bool = false, source_item: Dictionary = {}) -> void:
 	var player_node := prototype_feedback_audio_player if layered else prototype_audio_player
 	if player_node == null:
 		return
-	var item := _equipped_weapon_item()
+	var item := source_item if not source_item.is_empty() else _equipped_weapon_item()
 	var audio: Dictionary = item.get("audio", {})
 	var audio_id := String(audio.get(action, "prototype.%s" % action))
 	player_node.set_meta("catalog_audio_id", audio_id)
@@ -1558,6 +1597,7 @@ func _restart_run() -> void:
 	held_actions.clear()
 	_reset_touch_controls()
 	_apply_equipped_weapon_presentation()
+	_apply_equipped_gear_presentation()
 	_remove_salvage_drop()
 	player.position = Vector3(0.0, 1.0, 4.0)
 	player.velocity = Vector3.ZERO
@@ -1773,11 +1813,14 @@ func _defeat_infected(award_salvage: bool = true, persist_state: bool = true) ->
 		_save_game()
 
 
-func _spawn_salvage_drop(position: Vector3) -> void:
+func _spawn_salvage_drop(position: Vector3, item_id: String = FIELD_LOOT_GEAR_ID) -> void:
 	if environment_root == null or salvage_drop != null:
 		return
+	if not item_catalog.has_item(item_id) or String(item_catalog.item_by_id(item_id).get("category", "")) != "gear":
+		item_id = FIELD_LOOT_GEAR_ID
 	salvage_drop_position = Vector3(position.x, 0.35, position.z)
 	salvage_drop_collected = false
+	salvage_drop_item_id = item_id
 	salvage_drop = _build_pickup(
 		environment_root,
 		"scrap",
@@ -1786,6 +1829,7 @@ func _spawn_salvage_drop(position: Vector3) -> void:
 		Color("e8b160"),
 		"LootDrop_Salvage_001",
 	)
+	salvage_drop.set_meta("prototype_item_id", item_id)
 
 
 func _remove_salvage_drop() -> void:
@@ -1796,6 +1840,7 @@ func _remove_salvage_drop() -> void:
 	salvage_drop = null
 	salvage_drop_collected = false
 	salvage_drop_position = Vector3.ZERO
+	salvage_drop_item_id = ""
 
 
 func _collect_pickups() -> void:
@@ -1807,6 +1852,7 @@ func _collect_pickups() -> void:
 		var kind := String(pickup.get_meta("kind", "scrap"))
 		var amount := int(pickup.get_meta("amount", 1))
 		var is_salvage_drop := bool(pickup.get_meta("is_salvage_drop", false))
+		var field_item_id := String(pickup.get_meta("prototype_item_id", ""))
 		if kind == "ammo":
 			prototype_weapon_state.add_reserve(amount)
 			_sync_ammo_inventory()
@@ -1816,7 +1862,13 @@ func _collect_pickups() -> void:
 		if is_salvage_drop:
 			salvage_drop_collected = true
 			salvage_drop = null
-			_set_feedback("Salvage secured: +%d scrap." % amount, 2.0)
+			var collected_field_item := prototype_field_inventory.collect(field_item_id, item_catalog)
+			var field_item := item_catalog.item_by_id(field_item_id)
+			if collected_field_item:
+				_play_prototype_audio("select", true, field_item)
+				_set_feedback("Recovered %s and +%d scrap. Open GEAR to equip it." % [field_item.get("name", field_item_id), amount], 3.0)
+			else:
+				_set_feedback("Salvage secured: +%d scrap. Gear already carried." % amount, 2.0)
 		else:
 			_set_feedback("Collected %s +%d." % [kind, amount], 1.5)
 		_save_game()
@@ -2126,7 +2178,7 @@ func _build_inventory_panel(parent: Control) -> void:
 	content.add_child(title)
 
 	var disclaimer := Label.new()
-	disclaimer.text = "Local evaluation loadout only. Concepts are non-canonical, unowned, and not for sale."
+	disclaimer.text = "Equip field-carried items only. Preview concepts remain non-canonical; field inventory is not account ownership or an entitlement."
 	disclaimer.add_theme_color_override("font_color", Color("d8b98a"))
 	disclaimer.add_theme_font_size_override("font_size", 17)
 	content.add_child(disclaimer)
@@ -2209,7 +2261,7 @@ func _refresh_inventory_items() -> void:
 	inventory_item_list.clear()
 	var items := item_catalog.items_for_category(inventory_category)
 	if inventory_category_label != null:
-		inventory_category_label.text = "%s / %d PROTOTYPE CONCEPTS" % [inventory_category.to_upper(), items.size()]
+		inventory_category_label.text = "%s   %d CARRIED / %d CONCEPTS" % [inventory_category.to_upper(), prototype_field_inventory.count_for_category(inventory_category, item_catalog), items.size()]
 	if items.is_empty():
 		inventory_detail_label.text = "Item catalog unavailable."
 		inventory_equip_button.disabled = true
@@ -2221,7 +2273,11 @@ func _refresh_inventory_items() -> void:
 		var item_id := String(item.get("id", ""))
 		var label := String(item.get("name", item_id))
 		if item_id == equipped_id:
-			label += "   [EQUIPPED]"
+			label += "   [CARRIED / EQUIPPED]"
+		elif prototype_field_inventory.has_item(item_id):
+			label += "   [CARRIED]"
+		else:
+			label += "   [PREVIEW ONLY]"
 		inventory_item_list.add_item(label)
 		var index := inventory_item_list.get_item_count() - 1
 		inventory_item_list.set_item_metadata(index, item_id)
@@ -2238,8 +2294,14 @@ func _on_inventory_item_selected(index: int) -> void:
 	var item := item_catalog.item_by_id(inventory_selected_item_id)
 	inventory_detail_label.text = _format_inventory_item(item)
 	var equipped := prototype_loadout.is_equipped(inventory_selected_item_id)
-	inventory_equip_button.disabled = equipped
-	inventory_equip_button.text = "EQUIPPED LOCALLY" if equipped else "EQUIP LOCALLY"
+	var carried := prototype_field_inventory.has_item(inventory_selected_item_id)
+	inventory_equip_button.disabled = equipped or not carried
+	if equipped:
+		inventory_equip_button.text = "EQUIPPED LOCALLY"
+	elif carried:
+		inventory_equip_button.text = "EQUIP CARRIED ITEM"
+	else:
+		inventory_equip_button.text = "PREVIEW ONLY - NOT CARRIED"
 
 
 func _on_inventory_item_activated(index: int) -> void:
@@ -2249,6 +2311,9 @@ func _on_inventory_item_activated(index: int) -> void:
 
 func _equip_selected_item() -> void:
 	if inventory_selected_item_id.is_empty():
+		return
+	if not prototype_field_inventory.has_item(inventory_selected_item_id):
+		_set_feedback("That concept has not been recovered in the field.", 1.8)
 		return
 	if not prototype_loadout.equip(inventory_selected_item_id, item_catalog):
 		_set_feedback("Prototype item could not be equipped.", 1.5)
@@ -2260,6 +2325,8 @@ func _equip_selected_item() -> void:
 		prototype_combat_motion.trigger_equip()
 		_sync_ammo_inventory()
 	_apply_equipped_weapon_presentation()
+	_apply_equipped_gear_presentation()
+	_play_prototype_audio("equip", true, equipped_item)
 	_save_game()
 	_set_feedback("Local loadout updated: %s" % equipped_item.get("name", inventory_selected_item_id), 1.8)
 	_refresh_inventory_items()
@@ -2273,6 +2340,7 @@ func _format_inventory_item(item: Dictionary) -> String:
 	var lines := PackedStringArray([
 		String(item.get("name", "Unknown item")),
 		"%s / %s / required level: %s" % [String(item.get("rarity", "unknown")).to_upper(), String(item.get("subCategory", "unknown")), level_text],
+		"Field inventory: %s" % ("CARRIED" if prototype_field_inventory.has_item(String(item.get("id", ""))) else "PREVIEW ONLY"),
 		"",
 		String(item.get("description", "")),
 		"",
@@ -2454,9 +2522,9 @@ func _set_feedback(message: String, duration: float) -> void:
 
 
 func _load_save() -> bool:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if not FileAccess.file_exists(save_path):
 		return false
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var schema_version := int(parsed.get("schema_version", 0))
@@ -2490,18 +2558,26 @@ func _load_save() -> bool:
 	if saved_inventory is Dictionary:
 		for item in inventory.keys():
 			inventory[item] = maxi(int(saved_inventory.get(item, inventory[item])), 0)
+	prototype_field_inventory.restore(parsed.get("prototype_field_inventory", {}), item_catalog)
 	prototype_loadout.restore(parsed.get("prototype_loadout", {}), item_catalog)
+	# Preserve valid local loadouts from schemas 1-6 by treating previously
+	# selected items as carried prototype state, never commerce ownership.
+	for category: String in ["weapon", "gear"]:
+		prototype_field_inventory.collect(prototype_loadout.equipped_item_id(category), item_catalog)
 	prototype_weapon_state.initialize(_equipped_weapon_item(), int(inventory.get("ammo", 0)), parsed.get("prototype_weapon_state", {}))
 	_sync_ammo_inventory()
 	_apply_equipped_weapon_presentation()
+	_apply_equipped_gear_presentation()
 	var saved_collected_pickups = parsed.get("collected_pickups", [])
 	for pickup in pickups:
 		pickup.visible = not (saved_collected_pickups is Array and saved_collected_pickups.has(pickup.name))
 	salvage_drop_collected = bool(parsed.get("salvage_drop_collected", false))
 	var saved_salvage_spawned := bool(parsed.get("salvage_drop_spawned", false))
 	var saved_salvage_position = parsed.get("salvage_drop_position", [])
+	var saved_salvage_item_id := String(parsed.get("salvage_drop_item_id", FIELD_LOOT_GEAR_ID))
+	salvage_drop_item_id = saved_salvage_item_id
 	if saved_salvage_spawned and not salvage_drop_collected and saved_salvage_position is Array and saved_salvage_position.size() == 3:
-		_spawn_salvage_drop(Vector3(float(saved_salvage_position[0]), float(saved_salvage_position[1]), float(saved_salvage_position[2])))
+		_spawn_salvage_drop(Vector3(float(saved_salvage_position[0]), float(saved_salvage_position[1]), float(saved_salvage_position[2])), saved_salvage_item_id)
 	infected_knockback_timer = 0.0
 	infected_knockback_velocity = Vector3.ZERO
 	var infected_defeated := bool(parsed.get("infected_defeated", false))
@@ -2524,7 +2600,7 @@ func _save_game() -> bool:
 	if player == null:
 		return false
 	_sync_ammo_inventory()
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
 		return false
 	var collected_pickups: Array = []
@@ -2543,6 +2619,7 @@ func _save_game() -> bool:
 		"beacon_reached": beacon_reached,
 		"run_complete": run_complete,
 		"inventory": inventory,
+		"prototype_field_inventory": prototype_field_inventory.to_save_data(),
 		"prototype_loadout": prototype_loadout.to_save_data(),
 		"prototype_weapon_state": prototype_weapon_state.to_save_data(),
 		"position": [player.position.x, player.position.y, player.position.z],
@@ -2552,6 +2629,7 @@ func _save_game() -> bool:
 		"salvage_drop_spawned": salvage_drop != null and is_instance_valid(salvage_drop),
 		"salvage_drop_collected": salvage_drop_collected,
 		"salvage_drop_position": [salvage_drop_position.x, salvage_drop_position.y, salvage_drop_position.z],
+		"salvage_drop_item_id": salvage_drop_item_id,
 	}))
 	file.close()
 	return true
