@@ -42,4 +42,4 @@ if (
   throw new Error('Patched minimatch brace expansion smoke test failed.');
 }
 
-console.log('Applied minimatch 3.1.5 compatibility for brace-expansion 5.0.8.');
+console.log('Applied minimatch 3.1.5 compatibility for brace-expansion 5.0.9.');
