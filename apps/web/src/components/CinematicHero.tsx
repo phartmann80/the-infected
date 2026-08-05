@@ -310,13 +310,13 @@ export function CinematicHero() {
           <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
             <motion.div
               className="max-w-xl"
-              initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.15, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.div
-                initial={reduceMotion ? false : { opacity: 0, filter: 'blur(10px)', scale: 0.96 }}
-                animate={reduceMotion ? undefined : { opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                initial={false}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
                 transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
                 className="relative mb-6 w-72 sm:w-96 lg:w-[28rem]"
               >
@@ -331,11 +331,14 @@ export function CinematicHero() {
                 />
               </motion.div>
 
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-orange-500/80">
+                Enter the Quarantine Zone
+              </p>
               <motion.h1
                 id="hero-heading"
                 className="text-balance text-3xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl"
-                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.85, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
               >
                 Survive the <span className="text-orange-500">Quarantine Zone</span>
@@ -343,8 +346,8 @@ export function CinematicHero() {
 
               <motion.p
                 className="mt-4 max-w-md text-base leading-relaxed text-white/70 sm:text-lg"
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.75, delay: 0.75, ease: [0.16, 1, 0.3, 1] }}
               >
                 A top-down survival horror shooter. Scavenge, shoot, and stay alive across 10 escalating levels of the infected horde.
@@ -352,8 +355,8 @@ export function CinematicHero() {
 
               <motion.div
                 className="mt-8 flex flex-wrap items-center gap-4"
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.75, delay: 1.0, ease: [0.16, 1, 0.3, 1] }}
               >
                 <button
@@ -365,6 +368,14 @@ export function CinematicHero() {
                   className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
                 >
                   Join the Survivors
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrailerOpen(true)}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+                  Watch Trailer
                 </button>
                 <a
                   href="#download"
@@ -379,8 +390,8 @@ export function CinematicHero() {
 
               <motion.div
                 className="mt-6 flex items-center gap-3 text-xs text-white/40"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={reduceMotion ? undefined : { opacity: 1 }}
+                initial={false}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.75, delay: 2.25 }}
               >
                 <span className="inline-flex items-center gap-1.5">
@@ -392,12 +403,32 @@ export function CinematicHero() {
                 <span aria-hidden>|</span>
                 <span>No Ads</span>
               </motion.div>
+
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="mt-4 inline-flex items-center gap-2 text-xs text-white/50 transition hover:text-white/80"
+              >
+                {soundEnabled ? (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {soundEnabled ? 'Sound On' : 'Enter with Sound'}
+              </button>
             </motion.div>
 
             <motion.div
               className="relative hidden md:block"
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-              animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
+              initial={false}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1.0, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
               <div className="relative aspect-[3/4] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
@@ -419,8 +450,8 @@ export function CinematicHero() {
 
           <motion.div
             className="flex flex-col items-center gap-3 pb-2 pt-4 text-center"
-            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.75, delay: 2.5 }}
           >
             <p className="text-xs uppercase tracking-[0.2em] text-white/30">Scroll to explore</p>
