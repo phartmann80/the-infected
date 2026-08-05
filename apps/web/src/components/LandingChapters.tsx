@@ -1,9 +1,15 @@
+'use client';
+
 import Image from 'next/image';
 import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
 import { ProductionFooter } from './ProductionFooter';
 import { WEAPONS, GEAR } from '@/lib/catalog-data';
 import { NARRATION_CUES, SURFACES } from '@/lib/audio-data';
+import { ScrollReveal, StaggerContainer, StaggerItem, SmokeOverlay, EmberOverlay, EmergencyLights, AnimatedWaveform, SectionDivider, LazyVideo } from './animation/CinematicMotion';
+import { AnimatedCharacterCard } from './animation/AnimatedCharacterCard';
+import { AnimatedWeaponCard } from './animation/AnimatedWeaponCard';
+import { AnimatedGameplayLoop } from './animation/AnimatedGameplayLoop';
 
 type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review' | 'planned' | 'in-development';
 
@@ -234,6 +240,8 @@ export function LandingChapters() {
       <section id="story" aria-labelledby="story-heading" className="relative overflow-hidden px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div aria-hidden className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black via-[#080403] to-transparent" />
         <div aria-hidden className="absolute left-1/2 top-20 h-96 w-[46rem] -translate-x-1/2 rounded-full bg-orange-950/20 blur-3xl" />
+        <SmokeOverlay />
+        <EmergencyLights />
         <div className="relative mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-end">
             <SectionMarker
@@ -249,27 +257,42 @@ export function LandingChapters() {
                 <span className="flex items-center gap-2 text-red-200/80"><span className="h-2 w-2 animate-pulse rounded-full bg-red-400" aria-hidden />Live</span>
               </div>
               <p className="mt-12 max-w-xl text-2xl font-black uppercase leading-tight tracking-[-0.04em] text-white sm:text-4xl">“If you can hear this, the quarantine is already gone.”</p>
-              <div className="mt-10 flex items-end gap-1" aria-label="Signal activity visualization">
-                {[18, 34, 12, 52, 28, 72, 44, 88, 22, 56, 31, 64, 18, 42, 26, 76, 38, 54, 20, 48].map((height, index) => (
-                  <span key={`${height}-${index}`} className="h-10 flex-1 bg-orange-300/45" style={{ transform: `scaleY(${height / 100})`, transformOrigin: 'bottom' }} aria-hidden />
-                ))}
+              <div className="mt-10">
+                <AnimatedWaveform bars={24} />
               </div>
               <p className="mt-5 text-xs uppercase tracking-[0.18em] text-stone-400">Transmission continues / location withheld</p>
             </div>
           </div>
 
           <div className="mt-20 grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 md:grid-cols-3">
-            {storyBeats.map((beat) => (
-              <article key={beat.number} className="bg-[#0a0a09] p-6 sm:p-8">
-                <p className="text-5xl font-black tracking-[-0.08em] text-orange-100/20">{beat.number}</p>
-                <p className="mt-12 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{beat.label}</p>
-                <h3 className="mt-4 text-2xl font-black uppercase leading-none tracking-[-0.05em] text-white">{beat.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-stone-400">{beat.description}</p>
-              </article>
-            ))}
+            <StaggerContainer className="contents">
+              {storyBeats.map((beat) => (
+                <StaggerItem key={beat.number}>
+                  <article className="h-full bg-[#0a0a09] p-6 sm:p-8">
+                    <p className="text-5xl font-black tracking-[-0.08em] text-orange-100/20">{beat.number}</p>
+                    <p className="mt-12 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{beat.label}</p>
+                    <h3 className="mt-4 text-2xl font-black uppercase leading-none tracking-[-0.05em] text-white">{beat.title}</h3>
+                    <p className="mt-4 text-sm leading-7 text-stone-400">{beat.description}</p>
+                  </article>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
         </div>
       </section>
+
+      {/* Environment band: Ruined street */}
+      <div className="py-6">
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative aspect-[21/9] overflow-hidden rounded-[1.5rem] border border-white/8 sm:aspect-[16/6]">
+            <LazyVideo srcMp4="/assets/cinematic/env/env-ruined-street.mp4" srcWebm="/assets/cinematic/env/env-ruined-street.webm" poster="/assets/cinematic/env/env-ruined-street.jpg" className="absolute inset-0 h-full w-full" overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            <div className="absolute bottom-4 left-5 z-10 sm:bottom-6 sm:left-8">
+              <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Environment / Ruined district</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-[-0.03em] text-white/70 sm:text-base">The streets stopped being streets.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section id="world" aria-labelledby="world-heading" className="relative overflow-hidden border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div aria-hidden className="absolute inset-0 opacity-30" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)', backgroundSize: '72px 72px', maskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)' }} />
@@ -334,7 +357,7 @@ export function LandingChapters() {
             headingId="survivors-heading"
           />
           <div className="mt-14 grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
-            <RegistryCard entry={survivorEntry} />
+            <AnimatedCharacterCard entry={survivorEntry} variant="survivor" />
             <aside className="rounded-[2rem] border border-orange-200/15 bg-orange-100/[0.035] p-6 sm:p-8">
               <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Character gate / 001</p>
               <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">A person first. A roster later.</h3>
@@ -359,9 +382,10 @@ export function LandingChapters() {
             headingId="infected-heading"
           />
           <div className="mt-14 grid gap-5 lg:grid-cols-2 lg:items-stretch">
-            <RegistryCard entry={infectedEntry} />
-            <RegistryCard entry={infected002Entry} />
+            <AnimatedCharacterCard entry={infectedEntry} variant="infected-001" />
+            <AnimatedCharacterCard entry={infected002Entry} variant="infected-002" />
           </div>
+          <EmberOverlay count={8} />
           <div className="mt-5 rounded-[2rem] border border-red-200/15 bg-red-100/[0.035] p-6 sm:p-8">
             <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-red-100/65">Threat boundary / prototype</p>
             <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">Two infected designs in review.</h3>
@@ -374,6 +398,19 @@ export function LandingChapters() {
           </div>
         </div>
       </section>
+
+      {/* Environment band: Quarantine checkpoint */}
+      <div className="py-6">
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative aspect-[21/9] overflow-hidden rounded-[1.5rem] border border-white/8 sm:aspect-[16/6]">
+            <LazyVideo srcMp4="/assets/cinematic/env/env-quarantine-checkpoint.mp4" srcWebm="/assets/cinematic/env/env-quarantine-checkpoint.webm" poster="/assets/cinematic/env/env-quarantine-checkpoint.jpg" className="absolute inset-0 h-full w-full" overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            <div className="absolute bottom-4 left-5 z-10 sm:bottom-6 sm:left-8">
+              <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Environment / Quarantine line</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-[-0.03em] text-white/70 sm:text-base">Nobody left. Nobody got in.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section id="arsenal" aria-labelledby="arsenal-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
@@ -389,32 +426,25 @@ export function LandingChapters() {
             <span>All weapons are prototype concepts. Stats may change before release.</span>
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {WEAPONS.map((weapon) => (
-              <article key={weapon.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0a] p-5 transition hover:border-orange-200/20 sm:p-6">
-                <div aria-hidden className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-orange-500/8 blur-2xl transition group-hover:bg-orange-500/15" />
-                <div className="relative">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-orange-100/55">{weapon.subCategory}</p>
-                      <h3 className="mt-2 text-xl font-black uppercase leading-tight tracking-[-0.04em] text-white">{weapon.name}</h3>
-                    </div>
-                    <StatusBadge status="prototype" />
-                  </div>
-                  <p className="mt-4 text-xs leading-5 text-stone-400">{weapon.purpose}</p>
-                  <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-[0.62rem]">
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Damage</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.damage}</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Fire Rate</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.fireRateRpm} rpm</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Range</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.rangeMeters}m</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Magazine</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.magazineCapacity} rounds</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Ammo</dt><dd className="mt-1 text-sm font-bold text-stone-200">{weapon.ammo.type}</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Reload</dt><dd className="mt-1 text-sm font-bold text-stone-200">{weapon.reload.behavior} ({weapon.reload.durationSeconds}s)</dd></div>
-                  </dl>
-                </div>
-              </article>
+            {WEAPONS.map((weapon, i) => (
+              <AnimatedWeaponCard key={weapon.id} weapon={weapon} index={i} />
             ))}
           </div>
         </div>
       </section>
+
+      {/* Environment band: Abandoned building */}
+      <div className="py-6">
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative aspect-[21/9] overflow-hidden rounded-[1.5rem] border border-white/8 sm:aspect-[16/6]">
+            <LazyVideo srcMp4="/assets/cinematic/env/env-abandoned-building.mp4" srcWebm="/assets/cinematic/env/env-abandoned-building.webm" poster="/assets/cinematic/env/env-abandoned-building.jpg" className="absolute inset-0 h-full w-full" overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            <div className="absolute bottom-4 left-5 z-10 sm:bottom-6 sm:left-8">
+              <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Environment / Abandoned interior</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-[-0.03em] text-white/70 sm:text-base">Every room has a story you do not want to read.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section id="gear" aria-labelledby="gear-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
@@ -430,30 +460,47 @@ export function LandingChapters() {
             <span>All gear items are prototype concepts. Effects and stats may change before release.</span>
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {GEAR.map((item) => (
-              <article key={item.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] p-5 transition hover:border-orange-200/15 sm:p-6">
-                <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-orange-500/6 blur-2xl transition group-hover:bg-orange-500/12" />
-                <div className="relative">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-orange-100/55">{item.subCategory}</p>
-                      <h3 className="mt-2 text-lg font-black uppercase leading-tight tracking-[-0.04em] text-white">{item.name}</h3>
+            <StaggerContainer className="contents">
+              {GEAR.map((item) => (
+                <StaggerItem key={item.id}>
+                  <article className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] p-5 transition hover:border-orange-200/15 sm:p-6">
+                    <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-orange-500/6 blur-2xl transition group-hover:bg-orange-500/12" />
+                    <div className="relative">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-orange-100/55">{item.subCategory}</p>
+                          <h3 className="mt-2 text-lg font-black uppercase leading-tight tracking-[-0.04em] text-white">{item.name}</h3>
+                        </div>
+                        <StatusBadge status="prototype" />
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-stone-400">{item.purpose}</p>
+                      <dl className="mt-4 grid grid-cols-4 gap-x-2 gap-y-2 text-[0.58rem]">
+                        <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Prot</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.protection}</dd></div>
+                        <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Util</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.utility}</dd></div>
+                        <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Mob</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.mobility}</dd></div>
+                        <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Cap</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.capacity}</dd></div>
+                      </dl>
                     </div>
-                    <StatusBadge status="prototype" />
-                  </div>
-                  <p className="mt-3 text-xs leading-5 text-stone-400">{item.purpose}</p>
-                  <dl className="mt-4 grid grid-cols-4 gap-x-2 gap-y-2 text-[0.58rem]">
-                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Prot</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.protection}</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Util</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.utility}</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Mob</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.mobility}</dd></div>
-                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Cap</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.capacity}</dd></div>
-                  </dl>
-                </div>
-              </article>
-            ))}
+                  </article>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
         </div>
       </section>
+
+      {/* Environment band: Industrial zone */}
+      <div className="py-6">
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative aspect-[21/9] overflow-hidden rounded-[1.5rem] border border-white/8 sm:aspect-[16/6]">
+            <LazyVideo srcMp4="/assets/cinematic/env/env-industrial-zone.mp4" srcWebm="/assets/cinematic/env/env-industrial-zone.webm" poster="/assets/cinematic/env/env-industrial-zone.jpg" className="absolute inset-0 h-full w-full" overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            <div className="absolute bottom-4 left-5 z-10 sm:bottom-6 sm:left-8">
+              <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Environment / Industrial zone</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-[-0.03em] text-white/70 sm:text-base">The machines kept running after the people stopped.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section id="combat" aria-labelledby="combat-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
@@ -505,16 +552,7 @@ export function LandingChapters() {
               </div>
               <StatusBadge status="prototype" />
             </div>
-            <ol aria-label="Android prototype gameplay loop" className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
-              {gameplayLoop.map((item) => (
-                <li key={item.step} className="bg-[#0b0b0a] p-5 sm:p-6">
-                  <p className="text-4xl font-black tracking-[-0.08em] text-orange-100/20" aria-hidden>{item.step}</p>
-                  <p className="mt-8 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">{item.label}</p>
-                  <h4 className="mt-3 text-xl font-black uppercase leading-none tracking-[-0.05em] text-white">{item.title}</h4>
-                  <p className="mt-4 text-sm leading-7 text-stone-400">{item.description}</p>
-                </li>
-              ))}
-            </ol>
+            <AnimatedGameplayLoop steps={gameplayLoop} />
           </div>
           <div className="mt-14 grid gap-5 lg:grid-cols-3">
             {levels.map((level) => (
@@ -574,6 +612,21 @@ export function LandingChapters() {
           </div>
         </div>
       </section>
+
+      {/* Environment band: Underground tunnel */}
+      <div className="py-6">
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+          <div className="relative aspect-[21/9] overflow-hidden rounded-[1.5rem] border border-white/8 sm:aspect-[16/6]">
+            <LazyVideo srcMp4="/assets/cinematic/env/env-underground-tunnel.mp4" srcWebm="/assets/cinematic/env/env-underground-tunnel.webm" poster="/assets/cinematic/env/env-underground-tunnel.jpg" className="absolute inset-0 h-full w-full" overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40" />
+            <div className="absolute bottom-4 left-5 z-10 sm:bottom-6 sm:left-8">
+              <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Environment / Underground</p>
+              <p className="mt-1 text-sm font-bold uppercase tracking-[-0.03em] text-white/70 sm:text-base">The signal comes from below.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider label="The signal fades" />
 
       <section id="audio" aria-labelledby="audio-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">

@@ -9,6 +9,160 @@ section[id] { scroll-margin-top: 5.5rem; }
 :focus-visible { outline: 2px solid rgba(255, 210, 174, 0.95); outline-offset: 4px; }
 .chapter-link-scroll { scrollbar-width: none; }
 .chapter-link-scroll::-webkit-scrollbar { display: none; }
+
+/* ===== CINEMATIC MOTION SYSTEM ===== */
+
+/* Smoke drift — slow horizontal movement */
+@keyframes smoke-drift {
+  0% { transform: translateX(0) translateY(0); opacity: 0.12; }
+  50% { transform: translateX(40px) translateY(-12px); opacity: 0.18; }
+  100% { transform: translateX(0) translateY(0); opacity: 0.12; }
+}
+
+/* Ember float — rising particles */
+@keyframes ember-float {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-120px) translateX(15px); opacity: 0; }
+}
+
+/* Emergency light flicker */
+@keyframes emergency-flicker {
+  0%, 100% { opacity: 0.85; }
+  3% { opacity: 0.3; }
+  6% { opacity: 0.9; }
+  9% { opacity: 0.4; }
+  12% { opacity: 0.85; }
+  50% { opacity: 0.75; }
+  53% { opacity: 0.2; }
+  56% { opacity: 0.8; }
+}
+
+/* Fog movement — slow drift */
+@keyframes fog-drift {
+  0% { transform: translateX(-5%) scale(1); opacity: 0.06; }
+  50% { transform: translateX(5%) scale(1.1); opacity: 0.1; }
+  100% { transform: translateX(-5%) scale(1); opacity: 0.06; }
+}
+
+/* Distant fire glow — pulsing */
+@keyframes fire-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+}
+
+/* Radio signal pulse */
+@keyframes signal-pulse {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Survivor breathing — subtle scale */
+@keyframes survivor-breathing {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.008) translateY(-2px); }
+}
+
+/* Survivor weapon grip — slight rotation */
+@keyframes weapon-grip {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(0.5deg); }
+  70% { transform: rotate(-0.3deg); }
+}
+
+/* Infected 001 — hunched idle sway */
+@keyframes infected-sway {
+  0%, 100% { transform: rotate(-1deg) translateY(0); }
+  25% { transform: rotate(0.5deg) translateY(-1px); }
+  50% { transform: rotate(1deg) translateY(0); }
+  75% { transform: rotate(-0.5deg) translateY(1px); }
+}
+
+/* Infected 001 — head twitch */
+@keyframes head-twitch {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  92% { transform: rotate(3deg); }
+  94% { transform: rotate(-2deg); }
+  96% { transform: rotate(1deg); }
+}
+
+/* Infected 001 — jaw movement */
+@keyframes jaw-move {
+  0%, 80%, 100% { transform: translateY(0); }
+  85% { transform: translateY(2px); }
+  90% { transform: translateY(0); }
+}
+
+/* Infected 002 — heavy breathing chest expansion */
+@keyframes heavy-breathing {
+  0%, 100% { transform: scaleX(1) scaleY(1); }
+  50% { transform: scaleX(1.02) scaleY(1.015); }
+}
+
+/* Infected 002 — slow threatening turn */
+@keyframes threatening-turn {
+  0%, 100% { transform: rotateY(0deg) translateX(0); }
+  50% { transform: rotateY(8deg) translateX(4px); }
+}
+
+/* Weapon card tilt on hover */
+@keyframes weapon-tilt {
+  0% { transform: perspective(800px) rotateY(0deg) rotateX(0deg); }
+  100% { transform: perspective(800px) rotateY(-3deg) rotateX(2deg); }
+}
+
+/* Stat bar fill */
+@keyframes stat-fill {
+  from { width: 0%; }
+}
+
+/* Muzzle flash */
+@keyframes muzzle-flash {
+  0%, 90%, 100% { opacity: 0; }
+  92% { opacity: 0.8; }
+  94% { opacity: 0; }
+  96% { opacity: 0.6; }
+  98% { opacity: 0; }
+}
+
+/* Section divider glow */
+@keyframes divider-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+/* Gameplay loop pulse */
+@keyframes loop-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 100, 30, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(255, 100, 30, 0.15); }
+}
+
+/* Utility classes */
+.anim-smoke { animation: smoke-drift 20s ease-in-out infinite; }
+.anim-ember { animation: ember-float 4s ease-out infinite; }
+.anim-flicker { animation: emergency-flicker 4s ease-in-out infinite; }
+.anim-fog { animation: fog-drift 15s ease-in-out infinite; }
+.anim-fire-glow { animation: fire-glow 3s ease-in-out infinite; }
+.anim-signal { animation: signal-pulse 1.2s ease-in-out infinite; }
+.anim-survivor-breathing { animation: survivor-breathing 4s ease-in-out infinite; }
+.anim-weapon-grip { animation: weapon-grip 6s ease-in-out infinite; }
+.anim-infected-sway { animation: infected-sway 5s ease-in-out infinite; }
+.anim-head-twitch { animation: head-twitch 7s ease-in-out infinite; }
+.anim-jaw-move { animation: jaw-move 8s ease-in-out infinite; }
+.anim-heavy-breathing { animation: heavy-breathing 3s ease-in-out infinite; }
+.anim-threatening-turn { animation: threatening-turn 8s ease-in-out infinite; }
+.anim-muzzle-flash { animation: muzzle-flash 5s ease-in-out infinite; }
+.anim-divider-glow { animation: divider-glow 4s ease-in-out infinite; }
+.anim-loop-pulse { animation: loop-pulse 3s ease-in-out infinite; }
+
+/* Staggered animation delays */
+.delay-1 { animation-delay: 0.5s; }
+.delay-2 { animation-delay: 1s; }
+.delay-3 { animation-delay: 1.5s; }
+.delay-4 { animation-delay: 2s; }
+.delay-5 { animation-delay: 2.5s; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
