@@ -40,16 +40,17 @@ function prefersLowBandwidth() {
   return Boolean(connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g');
 }
 
-type VideoSourceKey = 'desktop-mp4' | 'desktop-webm' | 'mobile-mp4' | 'mobile-webm' | 'auto';
+type VideoSourceKey = 'compat-mp4' | 'desktop-mp4' | 'desktop-webm' | 'mobile-mp4' | 'mobile-webm' | 'auto';
 type HeroMode = 'normal' | 'video-only' | 'video-ui';
 
 const VIDEO_SOURCES: Record<VideoSourceKey, { src: string; type: string }[]> = {
+  'compat-mp4': [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }],
   'desktop-mp4': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }],
   'desktop-webm': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' }],
   'mobile-mp4': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' }],
   'mobile-webm': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' }],
   'auto': [
-    { src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' },
+    { src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' },
   ],
 };
 
@@ -98,6 +99,9 @@ export function CinematicHero() {
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const [hasPlayed, setHasPlayed] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
+  const [playbackFrozen, setPlaybackFrozen] = useState(false);
+  const frozenRetryAttempted = useRef(false);
+  const frozenCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- Debug mode: activated by ?heroDebug=1 URL param ---
   const [heroDebug, setHeroDebug] = useState(false);
@@ -131,7 +135,7 @@ export function CinematicHero() {
       const mode = params.get('heroMode');
       if (mode === 'video-only' || mode === 'video-ui') setHeroMode(mode);
       const src = params.get('heroSource');
-      if (src === 'desktop-mp4' || src === 'desktop-webm' || src === 'mobile-mp4' || src === 'mobile-webm') {
+      if (src === 'compat-mp4' || src === 'desktop-mp4' || src === 'desktop-webm' || src === 'mobile-mp4' || src === 'mobile-webm') {
         setSelectedSource(src);
         setHeroDebug(true); // auto-enable debug when source is forced
       }
@@ -248,6 +252,9 @@ export function CinematicHero() {
       video.pause();
       if (heroDebug) logDebugEvent('video paused (tab hidden)');
     }
+    return () => {
+      if (frozenCheckTimer.current) clearTimeout(frozenCheckTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, videoActive]);
 
@@ -361,11 +368,11 @@ export function CinematicHero() {
       return VIDEO_SOURCES[selectedSource];
     }
     if (!mounted || !isMobile) {
-      // Desktop: MP4 only, as Paul requested
-      return [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }];
+      // Desktop: compatibility MP4 only (720p, H.264 Main profile, level 4.0)
+      return [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }];
     }
-    // Mobile: MP4 only
-    return [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' }];
+    // Mobile: compatibility MP4 only (same file, broad support)
+    return [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }];
   }, [heroDebug, selectedSource, mounted, isMobile]);
 
   // --- NO source-change effect. The video element is stable.
@@ -390,7 +397,43 @@ export function CinematicHero() {
           preload={videoPreload}
           controls={heroDebug}
           aria-hidden={!heroDebug}
-          onPlaying={() => { setHasPlayed(true); setAutoplayFailed(false); setPlayError(null); if (heroDebug) logDebugEvent('playing event fired'); }}
+          onPlaying={() => {
+            setHasPlayed(true);
+            setAutoplayFailed(false);
+            setPlayError(null);
+            setPlaybackFrozen(false);
+            if (heroDebug) logDebugEvent('playing event fired');
+
+            // --- Frozen-playback detection ---
+            // After playing event fires, record currentTime, wait 3s,
+            // compare. If advanced < 0.25s, treat as frozen.
+            if (frozenCheckTimer.current) clearTimeout(frozenCheckTimer.current);
+            const videoEl = videoRef.current;
+            if (videoEl) {
+              const startingTime = videoEl.currentTime;
+              frozenCheckTimer.current = setTimeout(() => {
+                const advanced = videoEl.currentTime - startingTime;
+                if (videoEl.paused || advanced < 0.25) {
+                  setPlaybackFrozen(true);
+                  if (heroDebug) logDebugEvent(`FROZEN detected: advanced ${advanced.toFixed(2)}s in 3s`);
+                  // Attempt one muted manual restart
+                  if (!frozenRetryAttempted.current) {
+                    frozenRetryAttempted.current = true;
+                    videoEl.muted = true;
+                    videoEl.volume = 0;
+                    videoEl.play().then(() => {
+                      setPlaybackFrozen(false);
+                      if (heroDebug) logDebugEvent('frozen recovery: play() succeeded after restart');
+                    }).catch((err) => {
+                      if (heroDebug) logDebugEvent(`frozen recovery: play() rejected: ${err.name}`);
+                    });
+                  }
+                } else {
+                  if (heroDebug) logDebugEvent(`playback verified: advanced ${advanced.toFixed(2)}s in 3s`);
+                }
+              }, 3000);
+            }
+          }}
           onPause={() => { if (heroDebug) logDebugEvent('pause event fired'); }}
           onError={(e) => { if (heroDebug) logDebugEvent(`error event: ${e.currentTarget.error?.code} - ${e.currentTarget.error?.message}`); }}
           onStalled={() => { if (heroDebug) logDebugEvent('stalled event fired'); }}
@@ -404,7 +447,7 @@ export function CinematicHero() {
           ))}
         </video>
 
-        {showAutoplayFallback && (
+        {(showAutoplayFallback || playbackFrozen) && !reduceMotion && !lowBandwidth && mounted && (
           <button
             type="button"
             onClick={manuallyPlayVideo}
@@ -413,6 +456,12 @@ export function CinematicHero() {
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
             Play Cinematic
           </button>
+        )}
+
+        {playbackFrozen && (
+          <div className="absolute left-1/2 top-[calc(50%+3rem)] z-20 -translate-x-1/2 rounded-lg bg-orange-900/80 px-4 py-2 text-xs text-orange-100">
+            Playback frozen detected. Click Play Cinematic to restart.
+          </div>
         )}
 
         {playError && heroDebug && (
@@ -636,7 +685,7 @@ export function CinematicHero() {
           <div className="mb-3 border-b border-white/10 pb-2">
             <div className="mb-1 text-white/60">Video Source (A/B test):</div>
             <div className="flex flex-wrap gap-1">
-              {(['auto', 'desktop-mp4', 'desktop-webm', 'mobile-mp4', 'mobile-webm'] as VideoSourceKey[]).map((key) => (
+              {(['auto', 'compat-mp4', 'desktop-mp4', 'desktop-webm', 'mobile-mp4', 'mobile-webm'] as VideoSourceKey[]).map((key) => (
                 <button
                   key={key}
                   type="button"
@@ -668,6 +717,7 @@ export function CinematicHero() {
               <div>decodedFrames: <span className="text-cyan-300">{debugInfo.decodedFrames ?? 'N/A'}</span></div>
               <div>droppedFrames: <span className={debugInfo.droppedFrames ? 'text-red-400' : 'text-green-400'}>{debugInfo.droppedFrames ?? 'N/A'}</span></div>
               <div>hasPlayed: <span className={hasPlayed ? 'text-green-400' : 'text-red-400'}>{String(hasPlayed)}</span></div>
+              <div>playbackFrozen: <span className={playbackFrozen ? 'text-red-400' : 'text-green-400'}>{String(playbackFrozen)}</span></div>
               {playError && <div className="text-red-400">playError: {playError}</div>}
             </div>
           )}
@@ -701,6 +751,7 @@ export function CinematicHero() {
             <div className="space-y-0.5 text-[10px]">
               <div><a href="/?heroDebug=1&heroMode=video-only" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-only</a></div>
               <div><a href="/?heroDebug=1&heroMode=video-ui" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-ui</a></div>
+              <div><a href="/?heroDebug=1&heroSource=compat-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=compat-mp4</a></div>
               <div><a href="/?heroDebug=1&heroSource=desktop-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=desktop-mp4</a></div>
               <div><a href="/?heroDebug=1&heroSource=mobile-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=mobile-mp4</a></div>
             </div>
@@ -759,7 +810,7 @@ export function CinematicHero() {
               autoPlay
               playsInline
             >
-              <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
+              <source src="/assets/cinematic/hero-cinematic-compat-v1.mp4" type="video/mp4" />
             </video>
             <button
               type="button"
