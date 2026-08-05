@@ -196,7 +196,7 @@ export function CinematicHero() {
       <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] w-full overflow-hidden bg-[#030405]">
         <video
           ref={videoRef}
-          className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
+          className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-90 saturate-[0.85] contrast-[1.05]"
           autoPlay={!reduceMotion && !lowBandwidth}
           muted
           loop
@@ -207,13 +207,13 @@ export function CinematicHero() {
         >
           {isMobile ? (
             <>
-              <source src="/assets/cinematic/hero-cinematic-mobile-v1.webm" type="video/webm" />
               <source src="/assets/cinematic/hero-cinematic-mobile-v1.mp4" type="video/mp4" />
+              <source src="/assets/cinematic/hero-cinematic-mobile-v1.webm" type="video/webm" />
             </>
           ) : (
             <>
-              <source src="/assets/cinematic/hero-cinematic-desktop-v1.webm" type="video/webm" />
               <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
+              <source src="/assets/cinematic/hero-cinematic-desktop-v1.webm" type="video/webm" />
             </>
           )}
           <source src="/assets/cinematic/hero-cinematic-v5.mp4" type="video/mp4" />
@@ -255,7 +255,7 @@ export function CinematicHero() {
           </SceneBoundary>
         )}
 
-        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.22),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.22),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.98)_0%,rgba(3,4,5,0.78)_31%,rgba(3,4,5,0.22)_61%,rgba(3,4,5,0.84)_100%)]" />
+        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.18),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.18),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.62)_31%,rgba(3,4,5,0.12)_61%,rgba(3,4,5,0.72)_100%)]" />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/78 to-transparent" />
         <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/90 via-black/40 to-transparent" />
 
@@ -279,7 +279,7 @@ export function CinematicHero() {
                 initial={reduceMotion ? false : { opacity: 0, filter: 'blur(10px)', scale: 0.96 }}
                 animate={reduceMotion ? undefined : { opacity: 1, filter: 'blur(0px)', scale: 1 }}
                 transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
-                className="relative mb-6 w-40 sm:w-48 lg:w-60"
+                className="relative mb-6 w-52 sm:w-64 lg:w-80"
               >
                 <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
                 <Image
