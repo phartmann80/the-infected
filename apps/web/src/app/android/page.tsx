@@ -117,13 +117,13 @@ export default function AndroidPage() {
             </section>
           </ScrollReveal>
 
-          {/* Download CTA */}
+          {/* APK Provenance Notice */}
           <ScrollReveal>
             <section className="rounded-2xl border border-orange-200/15 bg-gradient-to-br from-orange-950/10 to-transparent p-6 sm:p-8">
-              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div>
-                  <h2 className="text-2xl font-black uppercase tracking-[-0.04em] text-white">Get the APK.</h2>
-                  <p className="mt-2 text-sm text-stone-400">Early access builds are available for testing. Join to get the latest build.</p>
+                  <h2 className="text-2xl font-black uppercase tracking-[-0.04em] text-white">APK under verification.</h2>
+                  <p className="mt-2 text-sm text-stone-400">The public APK download is temporarily disabled while we verify build provenance. Join early access to be notified when the verified build is available.</p>
                 </div>
                 <a href="/early-access" className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-black uppercase tracking-[0.1em] text-black transition hover:bg-orange-400">
                   Join Early Access <span aria-hidden>→</span>
