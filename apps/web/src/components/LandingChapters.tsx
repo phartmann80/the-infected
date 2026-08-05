@@ -52,19 +52,19 @@ const registryEntries: RegistryEntry[] = [
     code: 'INFECTED / 001',
     label: 'Threat presentation',
     title: 'Infected 001 is ready for review.',
-    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This revised model features a rotting human body with flesh still attached, torn bloody skin, exposed bone through gaping wounds, and torn civilian clothing. Clearly a once-human body in advanced decay, not a skeleton creature. No creature roster, final behavior, or lore is implied.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This photorealistic model features a rotting human body with grey-green mottled decaying skin, exposed bone on the skull and jaw, torn bloody flesh with visible wounds and infection damage, sunken hollow eyes with milky corneas, and torn civilian clothing. Gritty survival-horror realism matching the approved creative direction. No creature roster, final behavior, or lore is implied.',
     status: 'internal-review',
-    image: '/assets/cinematic/infected-001-v2-meshy.png',
-    imageAlt: '3D model preview of Infected 001 (revised), generated via Meshy AI. Game-ready GLB for Godot. Rotting human zombie with flesh still attached, torn bloody skin, exposed bone, and torn civilian clothing. Half-human half-skeletal design.',
+    image: '/assets/cinematic/infected-001-v3-portrait.png',
+    imageAlt: 'Photorealistic preview of Infected 001 (v3), matching the approved creative direction. Rotting human zombie with grey-green mottled skin, exposed bone, torn bloody flesh, sunken eyes, and torn civilian clothing. Gritty survival-horror realism.'
   },
   {
     code: 'INFECTED / 002',
     label: 'Threat presentation',
     title: 'Infected 002 is ready for review.',
-    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This revised model is a bulkier mutated infected with swollen distorted muscles visible through torn skin, torn military vest remnants, partial skull exposure on one side with flesh on the other, and milky white eyes. Clearly a once-human body mutated and rotting, not a skeleton.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This photorealistic model is a bulkier mutated infected with swollen musculature visible through torn skin, exposed ribs and bone, torn military vest remnants with blood damage, unhinged jaw with broken teeth, and milky white eyes. Mottled grey-green decaying skin with lesions. Gritty survival-horror realism matching the approved creative direction.',
     status: 'internal-review',
-    image: '/assets/cinematic/infected-002-v2-meshy.png',
-    imageAlt: '3D model preview of Infected 002 (revised), generated via Meshy AI. Game-ready GLB for Godot. Bulky mutated zombie with flesh still attached, torn skin showing swollen muscle, military vest remnants, partial skull exposure. Half-human half-skeletal design.',
+    image: '/assets/cinematic/infected-002-v3-portrait.png',
+    imageAlt: 'Photorealistic preview of Infected 002 (v3), matching the approved creative direction. Bulky mutated zombie with swollen musculature, torn skin, exposed ribs, military vest remnants, milky eyes, and mottled grey-green decaying skin. Gritty survival-horror realism.'
   },
 ];
 
@@ -365,7 +365,7 @@ export function LandingChapters() {
           <div className="mt-5 rounded-[2rem] border border-red-200/15 bg-red-100/[0.035] p-6 sm:p-8">
             <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-red-100/65">Threat boundary / prototype</p>
             <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">Two infected designs in review.</h3>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">Both infected designs are revised to read as rotting human bodies with flesh still attached, torn bloody skin, exposed bone, and torn clothing. Not skeletons. Clearly once-human. These are creative review candidates, not final roster.</p>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">Both infected designs match the approved photorealistic direction: rotting human bodies with grey-green mottled skin, exposed bone, torn bloody flesh, sunken eyes, and torn clothing. Gritty survival-horror realism. These are creative review candidates, not final roster.</p>
             <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
               <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
               <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Two enemies</p></div>
