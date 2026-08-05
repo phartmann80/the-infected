@@ -80,12 +80,10 @@ export function AnimatedWeaponCard({ weapon, index }: AnimatedWeaponCardProps) {
 }
 
 function StatBar({ label, value, max, unit, color, delay, reduceMotion }: { label: string; value: number; max: number; unit?: string; color: string; delay: number; reduceMotion: boolean | null }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
   const pct = Math.min(100, (value / max) * 100);
 
   return (
-    <div ref={ref}>
+    <div>
       <dt className="font-bold uppercase tracking-[0.18em] text-stone-500">{label}</dt>
       <dd className="mt-1 flex items-center gap-2">
         <span className="text-sm font-bold text-orange-100">{value}{unit}</span>
@@ -94,8 +92,8 @@ function StatBar({ label, value, max, unit, color, delay, reduceMotion }: { labe
         <div
           className={`h-full rounded-full ${color}`}
           style={{
-            width: reduceMotion ? `${pct}%` : inView ? `${pct}%` : '0%',
-            transition: reduceMotion ? undefined : 'width 0.8s ease-out {delay}s',
+            width: `${pct}%`,
+            transition: reduceMotion ? undefined : `width 0.8s ease-out ${delay}s`,
           }}
         />
       </div>

@@ -62,6 +62,7 @@ export function CinematicHero() {
   const videoActive = Boolean(!reduceMotion && !lowBandwidth && !isMobile && heroVisible && pageVisible);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWebglAvailable(hasWebGLSupport());
     const media = window.matchMedia('(max-width: 767px)');
     const updateMobile = () => setIsMobile(media.matches);

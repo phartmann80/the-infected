@@ -17,10 +17,7 @@ export function ScrollReveal({ children, delay = 0, y = 40, className }: ScrollR
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion) {
-      setInView(true);
-      return;
-    }
+    if (reduceMotion) return;
     const node = ref.current;
     if (!node) return;
     const observer = new IntersectionObserver(
@@ -64,10 +61,7 @@ export function StaggerContainer({ children, className, stagger = 0.08 }: Stagge
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion) {
-      setInView(true);
-      return;
-    }
+    if (reduceMotion) return;
     const node = ref.current;
     if (!node) return;
     const observer = new IntersectionObserver(
@@ -202,7 +196,10 @@ export function LazyVideo({ srcMp4, srcWebm, poster, className, overlayClassName
     const video = videoRef.current;
     if (!video) return;
     if (visible && !reduceMotion) {
-      if (!loaded) setLoaded(true);
+      if (!loaded) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoaded(true);
+      }
       void video.play().catch(() => undefined);
     } else {
       video.pause();
@@ -212,6 +209,7 @@ export function LazyVideo({ srcMp4, srcWebm, poster, className, overlayClassName
   if (reduceMotion) {
     return (
       <div ref={containerRef} className={className}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={poster} alt="" className="h-full w-full object-cover" />
         {overlayClassName && <div className={overlayClassName} />}
       </div>
@@ -220,6 +218,7 @@ export function LazyVideo({ srcMp4, srcWebm, poster, className, overlayClassName
 
   return (
     <div ref={containerRef} className={className}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
       {loaded && (
         <video
@@ -257,13 +256,15 @@ export function SmokeOverlay({ className }: { className?: string }) {
 export function EmberOverlay({ className, count = 12 }: { className?: string; count?: number }) {
   const reduceMotion = useReducedMotion();
   if (reduceMotion) return null;
-  const embers = Array.from({ length: count }, (_, i) => ({
-    id: i,
-    left: `${(i * 8.3 + Math.random() * 5) % 100}%`,
-    delay: `${(i * 0.3 + Math.random() * 2).toFixed(1)}s`,
-    duration: `${(3 + Math.random() * 2).toFixed(1)}s`,
-    size: `${(2 + Math.random() * 3).toFixed(0)}px`,
-  }));
+  // Deterministic ember positions to avoid impure calls during render
+  const embers = Array.from({ length: count }, (_, i) => {
+    const seed = (i * 7919 + 31) % 1000;
+    const left = (i * 8.3 + (seed % 50) / 10) % 100;
+    const delay = ((i * 0.3 + (seed % 20) / 10) % 3).toFixed(1);
+    const duration = (3 + (seed % 20) / 10).toFixed(1);
+    const size = 2 + (seed % 4);
+    return { id: i, left: `${left}%`, delay: `${delay}s`, duration: `${duration}s`, size: `${size}px` };
+  });
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className ?? ''}`} aria-hidden>
       {embers.map((e) => (

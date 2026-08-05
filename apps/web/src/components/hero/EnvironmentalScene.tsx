@@ -33,10 +33,16 @@ function EmberField() {
   const geometry = useMemo(() => {
     const count = 420;
     const positions = new Float32Array(count * 3);
+    // Deterministic pseudo-random for SSR safety
+    let seed = 12345;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
     for (let i = 0; i < count; i += 1) {
-      positions[i * 3] = (Math.random() - 0.5) * 8;
-      positions[i * 3 + 1] = Math.random() * 4 - 1.5;
-      positions[i * 3 + 2] = Math.random() * -5;
+      positions[i * 3] = (rand() - 0.5) * 8;
+      positions[i * 3 + 1] = rand() * 4 - 1.5;
+      positions[i * 3 + 2] = rand() * -5;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));

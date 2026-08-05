@@ -17,10 +17,7 @@ export function AnimatedGameplayLoop({ steps }: { steps: readonly LoopStep[] }) 
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion) {
-      setInView(true);
-      return;
-    }
+    if (reduceMotion) return;
     const node = ref.current;
     if (!node) return;
     const observer = new IntersectionObserver(
