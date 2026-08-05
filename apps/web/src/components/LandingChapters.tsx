@@ -3,7 +3,7 @@ import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
 import { ProductionFooter } from './ProductionFooter';
 import { WEAPONS, GEAR } from '@/lib/catalog-data';
-import { NARRATION_CUES, SURFACES, AMBIENCE_STATES } from '@/lib/audio-data';
+import { NARRATION_CUES, SURFACES } from '@/lib/audio-data';
 
 type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review' | 'planned' | 'in-development';
 
@@ -61,30 +61,6 @@ const registryEntries: RegistryEntry[] = [
 
 const survivorEntry = registryEntries[0];
 const infectedEntry = registryEntries[1];
-
-const arsenal = [
-  {
-    code: 'A-01',
-    name: 'Field blade',
-    role: 'Close-range / prototype',
-    description: 'A practical tool for the space between a locked door and the next breath.',
-    detail: 'Fast recovery / low reach',
-  },
-  {
-    code: 'A-02',
-    name: 'Signal flare',
-    role: 'Utility / prototype',
-    description: 'Light is useful when you need a route. It is dangerous when something else needs one too.',
-    detail: 'Area reveal / limited supply',
-  },
-  {
-    code: 'A-03',
-    name: 'Recovered sidearm',
-    role: 'Ranged / prototype',
-    description: 'Every shot solves one problem and announces another. Ammunition is a decision, not a default.',
-    detail: 'Short burst / scarce ammo',
-  },
-] as const;
 
 const levels = [
   {
