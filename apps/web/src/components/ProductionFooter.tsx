@@ -44,7 +44,7 @@ export function ProductionFooter() {
           <div className="max-w-2xl">
             <div className="flex items-center gap-4">
               <Image
-                src="/assets/branding/the-infected-logo.png"
+                src="/assets/branding/the-infected-logo-approved-v2.png"
                 alt="The Infected logo"
                 width={48}
                 height={48}
