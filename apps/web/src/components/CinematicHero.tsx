@@ -41,6 +41,7 @@ function prefersLowBandwidth() {
 }
 
 type VideoSourceKey = 'desktop-mp4' | 'desktop-webm' | 'mobile-mp4' | 'mobile-webm' | 'auto';
+type HeroMode = 'normal' | 'video-only' | 'video-ui';
 
 const VIDEO_SOURCES: Record<VideoSourceKey, { src: string; type: string }[]> = {
   'desktop-mp4': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }],
@@ -49,8 +50,6 @@ const VIDEO_SOURCES: Record<VideoSourceKey, { src: string; type: string }[]> = {
   'mobile-webm': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' }],
   'auto': [
     { src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' },
-    { src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' },
-    { src: '/assets/cinematic/hero-cinematic-v5.mp4', type: 'video/mp4' },
   ],
 };
 
@@ -102,6 +101,7 @@ export function CinematicHero() {
 
   // --- Debug mode: activated by ?heroDebug=1 URL param ---
   const [heroDebug, setHeroDebug] = useState(false);
+  const [heroMode, setHeroMode] = useState<HeroMode>('normal');
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [selectedSource, setSelectedSource] = useState<VideoSourceKey>('auto');
   const [debugEvents, setDebugEvents] = useState<string[]>([]);
@@ -112,7 +112,6 @@ export function CinematicHero() {
   // --- Mount effect: set all browser-specific state after hydration ---
   useEffect(() => {
     setMounted(true);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWebglAvailable(hasWebGLSupport());
     const media = window.matchMedia('(max-width: 767px)');
     const updateMobile = () => setIsMobile(media.matches);
@@ -120,15 +119,23 @@ export function CinematicHero() {
     setLowBandwidth(prefersLowBandwidth());
     media.addEventListener('change', updateMobile);
 
-    // Check for heroDebug URL param
+    // Check for heroDebug and heroMode URL params
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       setHeroDebug(params.get('heroDebug') === '1');
+      const mode = params.get('heroMode');
+      if (mode === 'video-only' || mode === 'video-ui') setHeroMode(mode);
+      const src = params.get('heroSource');
+      if (src === 'desktop-mp4' || src === 'desktop-webm' || src === 'mobile-mp4' || src === 'mobile-webm') {
+        setSelectedSource(src);
+        setHeroDebug(true); // auto-enable debug when source is forced
+      }
     }
 
     return () => media.removeEventListener('change', updateMobile);
   }, []);
 
+  // --- Intersection observer: pause video only when hero is scrolled out of view ---
   useEffect(() => {
     const node = heroRef.current;
     if (!node) return;
@@ -137,6 +144,7 @@ export function CinematicHero() {
     return () => observer.disconnect();
   }, []);
 
+  // --- Visibility: pause when tab is hidden ---
   useEffect(() => {
     const onVisibility = () => setPageVisible(document.visibilityState === 'visible');
     onVisibility();
@@ -195,12 +203,16 @@ export function CinematicHero() {
     });
   }, []);
 
-  // --- Video playback effect: aggressive autoplay with retry ---
+  // --- SINGLE video playback controller ---
+  // One effect, one play() call. No video.load(). No competing effects.
+  // Only re-runs when videoActive changes (mount, visibility, scroll).
   useEffect(() => {
     if (!mounted) return;
     const video = videoRef.current;
     if (!video) return;
+
     if (videoActive) {
+      // Single play attempt. If it rejects, mute and retry once.
       const playPromise = video.play();
       if (playPromise) {
         playPromise.then(() => {
@@ -210,6 +222,7 @@ export function CinematicHero() {
         }).catch((err) => {
           if (heroDebug) logDebugEvent(`play() rejected: ${err.name} - ${err.message}`);
           setPlayError(`${err.name}: ${err.message}`);
+          // Retry muted
           video.muted = true;
           video.volume = 0;
           video.play().then(() => {
@@ -219,66 +232,17 @@ export function CinematicHero() {
           }).catch((err2) => {
             if (heroDebug) logDebugEvent(`retry play() rejected: ${err2.name}`);
             setPlayError(`${err2.name}: ${err2.message}`);
-            setTimeout(() => {
-              video.play().then(() => {
-                setHasPlayed(true);
-                setPlayError(null);
-                if (heroDebug) logDebugEvent('delayed retry play() succeeded');
-              }).catch((err3) => {
-                if (heroDebug) logDebugEvent(`delayed retry rejected: ${err3.name}`);
-                setPlayError(`${err3.name}: ${err3.message}`);
-                setAutoplayFailed(true);
-              });
-            }, 100);
+            setAutoplayFailed(true);
           });
         });
       }
     } else {
+      // Only pause when tab is genuinely hidden or hero scrolled out of view
       video.pause();
+      if (heroDebug) logDebugEvent('video paused (inactive)');
     }
-  }, [mounted, videoActive, heroDebug, logDebugEvent, selectedSource]);
-
-  // Additional retry: listen for first user interaction to start video
-  useEffect(() => {
-    if (!mounted || !videoActive) return;
-    const video = videoRef.current;
-    if (!video || !video.paused) return;
-
-    const tryPlayOnInteraction = () => {
-      if (video.paused) {
-        video.play().then(() => {
-          setHasPlayed(true);
-          setAutoplayFailed(false);
-          if (heroDebug) logDebugEvent('play() on user interaction succeeded');
-        }).catch((err) => {
-          if (heroDebug) logDebugEvent(`play() on interaction rejected: ${err.name}`);
-        });
-      }
-    };
-
-    const events = ["click", "touchstart", "keydown", "mousemove", "scroll"];
-    events.forEach(e => document.addEventListener(e, tryPlayOnInteraction, { once: true, passive: true }));
-
-    return () => {
-      events.forEach(e => document.removeEventListener(e, tryPlayOnInteraction));
-    };
-  }, [mounted, videoActive, heroDebug, logDebugEvent]);
-
-  const manuallyPlayVideo = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = true;
-    video.playsInline = true;
-    video.play().then(() => {
-      setHasPlayed(true);
-      setAutoplayFailed(false);
-      setPlayError(null);
-      if (heroDebug) logDebugEvent('manual play() succeeded');
-    }).catch((err) => {
-      setPlayError(`${err.name}: ${err.message}`);
-      if (heroDebug) logDebugEvent(`manual play() rejected: ${err.name} - ${err.message}`);
-    });
-  }, [heroDebug, logDebugEvent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, videoActive]);
 
   // --- Debug info polling: update once per second ---
   useEffect(() => {
@@ -323,14 +287,13 @@ export function CinematicHero() {
       return;
     }
     if (soundEnabled) void ambient?.play().catch(() => undefined);
-  }, [heroVisible, lowBandwidth, pageVisible, soundEnabled]);
+  }, [pageVisible, heroVisible, lowBandwidth, soundEnabled]);
 
-  const playNarration = useCallback(() => {
-    const narration = narrationRef.current;
-    if (!narration) return;
-    narration.currentTime = 0;
-    void narration.play().then(() => setNarrationState('playing')).catch(() => undefined);
-  }, []);
+  useEffect(() => {
+    if (!soundEnabled || !narrationRef.current) return;
+    narrationRef.current.currentTime = 0;
+    void narrationRef.current.play().then(() => setNarrationState('playing')).catch(() => undefined);
+  }, [soundEnabled]);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled((prev) => {
@@ -354,52 +317,63 @@ export function CinematicHero() {
     return 'Ambient sound active.';
   }, [lowBandwidth, narrationState, soundEnabled]);
 
+  const manuallyPlayVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.playsInline = true;
+    video.play().then(() => {
+      setHasPlayed(true);
+      setAutoplayFailed(false);
+      setPlayError(null);
+      if (heroDebug) logDebugEvent('manual play() succeeded');
+    }).catch((err) => {
+      setPlayError(`${err.name}: ${err.message}`);
+      if (heroDebug) logDebugEvent(`manual play() rejected: ${err.name} - ${err.message}`);
+    });
+  }, [heroDebug, logDebugEvent]);
+
   // --- Deterministic rendering ---
   const showVideo = true;
   const videoAutoPlay = !reduceMotion && !lowBandwidth;
   const videoPreload = reduceMotion || lowBandwidth ? 'none' : 'auto';
   const showAutoplayFallback = (autoplayFailed || (heroDebug && !hasPlayed)) && !reduceMotion && !lowBandwidth && mounted;
-  const showScene = sceneActive && mounted;
+
+  // In video-only mode, disable all decorative layers
+  const isVideoOnly = heroMode === 'video-only';
+  const showScene = sceneActive && mounted && !isVideoOnly;
+  const showUI = !isVideoOnly;
 
   // Determine which video sources to use
+  // Desktop: MP4 only (no WebM, no source switching)
+  // Mobile: MP4 only
+  // Debug: allow A/B source selection
   const videoSources = useMemo(() => {
     if (heroDebug && selectedSource !== 'auto') {
       return VIDEO_SOURCES[selectedSource];
     }
     if (!mounted || !isMobile) {
-      return [
-        { src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' },
-        { src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' },
-      ];
+      // Desktop: MP4 only, as Paul requested
+      return [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }];
     }
-    return [
-      { src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' },
-      { src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' },
-    ];
+    // Mobile: MP4 only
+    return [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' }];
   }, [heroDebug, selectedSource, mounted, isMobile]);
 
-  // Force video to reload when source changes (React swaps <source> tags but video element keeps old src)
-  useEffect(() => {
-    if (!mounted) return;
-    const video = videoRef.current;
-    if (!video) return;
-    video.load();
-    if (videoActive) {
-      video.play().then(() => {
-        setHasPlayed(true);
-        if (heroDebug) logDebugEvent('source changed, play() succeeded');
-      }).catch((err) => {
-        if (heroDebug) logDebugEvent(`source changed, play() rejected: ${err.name}`);
-      });
-    }
-  }, [selectedSource, mounted]);
+  // --- NO source-change effect. The video element is stable.
+  // React only swaps <source> tags when heroDebug source selector changes,
+  // and we handle that with a key change that remounts the video cleanly.
+  const videoKey = heroDebug && selectedSource !== 'auto'
+    ? `video-${selectedSource}`
+    : 'video';
 
   return (
     <>
       <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] w-full overflow-hidden bg-[#030405]">
+        {/* --- STABLE VIDEO ELEMENT: one ref, one source, no load() --- */}
         <video
           ref={videoRef}
-          key={heroDebug ? `video-${selectedSource}` : 'video'}
+          key={videoKey}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-90 saturate-[0.74] contrast-[1.08]"
           autoPlay={videoAutoPlay}
           muted
@@ -455,158 +429,169 @@ export function CinematicHero() {
           </SceneBoundary>
         )}
 
-        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.18),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.18),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.62)_31%,rgba(3,4,5,0.12)_61%,rgba(3,4,5,0.72)_100%)]" />
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+        {/* Gradient overlays - only in non-video-only mode */}
+        {showUI && (
+          <>
+            <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.18),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.18),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.62)_31%,rgba(3,4,5,0.12)_61%,rgba(3,4,5,0.72)_100%)]" />
+            <div aria-hidden className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+          </>
+        )}
 
-        <motion.div
-          aria-hidden
-          className="absolute inset-0 opacity-50 mix-blend-screen"
-          animate={showScene ? { x: [0, -10, 0], y: [0, 8, 0], opacity: [0.32, 0.54, 0.32] } : undefined}
-          transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ background: 'radial-gradient(circle at 74% 68%, rgba(255,93,31,.22), transparent 19%), radial-gradient(circle at 28% 48%, rgba(91,119,137,.13), transparent 28%)' }}
-        />
+        {showUI && (
+          <motion.div
+            aria-hidden
+            className="absolute inset-0 opacity-50 mix-blend-screen"
+            animate={showScene ? { x: [0, -10, 0], y: [0, 8, 0], opacity: [0.32, 0.54, 0.32] } : undefined}
+            transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ background: 'radial-gradient(circle at 74% 68%, rgba(255,93,31,.22), transparent 19%), radial-gradient(circle at 28% 48%, rgba(91,119,137,.13), transparent 28%)' }}
+          />
+        )}
 
-        <div className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
-          <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
+        {/* --- UI overlay: logo, headline, buttons as siblings above video --- */}
+        {/* These are siblings layered above the video, NOT controlling it */}
+        {showUI && (
+          <div className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
+            <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
+              <motion.div
+                className="max-w-xl"
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.15, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <motion.div
+                  initial={false}
+                  animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                  transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
+                  className="relative mb-6 w-72 sm:w-96 lg:w-[28rem]"
+                >
+                  <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
+                  <Image
+                    src="/assets/branding/the-infected-logo-approved-v2.png"
+                    alt="The Infected official logo"
+                    width={448}
+                    height={1024}
+                    priority
+                    className="relative h-auto w-full"
+                  />
+                </motion.div>
+
+                <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-orange-500/80">
+                  Enter the Quarantine Zone
+                </p>
+                <motion.h1
+                  id="hero-heading"
+                  className="text-balance text-3xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.85, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  Survive the <span className="text-orange-500">Quarantine Zone</span>
+                </motion.h1>
+
+                <motion.p
+                  className="mt-4 max-w-md text-base leading-relaxed text-white/70 sm:text-lg"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.75, delay: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  A top-down survival horror shooter. Scavenge, shoot, and stay alive across 10 escalating levels of the infected horde.
+                </motion.p>
+
+                <motion.div
+                  className="mt-8 flex flex-wrap items-center gap-4"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.75, delay: 1.0, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <button
+                    type="button"
+                    ref={signupTriggerRef}
+                    onClick={() => {
+                      setSignupOpen(true);
+                    }}
+                    className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    Join the Survivors
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrailerOpen(true)}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+                    Watch Trailer
+                  </button>
+                  <a
+                    href="#download"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Download APK
+                  </a>
+                </motion.div>
+
+                <motion.div
+                  className="mt-6 flex items-center gap-3 text-xs text-white/40"
+                  initial={false}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.75, delay: 2.25 }}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    Alpha Build
+                  </span>
+                  <span aria-hidden>|</span>
+                  <span>Offline Play</span>
+                  <span aria-hidden>|</span>
+                  <span>No Ads</span>
+                </motion.div>
+
+                <button
+                  type="button"
+                  onClick={toggleSound}
+                  className="mt-4 inline-flex items-center gap-2 text-xs text-white/50 transition hover:text-white/80"
+                >
+                  {soundEnabled ? (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  {soundEnabled ? 'Sound On' : 'Enter with Sound'}
+                </button>
+              </motion.div>
+
+              {/* Right column removed: the gameplay screenshot image was broken (file does not exist)
+                  and was covering the zombie video. The video itself is the hero visual. */}
+            </div>
+
             <motion.div
-              className="max-w-xl"
+              className="flex flex-col items-center gap-3 pb-2 pt-4 text-center"
               initial={false}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.15, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.75, delay: 2.5 }}
             >
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30">Scroll to explore</p>
               <motion.div
-                initial={false}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
-                className="relative mb-6 w-72 sm:w-96 lg:w-[28rem]"
+                aria-hidden
+                animate={reduceMotion ? undefined : { y: [0, 8, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 p-1"
               >
-                <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
-                <Image
-                  src="/assets/branding/the-infected-logo-approved-v2.png"
-                  alt="The Infected official logo"
-                  width={448}
-                  height={1024}
-                  priority
-                  className="relative h-auto w-full"
-                />
+                <span className="h-2 w-1 rounded-full bg-white/40" />
               </motion.div>
-
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-orange-500/80">
-                Enter the Quarantine Zone
-              </p>
-              <motion.h1
-                id="hero-heading"
-                className="text-balance text-3xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl"
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.85, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
-              >
-                Survive the <span className="text-orange-500">Quarantine Zone</span>
-              </motion.h1>
-
-              <motion.p
-                className="mt-4 max-w-md text-base leading-relaxed text-white/70 sm:text-lg"
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.75, delay: 0.75, ease: [0.16, 1, 0.3, 1] }}
-              >
-                A top-down survival horror shooter. Scavenge, shoot, and stay alive across 10 escalating levels of the infected horde.
-              </motion.p>
-
-              <motion.div
-                className="mt-8 flex flex-wrap items-center gap-4"
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.75, delay: 1.0, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <button
-                  type="button"
-                  ref={signupTriggerRef}
-                  onClick={() => {
-                    setSignupOpen(true);
-                  }}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                >
-                  Join the Survivors
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrailerOpen(true)}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
-                  Watch Trailer
-                </button>
-                <a
-                  href="#download"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  Download APK
-                </a>
-              </motion.div>
-
-              <motion.div
-                className="mt-6 flex items-center gap-3 text-xs text-white/40"
-                initial={false}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.75, delay: 2.25 }}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                  Alpha Build
-                </span>
-                <span aria-hidden>|</span>
-                <span>Offline Play</span>
-                <span aria-hidden>|</span>
-                <span>No Ads</span>
-              </motion.div>
-
-              <button
-                type="button"
-                onClick={toggleSound}
-                className="mt-4 inline-flex items-center gap-2 text-xs text-white/50 transition hover:text-white/80"
-              >
-                {soundEnabled ? (
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-                {soundEnabled ? 'Sound On' : 'Enter with Sound'}
-              </button>
             </motion.div>
-
-            {/* Right column removed: the gameplay screenshot image was broken (file does not exist)
-                and was covering the zombie video. The video itself is the hero visual. */}
           </div>
-
-          <motion.div
-            className="flex flex-col items-center gap-3 pb-2 pt-4 text-center"
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, delay: 2.5 }}
-          >
-            <p className="text-xs uppercase tracking-[0.2em] text-white/30">Scroll to explore</p>
-            <motion.div
-              aria-hidden
-              animate={reduceMotion ? undefined : { y: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 p-1"
-            >
-              <span className="h-2 w-1 rounded-full bg-white/40" />
-            </motion.div>
-          </motion.div>
-        </div>
+        )}
       </section>
 
       {/* --- Debug panel: only visible when ?heroDebug=1 --- */}
@@ -615,6 +600,28 @@ export function CinematicHero() {
           <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
             <span className="font-bold text-orange-400">HERO DEBUG PANEL</span>
             <span className="text-white/40">updates 1/s</span>
+          </div>
+
+          {/* Mode selector */}
+          <div className="mb-3 border-b border-white/10 pb-2">
+            <div className="mb-1 text-white/60">Hero Mode:</div>
+            <div className="flex flex-wrap gap-1">
+              {(['normal', 'video-only', 'video-ui'] as HeroMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setHeroMode(mode);
+                    setHasPlayed(false);
+                    setAutoplayFailed(false);
+                    setPlayError(null);
+                  }}
+                  className={`rounded px-2 py-1 text-[10px] ${heroMode === mode ? 'bg-orange-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Source selector */}
@@ -653,25 +660,11 @@ export function CinematicHero() {
               <div>decodedFrames: <span className="text-cyan-300">{debugInfo.decodedFrames ?? 'N/A'}</span></div>
               <div>droppedFrames: <span className={debugInfo.droppedFrames ? 'text-red-400' : 'text-green-400'}>{debugInfo.droppedFrames ?? 'N/A'}</span></div>
               <div>hasPlayed: <span className={hasPlayed ? 'text-green-400' : 'text-red-400'}>{String(hasPlayed)}</span></div>
-              {playError && <div>playError: <span className="text-red-400">{playError}</span></div>}
+              {playError && <div className="text-red-400">playError: {playError}</div>}
             </div>
           )}
 
-          {/* Playback events log */}
-          <div className="mt-3 border-t border-white/10 pt-2">
-            <div className="mb-1 text-white/60">Playback Events:</div>
-            <div className="max-h-32 overflow-y-auto space-y-0.5">
-              {debugEvents.length === 0 ? (
-                <div className="text-white/30">(no events yet)</div>
-              ) : (
-                debugEvents.map((evt, i) => (
-                  <div key={i} className="text-[10px] text-green-300">{evt}</div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Manual play button */}
+          {/* Force Play button */}
           <div className="mt-3 border-t border-white/10 pt-2">
             <button
               type="button"
@@ -681,9 +674,33 @@ export function CinematicHero() {
               Force Play (muted, playsInline)
             </button>
           </div>
+
+          {/* Playback events log */}
+          {debugEvents.length > 0 && (
+            <div className="mt-3 border-t border-white/10 pt-2">
+              <div className="mb-1 text-white/60">Playback Events:</div>
+              <div className="space-y-0.5">
+                {debugEvents.map((event, i) => (
+                  <div key={i} className="text-[10px] text-white/50">{event}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Diagnostic URLs */}
+          <div className="mt-3 border-t border-white/10 pt-2">
+            <div className="mb-1 text-white/60">Diagnostic URLs:</div>
+            <div className="space-y-0.5 text-[10px]">
+              <div><a href="/?heroDebug=1&heroMode=video-only" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-only</a></div>
+              <div><a href="/?heroDebug=1&heroMode=video-ui" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-ui</a></div>
+              <div><a href="/?heroDebug=1&heroSource=desktop-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=desktop-mp4</a></div>
+              <div><a href="/?heroDebug=1&heroSource=mobile-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=mobile-mp4</a></div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Signup dialog */}
       {signupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div
@@ -691,16 +708,16 @@ export function CinematicHero() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="signup-title"
-            className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0b0d] p-8 shadow-2xl"
+            className="relative mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0b0d] p-8 shadow-2xl"
           >
             <button
               type="button"
               onClick={closeSignup}
+              className="absolute right-4 top-4 text-white/40 transition hover:text-white/80"
               aria-label="Close"
-              className="absolute right-4 top-4 text-white/40 transition hover:text-white"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                <path d="M6 6l12 12M6 18L18 6" strokeLinecap="round" />
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
             <h2 id="signup-title" className="mb-2 text-2xl font-black uppercase tracking-tight text-white">
@@ -715,38 +732,38 @@ export function CinematicHero() {
               heading="Join the Survivors"
               description="Get early access to The Infected alpha build and be the first to know about new levels and updates."
               registrationEnabled={true}
-              onCancel={closeSignup}
-              ref={signupEmailRef}
             />
           </div>
         </div>
       )}
 
+      {/* Trailer modal */}
       {trailerOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
           onClick={() => setTrailerOpen(false)}
         >
-          <button
-            type="button"
-            onClick={() => setTrailerOpen(false)}
-            className="absolute right-6 top-6 text-white/60 transition hover:text-white"
-            aria-label="Close trailer"
-          >
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M6 6l12 12M6 18L18 6" strokeLinecap="round" />
-            </svg>
-          </button>
-          <video
-            ref={trailerVideoRef}
-            className="max-h-[80vh] w-full max-w-4xl rounded-lg"
-            controls
-            autoPlay
-            playsInline
-          >
-            <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
-            <source src="/assets/cinematic/hero-cinematic-desktop-v1.webm" type="video/webm" />
-          </video>
+          <div className="relative aspect-video w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <video
+              ref={trailerVideoRef}
+              className="h-full w-full rounded-lg"
+              controls
+              autoPlay
+              playsInline
+            >
+              <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
+            </video>
+            <button
+              type="button"
+              onClick={() => setTrailerOpen(false)}
+              className="absolute -top-12 right-0 text-white/60 transition hover:text-white"
+              aria-label="Close trailer"
+            >
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </>
