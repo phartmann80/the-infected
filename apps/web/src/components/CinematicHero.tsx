@@ -61,7 +61,9 @@ export function CinematicHero() {
   const trailerVideoRef = useRef<HTMLVideoElement>(null);
 
   const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
-  const videoActive = Boolean(!reduceMotion && !lowBandwidth && !isMobile && heroVisible && pageVisible);
+  // Video plays on both desktop and mobile; only blocked by reduceMotion or genuine low-bandwidth (2g/saveData)
+  const videoActive = Boolean(!reduceMotion && !lowBandwidth && heroVisible && pageVisible);
+  const [autoplayFailed, setAutoplayFailed] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -134,9 +136,20 @@ export function CinematicHero() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (videoActive) void video.play().catch(() => undefined);
-    else video.pause();
+    if (videoActive) {
+      void video.play().catch(() => {
+        setAutoplayFailed(true);
+      });
+    } else {
+      video.pause();
+    }
   }, [videoActive]);
+
+  const manuallyPlayVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    void video.play().then(() => setAutoplayFailed(false)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const ambient = ambientRef.current;
@@ -149,47 +162,38 @@ export function CinematicHero() {
     if (soundEnabled) void ambient?.play().catch(() => undefined);
   }, [heroVisible, lowBandwidth, pageVisible, soundEnabled]);
 
-  const playNarrationOnce = useCallback(async () => {
+  const playNarration = useCallback(() => {
     const narration = narrationRef.current;
-    if (!narration || narrationState !== 'idle') return;
-    narration.volume = 0.92;
-    try {
-      setNarrationState('playing');
-      await narration.play();
-    } catch {
-      setNarrationState('idle');
-    }
-  }, [narrationState]);
+    if (!narration) return;
+    narration.currentTime = 0;
+    void narration.play().then(() => setNarrationState('playing')).catch(() => undefined);
+  }, []);
 
-  const toggleSound = useCallback(async () => {
-    const ambient = ambientRef.current;
-    if (!ambient || lowBandwidth) return;
-    if (soundEnabled) {
-      ambient.pause();
-      setSoundEnabled(false);
-      return;
-    }
-    ambient.volume = 0.34;
-    try {
-      await ambient.play();
-      setSoundEnabled(true);
-      await playNarrationOnce();
-    } catch {
-      setSoundEnabled(false);
-    }
-  }, [lowBandwidth, playNarrationOnce, soundEnabled]);
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        void ambientRef.current?.play().catch(() => undefined);
+        void narrationRef.current?.play().then(() => setNarrationState('playing')).catch(() => undefined);
+      } else {
+        ambientRef.current?.pause();
+        narrationRef.current?.pause();
+      }
+      return next;
+    });
+  }, []);
 
   const audioStatus = useMemo(() => {
-    if (lowBandwidth) return 'Low-bandwidth mode. Video, WebGL, and audio are paused.';
-    if (!soundEnabled) return 'Sound muted. Narration captions available.';
-    if (narrationState === 'playing') return 'Ambient sound active. Narration playing.';
-    if (narrationState === 'complete') return 'Ambient sound active. Narration complete.';
+    if (lowBandwidth) return 'Low-bandwidth mode. Media paused to protect your connection.';
+    if (!soundEnabled) return 'Audio muted. Click "Enter with Sound" to enable.';
+    if (narrationState === 'playing') return 'Narration playing...';
+    if (narrationState === 'complete') return 'Narration complete.';
     return 'Ambient sound active.';
   }, [lowBandwidth, narrationState, soundEnabled]);
 
   return (
     <>
-      <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
+      <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] w-full overflow-hidden bg-[#030405]">
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
@@ -197,13 +201,24 @@ export function CinematicHero() {
           muted
           loop
           playsInline
-          preload={reduceMotion || lowBandwidth || isMobile ? 'none' : 'metadata'}
+          preload={reduceMotion || lowBandwidth ? 'none' : 'auto'}
           poster="/assets/cinematic/hero-poster-v5.jpg"
           aria-hidden
         >
+          {isMobile ? (
+            <>
+              <source src="/assets/cinematic/hero-cinematic-mobile-v1.webm" type="video/webm" />
+              <source src="/assets/cinematic/hero-cinematic-mobile-v1.mp4" type="video/mp4" />
+            </>
+          ) : (
+            <>
+              <source src="/assets/cinematic/hero-cinematic-desktop-v1.webm" type="video/webm" />
+              <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
+            </>
+          )}
           <source src="/assets/cinematic/hero-cinematic-v5.mp4" type="video/mp4" />
         </video>
-        {(reduceMotion || lowBandwidth) && (
+        {(reduceMotion || lowBandwidth || autoplayFailed) && (
           <Image
             src="/assets/cinematic/hero-poster-v5.jpg"
             alt=""
@@ -213,6 +228,16 @@ export function CinematicHero() {
             className="object-cover object-center"
             aria-hidden
           />
+        )}
+        {autoplayFailed && !reduceMotion && !lowBandwidth && (
+          <button
+            type="button"
+            onClick={manuallyPlayVideo}
+            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 inline-flex items-center justify-center gap-2 rounded-full border border-orange-200/30 bg-black/60 px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur transition hover:bg-black/40 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+            Play Cinematic
+          </button>
         )}
         <audio ref={ambientRef} src="/assets/audio/temporary-ambient-loop-noncanonical.webm" loop preload="none" />
         <audio
@@ -258,7 +283,7 @@ export function CinematicHero() {
               >
                 <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
                 <Image
-                  src="/assets/branding/the-infected-logo.png"
+                  src="/assets/branding/the-infected-logo-approved-v2.png"
                   alt="The Infected official logo"
                   width={1024}
                   height={1024}
