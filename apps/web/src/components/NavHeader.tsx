@@ -98,7 +98,7 @@ export function NavHeader() {
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
           <Link href="/" className="flex items-center gap-3 py-4" onClick={() => setMobileOpen(false)}>
             <Image
-              src="/assets/branding/header-logo.png"
+              src="/assets/branding/header-logo-approved-v2.png"
               alt="The Infected"
               width={48}
               height={48}
@@ -194,7 +194,7 @@ export function NavHeader() {
               {navGroups.map((group) => (
                 <div key={group.label} className="mb-4">
                   <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">{group.label}</p>
-                  <div className="grid grid-cols-2 gap-1">
+                  <div className="flex flex-col gap-1">
                     {group.items.map((item, i) => (
                       <Link
                         key={`${item.href}-${i}`}

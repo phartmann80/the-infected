@@ -40,8 +40,45 @@ function prefersLowBandwidth() {
   return Boolean(connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g');
 }
 
+type VideoSourceKey = 'compat-mp4' | 'desktop-mp4' | 'desktop-webm' | 'mobile-mp4' | 'mobile-webm' | 'auto';
+type HeroMode = 'normal' | 'video-only' | 'video-ui';
+
+const VIDEO_SOURCES: Record<VideoSourceKey, { src: string; type: string }[]> = {
+  'compat-mp4': [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }],
+  'desktop-mp4': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }],
+  'desktop-webm': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' }],
+  'mobile-mp4': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' }],
+  'mobile-webm': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' }],
+  'auto': [
+    { src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' },
+  ],
+};
+
+type DebugInfo = {
+  currentSrc: string;
+  paused: boolean;
+  currentTime: number;
+  duration: number;
+  readyState: number;
+  networkState: number;
+  videoWidth: number;
+  videoHeight: number;
+  error: MediaError | null;
+  visibilityState: string;
+  reducedMotion: boolean;
+  saveData: boolean | undefined;
+  effectiveType: string | undefined;
+  decodedFrames: number | undefined;
+  droppedFrames: number | undefined;
+  playbackEvents: string[];
+};
+
 export function CinematicHero() {
-  const reduceMotion = useReducedMotion();
+  // --- Mounted state pattern: server and first client render must match ---
+  const [mounted, setMounted] = useState(false);
+  const reduceMotionRaw = useReducedMotion();
+  const reduceMotion = mounted ? Boolean(reduceMotionRaw) : false;
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const ambientRef = useRef<HTMLAudioElement>(null);
   const narrationRef = useRef<HTMLAudioElement>(null);
@@ -59,21 +96,56 @@ export function CinematicHero() {
   const [lowBandwidth, setLowBandwidth] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const trailerVideoRef = useRef<HTMLVideoElement>(null);
+  const [autoplayFailed, setAutoplayFailed] = useState(false);
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
+  const [playbackFrozen, setPlaybackFrozen] = useState(false);
+  const frozenRetryAttempted = useRef(false);
+  const frozenCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
-  const videoActive = Boolean(!reduceMotion && !lowBandwidth && !isMobile && heroVisible && pageVisible);
+  // --- Debug mode: activated by ?heroDebug=1 URL param ---
+  const [heroDebug, setHeroDebug] = useState(false);
+  const [heroMode, setHeroMode] = useState<HeroMode>('normal');
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [selectedSource, setSelectedSource] = useState<VideoSourceKey>('auto');
+  const [debugEvents, setDebugEvents] = useState<string[]>([]);
 
+  // TEMPORARILY DISABLED in production until desktop playback is proven stable:
+  // - WebGL/environmental scene (showScene forced false in production)
+  // - IntersectionObserver pausing (videoActive no longer depends on heroVisible)
+  // - Bandwidth-based source changes (videoActive no longer depends on lowBandwidth)
+  // Video pauses ONLY when document.visibilityState === 'hidden'
+  const sceneActive = false; // Disabled until desktop playback proven stable
+  const videoActive = Boolean(!reduceMotion && pageVisible);
+
+  // --- Mount effect: set all browser-specific state after hydration ---
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
     setWebglAvailable(hasWebGLSupport());
     const media = window.matchMedia('(max-width: 767px)');
     const updateMobile = () => setIsMobile(media.matches);
     updateMobile();
     setLowBandwidth(prefersLowBandwidth());
     media.addEventListener('change', updateMobile);
+
+    // Check for heroDebug and heroMode URL params
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setHeroDebug(params.get('heroDebug') === '1');
+      const mode = params.get('heroMode');
+      if (mode === 'video-only' || mode === 'video-ui') setHeroMode(mode);
+      const src = params.get('heroSource');
+      if (src === 'compat-mp4' || src === 'desktop-mp4' || src === 'desktop-webm' || src === 'mobile-mp4' || src === 'mobile-webm') {
+        setSelectedSource(src);
+        setHeroDebug(true); // auto-enable debug when source is forced
+      }
+    }
+
     return () => media.removeEventListener('change', updateMobile);
   }, []);
 
+  // --- Intersection observer: tracked for debug only, does NOT control video playback ---
+  // TEMPORARILY DISABLED: intersection-observer pausing removed until desktop playback proven stable
   useEffect(() => {
     const node = heroRef.current;
     if (!node) return;
@@ -82,6 +154,7 @@ export function CinematicHero() {
     return () => observer.disconnect();
   }, []);
 
+  // --- Visibility: pause when tab is hidden ---
   useEffect(() => {
     const onVisibility = () => setPageVisible(document.visibilityState === 'visible');
     onVisibility();
@@ -131,12 +204,93 @@ export function CinematicHero() {
     };
   }, [closeSignup, signupOpen]);
 
+  const logDebugEvent = useCallback((event: string) => {
+    setDebugEvents((prev) => {
+      const time = new Date().toLocaleTimeString();
+      const entry = `[${time}] ${event}`;
+      const next = [...prev, entry];
+      return next.slice(-20);
+    });
+  }, []);
+
+  // --- SINGLE video playback controller ---
+  // One effect, one play() call. No video.load(). No competing effects.
+  // Only re-runs when videoActive changes (mount, visibility, scroll).
   useEffect(() => {
+    if (!mounted) return;
     const video = videoRef.current;
     if (!video) return;
-    if (videoActive) void video.play().catch(() => undefined);
-    else video.pause();
-  }, [videoActive]);
+
+    if (videoActive) {
+      // Single play attempt. If it rejects, mute and retry once.
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise.then(() => {
+          setHasPlayed(true);
+          setPlayError(null);
+          if (heroDebug) logDebugEvent('play() succeeded');
+        }).catch((err) => {
+          if (heroDebug) logDebugEvent(`play() rejected: ${err.name} - ${err.message}`);
+          setPlayError(`${err.name}: ${err.message}`);
+          // Retry muted
+          video.muted = true;
+          video.volume = 0;
+          video.play().then(() => {
+            setHasPlayed(true);
+            setPlayError(null);
+            if (heroDebug) logDebugEvent('retry play() succeeded (muted)');
+          }).catch((err2) => {
+            if (heroDebug) logDebugEvent(`retry play() rejected: ${err2.name}`);
+            setPlayError(`${err2.name}: ${err2.message}`);
+            setAutoplayFailed(true);
+          });
+        });
+      }
+    } else {
+      // Pause ONLY when tab is genuinely hidden (document.visibilityState === 'hidden')
+      // IntersectionObserver pausing is temporarily disabled
+      video.pause();
+      if (heroDebug) logDebugEvent('video paused (tab hidden)');
+    }
+    return () => {
+      if (frozenCheckTimer.current) clearTimeout(frozenCheckTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, videoActive]);
+
+  // --- Debug info polling: update once per second ---
+  useEffect(() => {
+    if (!mounted || !heroDebug) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateInfo = () => {
+      const quality = video.getVideoPlaybackQuality?.();
+      const conn = (navigator as Navigator & { connection?: ConnectionInformation }).connection;
+      setDebugInfo({
+        currentSrc: video.currentSrc || '(none)',
+        paused: video.paused,
+        currentTime: video.currentTime,
+        duration: video.duration,
+        readyState: video.readyState,
+        networkState: video.networkState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        error: video.error,
+        visibilityState: document.visibilityState,
+        reducedMotion: reduceMotion,
+        saveData: conn?.saveData,
+        effectiveType: conn?.effectiveType,
+        decodedFrames: quality?.totalVideoFrames,
+        droppedFrames: quality?.droppedVideoFrames,
+        playbackEvents: debugEvents,
+      });
+    };
+
+    updateInfo();
+    const interval = setInterval(updateInfo, 1000);
+    return () => clearInterval(interval);
+  }, [mounted, heroDebug, reduceMotion, debugEvents]);
 
   useEffect(() => {
     const ambient = ambientRef.current;
@@ -147,73 +301,175 @@ export function CinematicHero() {
       return;
     }
     if (soundEnabled) void ambient?.play().catch(() => undefined);
-  }, [heroVisible, lowBandwidth, pageVisible, soundEnabled]);
+  }, [pageVisible, heroVisible, lowBandwidth, soundEnabled]);
 
-  const playNarrationOnce = useCallback(async () => {
-    const narration = narrationRef.current;
-    if (!narration || narrationState !== 'idle') return;
-    narration.volume = 0.92;
-    try {
-      setNarrationState('playing');
-      await narration.play();
-    } catch {
-      setNarrationState('idle');
-    }
-  }, [narrationState]);
+  useEffect(() => {
+    if (!soundEnabled || !narrationRef.current) return;
+    narrationRef.current.currentTime = 0;
+    void narrationRef.current.play().then(() => setNarrationState('playing')).catch(() => undefined);
+  }, [soundEnabled]);
 
-  const toggleSound = useCallback(async () => {
-    const ambient = ambientRef.current;
-    if (!ambient || lowBandwidth) return;
-    if (soundEnabled) {
-      ambient.pause();
-      setSoundEnabled(false);
-      return;
-    }
-    ambient.volume = 0.34;
-    try {
-      await ambient.play();
-      setSoundEnabled(true);
-      await playNarrationOnce();
-    } catch {
-      setSoundEnabled(false);
-    }
-  }, [lowBandwidth, playNarrationOnce, soundEnabled]);
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        void ambientRef.current?.play().catch(() => undefined);
+        void narrationRef.current?.play().then(() => setNarrationState('playing')).catch(() => undefined);
+      } else {
+        ambientRef.current?.pause();
+        narrationRef.current?.pause();
+      }
+      return next;
+    });
+  }, []);
 
   const audioStatus = useMemo(() => {
-    if (lowBandwidth) return 'Low-bandwidth mode. Video, WebGL, and audio are paused.';
-    if (!soundEnabled) return 'Sound muted. Narration captions available.';
-    if (narrationState === 'playing') return 'Ambient sound active. Narration playing.';
-    if (narrationState === 'complete') return 'Ambient sound active. Narration complete.';
+    if (lowBandwidth) return 'Low-bandwidth mode. Media paused to protect your connection.';
+    if (!soundEnabled) return 'Audio muted. Click "Enter with Sound" to enable.';
+    if (narrationState === 'playing') return 'Narration playing...';
+    if (narrationState === 'complete') return 'Narration complete.';
     return 'Ambient sound active.';
   }, [lowBandwidth, narrationState, soundEnabled]);
 
+  const manuallyPlayVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.playsInline = true;
+    video.play().then(() => {
+      setHasPlayed(true);
+      setAutoplayFailed(false);
+      setPlayError(null);
+      if (heroDebug) logDebugEvent('manual play() succeeded');
+    }).catch((err) => {
+      setPlayError(`${err.name}: ${err.message}`);
+      if (heroDebug) logDebugEvent(`manual play() rejected: ${err.name} - ${err.message}`);
+    });
+  }, [heroDebug, logDebugEvent]);
+
+  // --- Deterministic rendering ---
+  const showVideo = true;
+  const videoAutoPlay = !reduceMotion && !lowBandwidth;
+  const videoPreload = reduceMotion || lowBandwidth ? 'none' : 'auto';
+  const showAutoplayFallback = (autoplayFailed || (heroDebug && !hasPlayed)) && !reduceMotion && !lowBandwidth && mounted;
+
+  // In video-only mode, disable all decorative layers
+  const isVideoOnly = heroMode === 'video-only';
+  // showScene is false in production (sceneActive = false). Only enabled in debug video-ui mode.
+  const showScene = heroDebug && sceneActive && mounted && !isVideoOnly && heroMode === 'video-ui';
+  const showUI = !isVideoOnly;
+
+  // Determine which video sources to use
+  // Desktop: MP4 only (no WebM, no source switching)
+  // Mobile: MP4 only
+  // Debug: allow A/B source selection
+  const videoSources = useMemo(() => {
+    if (heroDebug && selectedSource !== 'auto') {
+      return VIDEO_SOURCES[selectedSource];
+    }
+    if (!mounted || !isMobile) {
+      // Desktop: compatibility MP4 only (720p, H.264 Main profile, level 4.0)
+      return [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }];
+    }
+    // Mobile: compatibility MP4 only (same file, broad support)
+    return [{ src: '/assets/cinematic/hero-cinematic-compat-v1.mp4', type: 'video/mp4' }];
+  }, [heroDebug, selectedSource, mounted, isMobile]);
+
+  // --- NO source-change effect. The video element is stable.
+  // React only swaps <source> tags when heroDebug source selector changes,
+  // and we handle that with a key change that remounts the video cleanly.
+  const videoKey = heroDebug && selectedSource !== 'auto'
+    ? `video-${selectedSource}`
+    : 'video';
+
   return (
     <>
-      <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] overflow-hidden bg-[#030405] text-stone-100">
+      <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] w-full overflow-hidden bg-[#030405]">
+        {/* --- STABLE VIDEO ELEMENT: one ref, one source, no load() --- */}
         <video
           ref={videoRef}
-          className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-78 saturate-[0.74] contrast-[1.08]"
-          autoPlay={!reduceMotion && !lowBandwidth}
+          key={videoKey}
+          className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-90 saturate-[0.74] contrast-[1.08]"
+          autoPlay={videoAutoPlay}
           muted
           loop
           playsInline
-          preload={reduceMotion || lowBandwidth || isMobile ? 'none' : 'metadata'}
-          poster="/assets/cinematic/hero-poster-v5.jpg"
-          aria-hidden
+          preload={videoPreload}
+          controls={heroDebug}
+          aria-hidden={!heroDebug}
+          onPlaying={() => {
+            setHasPlayed(true);
+            setAutoplayFailed(false);
+            setPlayError(null);
+            setPlaybackFrozen(false);
+            if (heroDebug) logDebugEvent('playing event fired');
+
+            // --- Frozen-playback detection ---
+            // After playing event fires, record currentTime, wait 3s,
+            // compare. If advanced < 0.25s, treat as frozen.
+            if (frozenCheckTimer.current) clearTimeout(frozenCheckTimer.current);
+            const videoEl = videoRef.current;
+            if (videoEl) {
+              const startingTime = videoEl.currentTime;
+              frozenCheckTimer.current = setTimeout(() => {
+                const advanced = videoEl.currentTime - startingTime;
+                if (videoEl.paused || advanced < 0.25) {
+                  setPlaybackFrozen(true);
+                  if (heroDebug) logDebugEvent(`FROZEN detected: advanced ${advanced.toFixed(2)}s in 3s`);
+                  // Attempt one muted manual restart
+                  if (!frozenRetryAttempted.current) {
+                    frozenRetryAttempted.current = true;
+                    videoEl.muted = true;
+                    videoEl.volume = 0;
+                    videoEl.play().then(() => {
+                      setPlaybackFrozen(false);
+                      if (heroDebug) logDebugEvent('frozen recovery: play() succeeded after restart');
+                    }).catch((err) => {
+                      if (heroDebug) logDebugEvent(`frozen recovery: play() rejected: ${err.name}`);
+                    });
+                  }
+                } else {
+                  if (heroDebug) logDebugEvent(`playback verified: advanced ${advanced.toFixed(2)}s in 3s`);
+                }
+              }, 3000);
+            }
+          }}
+          onPause={() => { if (heroDebug) logDebugEvent('pause event fired'); }}
+          onError={(e) => { if (heroDebug) logDebugEvent(`error event: ${e.currentTarget.error?.code} - ${e.currentTarget.error?.message}`); }}
+          onStalled={() => { if (heroDebug) logDebugEvent('stalled event fired'); }}
+          onWaiting={() => { if (heroDebug) logDebugEvent('waiting event fired'); }}
+          onCanPlay={() => { if (heroDebug) logDebugEvent('canplay event fired'); }}
+          onLoadedData={() => { if (heroDebug) logDebugEvent('loadeddata event fired'); }}
+          onLoadedMetadata={() => { if (heroDebug) logDebugEvent('loadedmetadata event fired'); }}
         >
-          <source src="/assets/cinematic/hero-cinematic-v5.mp4" type="video/mp4" />
+          {videoSources.map((source, i) => (
+            <source key={i} src={source.src} type={source.type} />
+          ))}
         </video>
-        {(reduceMotion || lowBandwidth) && (
-          <Image
-            src="/assets/cinematic/hero-poster-v5.jpg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-            aria-hidden
-          />
+
+        {(showAutoplayFallback || playbackFrozen) && !reduceMotion && !lowBandwidth && mounted && (
+          <button
+            type="button"
+            onClick={manuallyPlayVideo}
+            className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 inline-flex items-center justify-center gap-2 rounded-full border border-orange-200/30 bg-black/60 px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur transition hover:bg-black/40 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+            Play Cinematic
+          </button>
         )}
+
+        {playbackFrozen && (
+          <div className="absolute left-1/2 top-[calc(50%+3rem)] z-20 -translate-x-1/2 rounded-lg bg-orange-900/80 px-4 py-2 text-xs text-orange-100">
+            Playback frozen detected. Click Play Cinematic to restart.
+          </div>
+        )}
+
+        {playError && heroDebug && (
+          <div className="absolute left-1/2 top-[calc(50%+3rem)] z-20 -translate-x-1/2 rounded-lg bg-red-900/80 px-4 py-2 text-xs text-red-100">
+            play() rejection: {playError}
+          </div>
+        )}
+
         <audio ref={ambientRef} src="/assets/audio/temporary-ambient-loop-noncanonical.webm" loop preload="none" />
         <audio
           ref={narrationRef}
@@ -222,7 +478,7 @@ export function CinematicHero() {
           onEnded={() => setNarrationState('complete')}
         />
 
-        {sceneActive && (
+        {showScene && (
           <SceneBoundary fallback={null}>
             <Suspense fallback={null}>
               <EnvironmentalScene active={sceneActive} reducedDetail={isMobile || lowBandwidth} />
@@ -230,197 +486,345 @@ export function CinematicHero() {
           </SceneBoundary>
         )}
 
-        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.22),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.22),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.98)_0%,rgba(3,4,5,0.78)_31%,rgba(3,4,5,0.22)_61%,rgba(3,4,5,0.84)_100%)]" />
-        <div aria-hidden className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/78 to-transparent" />
-        <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/90 via-black/40 to-transparent" />
+        {/* Gradient overlays - only in non-video-only mode */}
+        {showUI && (
+          <>
+            <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_77%_64%,rgba(255,73,24,0.18),transparent_22%),radial-gradient(circle_at_18%_18%,rgba(38,74,104,0.18),transparent_30%),linear-gradient(90deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.62)_31%,rgba(3,4,5,0.12)_61%,rgba(3,4,5,0.72)_100%)]" />
+            <div aria-hidden className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/60 to-transparent" />
+            <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+          </>
+        )}
 
-        <motion.div
-          aria-hidden
-          className="absolute inset-0 opacity-50 mix-blend-screen"
-          animate={sceneActive ? { x: [0, -10, 0], y: [0, 8, 0], opacity: [0.32, 0.54, 0.32] } : undefined}
-          transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ background: 'radial-gradient(circle at 74% 68%, rgba(255,93,31,.22), transparent 19%), radial-gradient(circle at 28% 48%, rgba(91,119,137,.13), transparent 28%)' }}
-        />
+        {showUI && (
+          <motion.div
+            aria-hidden
+            className="absolute inset-0 opacity-50 mix-blend-screen"
+            animate={showScene ? { x: [0, -10, 0], y: [0, 8, 0], opacity: [0.32, 0.54, 0.32] } : undefined}
+            transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ background: 'radial-gradient(circle at 74% 68%, rgba(255,93,31,.22), transparent 19%), radial-gradient(circle at 28% 48%, rgba(91,119,137,.13), transparent 28%)' }}
+          />
+        )}
 
-        <div className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
-          <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
-            <motion.div
-              className="max-w-xl"
-              initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ duration: 1.15, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            >
+        {/* --- UI overlay: logo, headline, buttons as siblings above video --- */}
+        {/* These are siblings layered above the video, NOT controlling it */}
+        {showUI && (
+          <div className="relative z-10 grid min-h-[100svh] grid-rows-[1fr_auto] px-5 py-6 sm:px-8 lg:px-12">
+            <div className="mx-auto grid w-full max-w-7xl items-center gap-6 pt-12 md:grid-cols-[minmax(0,0.82fr)_minmax(360px,1.18fr)] md:pt-0">
               <motion.div
-                initial={reduceMotion ? false : { opacity: 0, filter: 'blur(10px)', scale: 0.96 }}
-                animate={reduceMotion ? undefined : { opacity: 1, filter: 'blur(0px)', scale: 1 }}
-                transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
-                className="relative mb-6 w-40 sm:w-48 lg:w-60"
+                className="max-w-xl"
+                initial={false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.15, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
-                <Image
-                  src="/assets/branding/the-infected-logo.png"
-                  alt="The Infected official logo"
-                  width={1024}
-                  height={1024}
-                  priority
-                  className="relative h-auto w-full drop-shadow-[0_0_55px_rgba(255,74,28,0.55)]"
-                />
-              </motion.div>
-
-              <motion.p
-                className="mb-4 text-[0.68rem] font-semibold uppercase tracking-[0.42em] text-orange-100/75 sm:text-xs"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={reduceMotion ? undefined : { opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1.0 }}
-              >
-                Enter the quarantine zone
-              </motion.p>
-
-              <motion.h1
-                id="hero-heading"
-                className="max-w-[11ch] text-balance text-5xl font-black uppercase leading-[0.82] tracking-[-0.075em] text-white sm:text-7xl lg:text-8xl"
-                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 1, delay: 1.22, ease: [0.16, 1, 0.3, 1] }}
-              >
-                The silence...
-                <span className="block text-orange-100">was only</span>
-                <span className="block">the beginning.</span>
-              </motion.h1>
-
-              <motion.p
-                className="mt-6 max-w-md text-pretty text-base leading-7 text-stone-300/88 sm:text-lg"
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.85 }}
-              >
-                A broken city. One signal left. Survive long enough to answer it.
-              </motion.p>
-
-              <motion.div
-                className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center"
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.75, delay: 2.25 }}
-              >
-                <button
-                  type="button"
-                  ref={signupTriggerRef}
-                  onClick={() => {
-                    setSignupOpen(true);
-                  }}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                <motion.div
+                  initial={false}
+                  animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                  transition={{ duration: 1.45, delay: 0.1, ease: 'easeOut' }}
+                  className="relative mb-6 w-72 sm:w-96 lg:w-[28rem]"
                 >
-                  Join the Survivors
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrailerOpen(true)}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-orange-200/30 bg-orange-100/10 px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur transition hover:bg-orange-100/20 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  <div aria-hidden className="absolute -inset-8 rounded-full bg-orange-500/18 blur-3xl" />
+                  <Image
+                    src="/assets/branding/the-infected-logo-approved-v2.png"
+                    alt="The Infected official logo"
+                    width={448}
+                    height={1024}
+                    priority
+                    className="relative h-auto w-full"
+                  />
+                </motion.div>
+
+                <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-orange-500/80">
+                  Enter the Quarantine Zone
+                </p>
+                <motion.h1
+                  id="hero-heading"
+                  className="text-balance text-3xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.85, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
-                  Watch Trailer
-                </button>
+                  Survive the <span className="text-orange-500">Quarantine Zone</span>
+                </motion.h1>
+
+                <motion.p
+                  className="mt-4 max-w-md text-base leading-relaxed text-white/70 sm:text-lg"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.75, delay: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  A top-down survival horror shooter. Scavenge, shoot, and stay alive across 10 escalating levels of the infected horde.
+                </motion.p>
+
+                <motion.div
+                  className="mt-8 flex flex-wrap items-center gap-4"
+                  initial={false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.75, delay: 1.0, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <button
+                    type="button"
+                    ref={signupTriggerRef}
+                    onClick={() => {
+                      setSignupOpen(true);
+                    }}
+                    className="inline-flex min-h-12 items-center justify-center rounded-full bg-orange-500 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_0_70px_rgba(255,74,28,.28)] transition hover:scale-[1.02] hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    Join the Survivors
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrailerOpen(true)}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+                    Watch Trailer
+                  </button>
+                  <a
+                    href="#download"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Download APK
+                  </a>
+                </motion.div>
+
+                <motion.div
+                  className="mt-6 flex items-center gap-3 text-xs text-white/40"
+                  initial={false}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.75, delay: 2.25 }}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    Alpha Build
+                  </span>
+                  <span aria-hidden>|</span>
+                  <span>Offline Play</span>
+                  <span aria-hidden>|</span>
+                  <span>No Ads</span>
+                </motion.div>
+
                 <button
                   type="button"
                   onClick={toggleSound}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/18 bg-black/35 px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/14 focus:outline-none focus:ring-2 focus:ring-white/50"
-                  aria-pressed={soundEnabled}
-                  aria-describedby="audio-status narration-caption"
-                  disabled={lowBandwidth}
+                  className="mt-4 inline-flex items-center gap-2 text-xs text-white/50 transition hover:text-white/80"
                 >
-                  {lowBandwidth ? 'Low-bandwidth mode' : soundEnabled ? 'Mute' : 'Enter with Sound'}
+                  {soundEnabled ? (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M23 9l-6 6M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                  {soundEnabled ? 'Sound On' : 'Enter with Sound'}
                 </button>
               </motion.div>
 
-              <p className="mt-5 text-xs uppercase tracking-[0.32em] text-stone-400">Coming Soon to Android</p>
-              <p id="narration-caption" className="mt-4 max-w-xl rounded-2xl border border-white/10 bg-black/34 p-4 text-sm leading-6 text-stone-300/90 backdrop-blur">
-                <span className="font-semibold text-orange-200">Caption:</span> {narrationText}
-              </p>
-            </motion.div>
-
-            <div className="relative min-h-[34svh] md:min-h-[70svh]" aria-hidden>
-              <motion.div
-                className="absolute bottom-[18%] right-[28%] h-72 w-24 -skew-x-3 rounded-[48%] bg-black/45 shadow-[0_0_80px_rgba(255,74,28,.12)] blur-[1px] sm:h-[26rem] sm:w-32"
-                animate={sceneActive ? { x: [0, 5, 0], opacity: [0.34, 0.48, 0.34] } : undefined}
-                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <motion.div
-                className="absolute bottom-[22%] right-[14%] h-48 w-12 -skew-x-6 rounded-[48%] bg-black/40 blur-[1px] sm:h-64 sm:w-16"
-                animate={sceneActive ? { y: [0, -4, 0], opacity: [0.22, 0.38, 0.22] } : undefined}
-                transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              <div className="absolute bottom-[10%] right-[2%] h-56 w-56 rounded-full bg-orange-500/18 blur-3xl sm:h-96 sm:w-96" />
+              {/* Right column removed: the gameplay screenshot image was broken (file does not exist)
+                  and was covering the zombie video. The video itself is the hero visual. */}
             </div>
-          </div>
 
-          <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 border-t border-white/10 pb-2 pt-4 text-xs uppercase tracking-[0.22em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
-            <span>Descend into the city</span>
-            <span id="audio-status" role="status" aria-live="polite">{audioStatus}</span>
-            <span>{lowBandwidth ? 'Media paused to protect your connection' : 'Hero composition in internal review'}</span>
-          </div>
-        </div>
-
-        {signupOpen && (
-          <div
-            ref={signupDialogRef}
-            className="fixed inset-0 z-50 grid place-items-center bg-black/78 p-5 backdrop-blur-md"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="hero-signup-title"
-            aria-describedby="hero-signup-description"
-            tabIndex={-1}
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) closeSignup();
-            }}
-          >
-            <EarlyAccessForm
-              ref={signupEmailRef}
-              idPrefix="hero"
-              source="hero"
-              heading="Join the Survivors"
-              registrationEnabled={false}
-              description="The registration contract is wired into this preview. It remains closed until the reviewed storage and privacy configuration is enabled."
-              className="w-full max-w-md rounded-3xl border border-white/12 bg-[#0b0b0a] p-6 shadow-2xl"
-              onCancel={closeSignup}
-            />
+            <motion.div
+              className="flex flex-col items-center gap-3 pb-2 pt-4 text-center"
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.75, delay: 2.5 }}
+            >
+              <p className="text-xs uppercase tracking-[0.2em] text-white/30">Scroll to explore</p>
+              <motion.div
+                aria-hidden
+                animate={reduceMotion ? undefined : { y: [0, 8, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 p-1"
+              >
+                <span className="h-2 w-1 rounded-full bg-white/40" />
+              </motion.div>
+            </motion.div>
           </div>
         )}
       </section>
 
-      {/* Trailer modal */}
-      {trailerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
-          onClick={() => setTrailerOpen(false)}
-          onKeyDown={(e) => { if (e.key === 'Escape') setTrailerOpen(false); }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Cinematic trailer player"
-        >
-          <button
-            type="button"
-            onClick={() => setTrailerOpen(false)}
-            className="absolute right-6 top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition hover:bg-white/20"
-            aria-label="Close trailer"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M6 18L18 6" /></svg>
-          </button>
-          <div className="relative w-full max-w-5xl px-4" onClick={(e) => e.stopPropagation()}>
-            <video
-              ref={trailerVideoRef}
-              className="aspect-video w-full rounded-2xl border border-white/10 bg-black shadow-2xl"
-              controls
-              autoPlay
-              playsInline
-              poster="/assets/cinematic/hero-trailer-poster.jpg"
+      {/* --- Debug panel: only visible when ?heroDebug=1 --- */}
+      {heroDebug && mounted && (
+        <div className="fixed bottom-4 right-4 z-[100] max-h-[60vh] w-96 overflow-y-auto rounded-lg border border-orange-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="font-bold text-orange-400">HERO DEBUG PANEL</span>
+            <span className="text-white/40">updates 1/s</span>
+          </div>
+
+          {/* Mode selector */}
+          <div className="mb-3 border-b border-white/10 pb-2">
+            <div className="mb-1 text-white/60">Hero Mode:</div>
+            <div className="flex flex-wrap gap-1">
+              {(['normal', 'video-only', 'video-ui'] as HeroMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setHeroMode(mode);
+                    setHasPlayed(false);
+                    setAutoplayFailed(false);
+                    setPlayError(null);
+                  }}
+                  className={`rounded px-2 py-1 text-[10px] ${heroMode === mode ? 'bg-orange-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Source selector */}
+          <div className="mb-3 border-b border-white/10 pb-2">
+            <div className="mb-1 text-white/60">Video Source (A/B test):</div>
+            <div className="flex flex-wrap gap-1">
+              {(['auto', 'compat-mp4', 'desktop-mp4', 'desktop-webm', 'mobile-mp4', 'mobile-webm'] as VideoSourceKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setSelectedSource(key); setHasPlayed(false); setAutoplayFailed(false); setPlayError(null); }}
+                  className={`rounded px-2 py-1 text-[10px] ${selectedSource === key ? 'bg-orange-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Live video diagnostics */}
+          {debugInfo && (
+            <div className="space-y-0.5">
+              <div className="mb-1 text-white/60">Video State:</div>
+              <div>currentSrc: <span className="text-yellow-300">{debugInfo.currentSrc}</span></div>
+              <div>paused: <span className={debugInfo.paused ? 'text-red-400' : 'text-green-400'}>{String(debugInfo.paused)}</span></div>
+              <div>currentTime: <span className="text-cyan-300">{debugInfo.currentTime.toFixed(2)}s</span></div>
+              <div>duration: <span className="text-cyan-300">{debugInfo.duration ? debugInfo.duration.toFixed(2) : '?'}s</span></div>
+              <div>readyState: <span className="text-yellow-300">{debugInfo.readyState}</span> ({['nothing','metadata','current','future'][debugInfo.readyState] || '?'})</div>
+              <div>networkState: <span className="text-yellow-300">{debugInfo.networkState}</span> ({['empty','idle','loading','no_source'][debugInfo.networkState] || '?'})</div>
+              <div>videoWidth x Height: <span className="text-cyan-300">{debugInfo.videoWidth} x {debugInfo.videoHeight}</span></div>
+              <div>error: <span className={debugInfo.error ? 'text-red-400' : 'text-green-400'}>{debugInfo.error ? `${debugInfo.error.code}: ${debugInfo.error.message}` : 'null'}</span></div>
+              <div>visibilityState: <span className="text-yellow-300">{debugInfo.visibilityState}</span></div>
+              <div>reducedMotion: <span className={debugInfo.reducedMotion ? 'text-red-400' : 'text-green-400'}>{String(debugInfo.reducedMotion)}</span></div>
+              <div>saveData: <span className="text-yellow-300">{String(debugInfo.saveData)}</span></div>
+              <div>effectiveType: <span className="text-yellow-300">{debugInfo.effectiveType || '?'}</span></div>
+              <div>decodedFrames: <span className="text-cyan-300">{debugInfo.decodedFrames ?? 'N/A'}</span></div>
+              <div>droppedFrames: <span className={debugInfo.droppedFrames ? 'text-red-400' : 'text-green-400'}>{debugInfo.droppedFrames ?? 'N/A'}</span></div>
+              <div>hasPlayed: <span className={hasPlayed ? 'text-green-400' : 'text-red-400'}>{String(hasPlayed)}</span></div>
+              <div>playbackFrozen: <span className={playbackFrozen ? 'text-red-400' : 'text-green-400'}>{String(playbackFrozen)}</span></div>
+              {playError && <div className="text-red-400">playError: {playError}</div>}
+            </div>
+          )}
+
+          {/* Force Play button */}
+          <div className="mt-3 border-t border-white/10 pt-2">
+            <button
+              type="button"
+              onClick={manuallyPlayVideo}
+              className="w-full rounded bg-orange-500 px-3 py-2 text-xs font-bold text-black hover:bg-orange-400"
             >
-              <source src="/assets/cinematic/hero-trailer.mp4" type="video/mp4" />
-            </video>
+              Force Play (muted, playsInline)
+            </button>
+          </div>
+
+          {/* Playback events log */}
+          {debugEvents.length > 0 && (
+            <div className="mt-3 border-t border-white/10 pt-2">
+              <div className="mb-1 text-white/60">Playback Events:</div>
+              <div className="space-y-0.5">
+                {debugEvents.map((event, i) => (
+                  <div key={i} className="text-[10px] text-white/50">{event}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Diagnostic URLs */}
+          <div className="mt-3 border-t border-white/10 pt-2">
+            <div className="mb-1 text-white/60">Diagnostic URLs:</div>
+            <div className="space-y-0.5 text-[10px]">
+              <div><a href="/?heroDebug=1&heroMode=video-only" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-only</a></div>
+              <div><a href="/?heroDebug=1&heroMode=video-ui" className="text-blue-400 hover:underline">?heroDebug=1&heroMode=video-ui</a></div>
+              <div><a href="/?heroDebug=1&heroSource=compat-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=compat-mp4</a></div>
+              <div><a href="/?heroDebug=1&heroSource=desktop-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=desktop-mp4</a></div>
+              <div><a href="/?heroDebug=1&heroSource=mobile-mp4" className="text-blue-400 hover:underline">?heroDebug=1&heroSource=mobile-mp4</a></div>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Signup dialog */}
+      {signupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div
+            ref={signupDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signup-title"
+            className="relative mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0b0d] p-8 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={closeSignup}
+              className="absolute right-4 top-4 text-white/40 transition hover:text-white/80"
+              aria-label="Close"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <h2 id="signup-title" className="mb-2 text-2xl font-black uppercase tracking-tight text-white">
+              Join the Survivors
+            </h2>
+            <p className="mb-6 text-sm text-white/60">
+              Get early access to The Infected alpha build and be the first to know about new levels and updates.
+            </p>
+            <EarlyAccessForm
+              idPrefix="hero-signup"
+              source="hero"
+              heading="Join the Survivors"
+              description="Get early access to The Infected alpha build and be the first to know about new levels and updates."
+              registrationEnabled={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Trailer modal */}
+      {trailerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setTrailerOpen(false)}
+        >
+          <div className="relative aspect-video w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <video
+              ref={trailerVideoRef}
+              className="h-full w-full rounded-lg"
+              controls
+              autoPlay
+              playsInline
+            >
+              <source src="/assets/cinematic/hero-cinematic-compat-v1.mp4" type="video/mp4" />
+            </video>
+            <button
+              type="button"
+              onClick={() => setTrailerOpen(false)}
+              className="absolute -top-12 right-0 text-white/60 transition hover:text-white"
+              aria-label="Close trailer"
+            >
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
