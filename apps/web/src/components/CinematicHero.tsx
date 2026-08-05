@@ -40,14 +40,43 @@ function prefersLowBandwidth() {
   return Boolean(connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g');
 }
 
+type VideoSourceKey = 'desktop-mp4' | 'desktop-webm' | 'mobile-mp4' | 'mobile-webm' | 'auto';
+
+const VIDEO_SOURCES: Record<VideoSourceKey, { src: string; type: string }[]> = {
+  'desktop-mp4': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' }],
+  'desktop-webm': [{ src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' }],
+  'mobile-mp4': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' }],
+  'mobile-webm': [{ src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' }],
+  'auto': [
+    { src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' },
+    { src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' },
+    { src: '/assets/cinematic/hero-cinematic-v5.mp4', type: 'video/mp4' },
+  ],
+};
+
+type DebugInfo = {
+  currentSrc: string;
+  paused: boolean;
+  currentTime: number;
+  duration: number;
+  readyState: number;
+  networkState: number;
+  videoWidth: number;
+  videoHeight: number;
+  error: MediaError | null;
+  visibilityState: string;
+  reducedMotion: boolean;
+  saveData: boolean | undefined;
+  effectiveType: string | undefined;
+  decodedFrames: number | undefined;
+  droppedFrames: number | undefined;
+  playbackEvents: string[];
+};
+
 export function CinematicHero() {
   // --- Mounted state pattern: server and first client render must match ---
-  // All browser-specific values default to deterministic values that are
-  // identical on server and first client render. They are updated only
-  // after mount via useEffect, which runs exclusively on the client.
   const [mounted, setMounted] = useState(false);
   const reduceMotionRaw = useReducedMotion();
-  // useReducedMotion returns null on server, boolean on client. Normalize to false until mounted.
   const reduceMotion = mounted ? Boolean(reduceMotionRaw) : false;
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -68,9 +97,16 @@ export function CinematicHero() {
   const [trailerOpen, setTrailerOpen] = useState(false);
   const trailerVideoRef = useRef<HTMLVideoElement>(null);
   const [autoplayFailed, setAutoplayFailed] = useState(false);
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
+
+  // --- Debug mode: activated by ?heroDebug=1 URL param ---
+  const [heroDebug, setHeroDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [selectedSource, setSelectedSource] = useState<VideoSourceKey>('auto');
+  const [debugEvents, setDebugEvents] = useState<string[]>([]);
 
   const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
-  // Video plays on both desktop and mobile; only blocked by reduceMotion or genuine low-bandwidth (2g/saveData)
   const videoActive = Boolean(!reduceMotion && !lowBandwidth && heroVisible && pageVisible);
 
   // --- Mount effect: set all browser-specific state after hydration ---
@@ -83,6 +119,13 @@ export function CinematicHero() {
     updateMobile();
     setLowBandwidth(prefersLowBandwidth());
     media.addEventListener('change', updateMobile);
+
+    // Check for heroDebug URL param
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setHeroDebug(params.get('heroDebug') === '1');
+    }
+
     return () => media.removeEventListener('change', updateMobile);
   }, []);
 
@@ -143,23 +186,47 @@ export function CinematicHero() {
     };
   }, [closeSignup, signupOpen]);
 
+  const logDebugEvent = useCallback((event: string) => {
+    setDebugEvents((prev) => {
+      const time = new Date().toLocaleTimeString();
+      const entry = `[${time}] ${event}`;
+      const next = [...prev, entry];
+      return next.slice(-20);
+    });
+  }, []);
+
   // --- Video playback effect: aggressive autoplay with retry ---
   useEffect(() => {
     if (!mounted) return;
     const video = videoRef.current;
     if (!video) return;
     if (videoActive) {
-      // Try to play immediately
       const playPromise = video.play();
       if (playPromise) {
-        playPromise.catch(() => {
-          // Autoplay was blocked. Retry with muted=true (already muted but some browsers need it set again)
+        playPromise.then(() => {
+          setHasPlayed(true);
+          setPlayError(null);
+          if (heroDebug) logDebugEvent('play() succeeded');
+        }).catch((err) => {
+          if (heroDebug) logDebugEvent(`play() rejected: ${err.name} - ${err.message}`);
+          setPlayError(`${err.name}: ${err.message}`);
           video.muted = true;
           video.volume = 0;
-          video.play().catch(() => {
-            // Still blocked. Try again after a short delay (some browsers need a tick)
+          video.play().then(() => {
+            setHasPlayed(true);
+            setPlayError(null);
+            if (heroDebug) logDebugEvent('retry play() succeeded (muted)');
+          }).catch((err2) => {
+            if (heroDebug) logDebugEvent(`retry play() rejected: ${err2.name}`);
+            setPlayError(`${err2.name}: ${err2.message}`);
             setTimeout(() => {
-              video.play().catch(() => {
+              video.play().then(() => {
+                setHasPlayed(true);
+                setPlayError(null);
+                if (heroDebug) logDebugEvent('delayed retry play() succeeded');
+              }).catch((err3) => {
+                if (heroDebug) logDebugEvent(`delayed retry rejected: ${err3.name}`);
+                setPlayError(`${err3.name}: ${err3.message}`);
                 setAutoplayFailed(true);
               });
             }, 100);
@@ -169,34 +236,83 @@ export function CinematicHero() {
     } else {
       video.pause();
     }
-  }, [mounted, videoActive]);
+  }, [mounted, videoActive, heroDebug, logDebugEvent, selectedSource]);
 
   // Additional retry: listen for first user interaction to start video
   useEffect(() => {
     if (!mounted || !videoActive) return;
     const video = videoRef.current;
     if (!video || !video.paused) return;
-    
+
     const tryPlayOnInteraction = () => {
       if (video.paused) {
-        video.play().then(() => setAutoplayFailed(false)).catch(() => undefined);
+        video.play().then(() => {
+          setHasPlayed(true);
+          setAutoplayFailed(false);
+          if (heroDebug) logDebugEvent('play() on user interaction succeeded');
+        }).catch((err) => {
+          if (heroDebug) logDebugEvent(`play() on interaction rejected: ${err.name}`);
+        });
       }
     };
-    
-    // Listen for any user interaction
+
     const events = ["click", "touchstart", "keydown", "mousemove", "scroll"];
     events.forEach(e => document.addEventListener(e, tryPlayOnInteraction, { once: true, passive: true }));
-    
+
     return () => {
       events.forEach(e => document.removeEventListener(e, tryPlayOnInteraction));
     };
-  }, [mounted, videoActive]);
+  }, [mounted, videoActive, heroDebug, logDebugEvent]);
 
   const manuallyPlayVideo = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    void video.play().then(() => setAutoplayFailed(false)).catch(() => undefined);
-  }, []);
+    video.muted = true;
+    video.playsInline = true;
+    video.play().then(() => {
+      setHasPlayed(true);
+      setAutoplayFailed(false);
+      setPlayError(null);
+      if (heroDebug) logDebugEvent('manual play() succeeded');
+    }).catch((err) => {
+      setPlayError(`${err.name}: ${err.message}`);
+      if (heroDebug) logDebugEvent(`manual play() rejected: ${err.name} - ${err.message}`);
+    });
+  }, [heroDebug, logDebugEvent]);
+
+  // --- Debug info polling: update once per second ---
+  useEffect(() => {
+    if (!mounted || !heroDebug) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateInfo = () => {
+      const quality = video.getVideoPlaybackQuality?.();
+      const conn = (navigator as Navigator & { connection?: ConnectionInformation }).connection;
+      setDebugInfo({
+        currentSrc: video.currentSrc || '(none)',
+        paused: video.paused,
+        currentTime: video.currentTime,
+        duration: video.duration,
+        readyState: video.readyState,
+        networkState: video.networkState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        error: video.error,
+        visibilityState: document.visibilityState,
+        reducedMotion: reduceMotion,
+        saveData: conn?.saveData,
+        effectiveType: conn?.effectiveType,
+        decodedFrames: quality?.totalVideoFrames,
+        droppedFrames: quality?.droppedVideoFrames,
+        playbackEvents: debugEvents,
+      });
+    };
+
+    updateInfo();
+    const interval = setInterval(updateInfo, 1000);
+    return () => clearInterval(interval);
+  }, [mounted, heroDebug, reduceMotion, debugEvents]);
 
   useEffect(() => {
     const ambient = ambientRef.current;
@@ -238,15 +354,29 @@ export function CinematicHero() {
     return 'Ambient sound active.';
   }, [lowBandwidth, narrationState, soundEnabled]);
 
-  // --- Deterministic rendering: server and first client render must produce identical HTML ---
-  // Until mounted, we render a deterministic default: desktop sources, autoplay on, no fallback image.
-  // After mount, we apply browser-specific logic.
-  const showVideo = true; // video always rendered
-  const videoAutoPlay = !reduceMotion && !lowBandwidth; // deterministic until mounted updates reduceMotion/lowBandwidth
+  // --- Deterministic rendering ---
+  const showVideo = true;
+  const videoAutoPlay = !reduceMotion && !lowBandwidth;
   const videoPreload = reduceMotion || lowBandwidth ? 'none' : 'auto';
-  const showPosterImage = (reduceMotion || lowBandwidth) && mounted;
-  const showAutoplayFallback = autoplayFailed && !reduceMotion && !lowBandwidth && mounted;
+  const showAutoplayFallback = (autoplayFailed || (heroDebug && !hasPlayed)) && !reduceMotion && !lowBandwidth && mounted;
   const showScene = sceneActive && mounted;
+
+  // Determine which video sources to use
+  const videoSources = useMemo(() => {
+    if (heroDebug && selectedSource !== 'auto') {
+      return VIDEO_SOURCES[selectedSource];
+    }
+    if (!mounted || !isMobile) {
+      return [
+        { src: '/assets/cinematic/hero-cinematic-desktop-v1.mp4', type: 'video/mp4' },
+        { src: '/assets/cinematic/hero-cinematic-desktop-v1.webm', type: 'video/webm' },
+      ];
+    }
+    return [
+      { src: '/assets/cinematic/hero-cinematic-mobile-v1.mp4', type: 'video/mp4' },
+      { src: '/assets/cinematic/hero-cinematic-mobile-v1.webm', type: 'video/webm' },
+    ];
+  }, [heroDebug, selectedSource, mounted, isMobile]);
 
   return (
     <>
@@ -259,38 +389,22 @@ export function CinematicHero() {
           loop
           playsInline
           preload={videoPreload}
-          aria-hidden
-          onPlaying={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: playing'); setAutoplayFailed(false); }}
-          onPause={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: paused'); }}
-          onError={(e) => { if (process.env.NODE_ENV !== 'production') console.error('[CinematicHero] video: error', e); }}
-          onStalled={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: stalled'); }}
-          onWaiting={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: waiting'); }}
+          controls={heroDebug}
+          aria-hidden={!heroDebug}
+          onPlaying={() => { setHasPlayed(true); setAutoplayFailed(false); setPlayError(null); if (heroDebug) logDebugEvent('playing event fired'); }}
+          onPause={() => { if (heroDebug) logDebugEvent('pause event fired'); }}
+          onError={(e) => { if (heroDebug) logDebugEvent(`error event: ${e.currentTarget.error?.code} - ${e.currentTarget.error?.message}`); }}
+          onStalled={() => { if (heroDebug) logDebugEvent('stalled event fired'); }}
+          onWaiting={() => { if (heroDebug) logDebugEvent('waiting event fired'); }}
+          onCanPlay={() => { if (heroDebug) logDebugEvent('canplay event fired'); }}
+          onLoadedData={() => { if (heroDebug) logDebugEvent('loadeddata event fired'); }}
+          onLoadedMetadata={() => { if (heroDebug) logDebugEvent('loadedmetadata event fired'); }}
         >
-          {/* Before mount, render desktop sources (deterministic). After mount, switch based on isMobile. */}
-          {!mounted || !isMobile ? (
-            <>
-              <source src="/assets/cinematic/hero-cinematic-desktop-v1.mp4" type="video/mp4" />
-              <source src="/assets/cinematic/hero-cinematic-desktop-v1.webm" type="video/webm" />
-            </>
-          ) : (
-            <>
-              <source src="/assets/cinematic/hero-cinematic-mobile-v1.mp4" type="video/mp4" />
-              <source src="/assets/cinematic/hero-cinematic-mobile-v1.webm" type="video/webm" />
-            </>
-          )}
-          <source src="/assets/cinematic/hero-cinematic-v5.mp4" type="video/mp4" />
+          {videoSources.map((source, i) => (
+            <source key={i} src={source.src} type={source.type} />
+          ))}
         </video>
-        {showPosterImage && (
-          <Image
-            src="/assets/cinematic/hero-poster-light.jpg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-            aria-hidden
-          />
-        )}
+
         {showAutoplayFallback && (
           <button
             type="button"
@@ -301,17 +415,13 @@ export function CinematicHero() {
             Play Cinematic
           </button>
         )}
-        {showAutoplayFallback && (
-          <Image
-            src="/assets/cinematic/hero-poster-light.jpg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center opacity-50"
-            aria-hidden
-          />
+
+        {playError && heroDebug && (
+          <div className="absolute left-1/2 top-[calc(50%+3rem)] z-20 -translate-x-1/2 rounded-lg bg-red-900/80 px-4 py-2 text-xs text-red-100">
+            play() rejection: {playError}
+          </div>
         )}
+
         <audio ref={ambientRef} src="/assets/audio/temporary-ambient-loop-noncanonical.webm" loop preload="none" />
         <audio
           ref={narrationRef}
@@ -481,6 +591,81 @@ export function CinematicHero() {
           </motion.div>
         </div>
       </section>
+
+      {/* --- Debug panel: only visible when ?heroDebug=1 --- */}
+      {heroDebug && mounted && (
+        <div className="fixed bottom-4 right-4 z-[100] max-h-[60vh] w-96 overflow-y-auto rounded-lg border border-orange-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="font-bold text-orange-400">HERO DEBUG PANEL</span>
+            <span className="text-white/40">updates 1/s</span>
+          </div>
+
+          {/* Source selector */}
+          <div className="mb-3 border-b border-white/10 pb-2">
+            <div className="mb-1 text-white/60">Video Source (A/B test):</div>
+            <div className="flex flex-wrap gap-1">
+              {(['auto', 'desktop-mp4', 'desktop-webm', 'mobile-mp4', 'mobile-webm'] as VideoSourceKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setSelectedSource(key); setHasPlayed(false); setAutoplayFailed(false); setPlayError(null); }}
+                  className={`rounded px-2 py-1 text-[10px] ${selectedSource === key ? 'bg-orange-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'}`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Live video diagnostics */}
+          {debugInfo && (
+            <div className="space-y-0.5">
+              <div className="mb-1 text-white/60">Video State:</div>
+              <div>currentSrc: <span className="text-yellow-300">{debugInfo.currentSrc}</span></div>
+              <div>paused: <span className={debugInfo.paused ? 'text-red-400' : 'text-green-400'}>{String(debugInfo.paused)}</span></div>
+              <div>currentTime: <span className="text-cyan-300">{debugInfo.currentTime.toFixed(2)}s</span></div>
+              <div>duration: <span className="text-cyan-300">{debugInfo.duration ? debugInfo.duration.toFixed(2) : '?'}s</span></div>
+              <div>readyState: <span className="text-yellow-300">{debugInfo.readyState}</span> ({['nothing','metadata','current','future'][debugInfo.readyState] || '?'})</div>
+              <div>networkState: <span className="text-yellow-300">{debugInfo.networkState}</span> ({['empty','idle','loading','no_source'][debugInfo.networkState] || '?'})</div>
+              <div>videoWidth x Height: <span className="text-cyan-300">{debugInfo.videoWidth} x {debugInfo.videoHeight}</span></div>
+              <div>error: <span className={debugInfo.error ? 'text-red-400' : 'text-green-400'}>{debugInfo.error ? `${debugInfo.error.code}: ${debugInfo.error.message}` : 'null'}</span></div>
+              <div>visibilityState: <span className="text-yellow-300">{debugInfo.visibilityState}</span></div>
+              <div>reducedMotion: <span className={debugInfo.reducedMotion ? 'text-red-400' : 'text-green-400'}>{String(debugInfo.reducedMotion)}</span></div>
+              <div>saveData: <span className="text-yellow-300">{String(debugInfo.saveData)}</span></div>
+              <div>effectiveType: <span className="text-yellow-300">{debugInfo.effectiveType || '?'}</span></div>
+              <div>decodedFrames: <span className="text-cyan-300">{debugInfo.decodedFrames ?? 'N/A'}</span></div>
+              <div>droppedFrames: <span className={debugInfo.droppedFrames ? 'text-red-400' : 'text-green-400'}>{debugInfo.droppedFrames ?? 'N/A'}</span></div>
+              <div>hasPlayed: <span className={hasPlayed ? 'text-green-400' : 'text-red-400'}>{String(hasPlayed)}</span></div>
+              {playError && <div>playError: <span className="text-red-400">{playError}</span></div>}
+            </div>
+          )}
+
+          {/* Playback events log */}
+          <div className="mt-3 border-t border-white/10 pt-2">
+            <div className="mb-1 text-white/60">Playback Events:</div>
+            <div className="max-h-32 overflow-y-auto space-y-0.5">
+              {debugEvents.length === 0 ? (
+                <div className="text-white/30">(no events yet)</div>
+              ) : (
+                debugEvents.map((evt, i) => (
+                  <div key={i} className="text-[10px] text-green-300">{evt}</div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Manual play button */}
+          <div className="mt-3 border-t border-white/10 pt-2">
+            <button
+              type="button"
+              onClick={manuallyPlayVideo}
+              className="w-full rounded bg-orange-500 px-3 py-2 text-xs font-bold text-black hover:bg-orange-400"
+            >
+              Force Play (muted, playsInline)
+            </button>
+          </div>
+        </div>
+      )}
 
       {signupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
