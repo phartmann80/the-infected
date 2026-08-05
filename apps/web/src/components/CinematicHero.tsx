@@ -106,8 +106,13 @@ export function CinematicHero() {
   const [selectedSource, setSelectedSource] = useState<VideoSourceKey>('auto');
   const [debugEvents, setDebugEvents] = useState<string[]>([]);
 
-  const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
-  const videoActive = Boolean(!reduceMotion && !lowBandwidth && heroVisible && pageVisible);
+  // TEMPORARILY DISABLED in production until desktop playback is proven stable:
+  // - WebGL/environmental scene (showScene forced false in production)
+  // - IntersectionObserver pausing (videoActive no longer depends on heroVisible)
+  // - Bandwidth-based source changes (videoActive no longer depends on lowBandwidth)
+  // Video pauses ONLY when document.visibilityState === 'hidden'
+  const sceneActive = false; // Disabled until desktop playback proven stable
+  const videoActive = Boolean(!reduceMotion && pageVisible);
 
   // --- Mount effect: set all browser-specific state after hydration ---
   useEffect(() => {
@@ -135,7 +140,8 @@ export function CinematicHero() {
     return () => media.removeEventListener('change', updateMobile);
   }, []);
 
-  // --- Intersection observer: pause video only when hero is scrolled out of view ---
+  // --- Intersection observer: tracked for debug only, does NOT control video playback ---
+  // TEMPORARILY DISABLED: intersection-observer pausing removed until desktop playback proven stable
   useEffect(() => {
     const node = heroRef.current;
     if (!node) return;
@@ -237,9 +243,10 @@ export function CinematicHero() {
         });
       }
     } else {
-      // Only pause when tab is genuinely hidden or hero scrolled out of view
+      // Pause ONLY when tab is genuinely hidden (document.visibilityState === 'hidden')
+      // IntersectionObserver pausing is temporarily disabled
       video.pause();
-      if (heroDebug) logDebugEvent('video paused (inactive)');
+      if (heroDebug) logDebugEvent('video paused (tab hidden)');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, videoActive]);
@@ -341,7 +348,8 @@ export function CinematicHero() {
 
   // In video-only mode, disable all decorative layers
   const isVideoOnly = heroMode === 'video-only';
-  const showScene = sceneActive && mounted && !isVideoOnly;
+  // showScene is false in production (sceneActive = false). Only enabled in debug video-ui mode.
+  const showScene = heroDebug && sceneActive && mounted && !isVideoOnly && heroMode === 'video-ui';
   const showUI = !isVideoOnly;
 
   // Determine which video sources to use
