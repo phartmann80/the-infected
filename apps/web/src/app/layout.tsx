@@ -3,7 +3,6 @@ import './globals.css';
 
 const siteUrl = 'https://theinfected.app';
 const description = 'The Infected is a cinematic 3D zombie-survival Android game set in a city that remembers what happened.';
-// This is a temporary social preview and remains noncanonical until the production hero is approved.
 const socialImage = '/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg';
 
 const structuredData = {

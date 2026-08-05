@@ -2,17 +2,24 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const exploreLinks = [
-  { href: '#story', label: 'Story' },
-  { href: '#world', label: 'World' },
-  { href: '#survivors', label: 'Survivor' },
-  { href: '#infected', label: 'Infected' },
-  { href: '#arsenal', label: 'Weapons' },
-  { href: '#mission', label: 'Mission' },
+  { href: '/story', label: 'Story' },
+  { href: '/infected', label: 'Infected' },
+  { href: '/survivors', label: 'Survivors' },
+  { href: '/weapons', label: 'Weapons' },
+  { href: '/gear', label: 'Gear' },
+  { href: '/combat', label: 'Combat' },
+] as const;
+
+const worldLinks = [
+  { href: '/levels', label: 'Levels' },
+  { href: '/inventory', label: 'Inventory' },
+  { href: '/progression', label: 'Progression' },
+  { href: '/media', label: 'Media' },
+  { href: '/android', label: 'Android' },
 ] as const;
 
 const projectLinks = [
-  { href: '#join', label: 'Early Access' },
-  { href: '#review', label: 'Performance gates' },
+  { href: '/early-access', label: 'Early Access' },
   { href: '/contact', label: 'Contact' },
 ] as const;
 
@@ -38,82 +45,61 @@ export function ProductionFooter() {
             <div className="flex items-center gap-4">
               <Image
                 src="/assets/branding/the-infected-logo.png"
-                alt=""
-                width={112}
-                height={112}
-                loading="lazy"
-                aria-hidden
-                className="h-20 w-20 object-contain drop-shadow-[0_0_34px_rgba(255,74,28,0.35)] sm:h-24 sm:w-24"
+                alt="The Infected logo"
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-lg"
+                priority={false}
               />
               <div>
-                <p className="text-[0.62rem] font-bold uppercase tracking-[0.34em] text-orange-100/70">The Infected</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-400">A survival signal in development</p>
+                <p className="text-lg font-black uppercase tracking-[-0.04em] text-white">The Infected</p>
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/55">Survival Horror</p>
               </div>
             </div>
-
-            <h2 id="footer-heading" className="mt-10 max-w-[11ch] text-4xl font-black uppercase leading-[0.9] tracking-[-0.07em] text-white sm:text-6xl">
-              The signal is still out there.
-            </h2>
-            <p className="mt-6 max-w-xl text-base leading-8 text-stone-400 sm:text-lg">
-              Follow the route as one environment, one survivor, and one infected become a playable first chapter on Android.
+            <p className="mt-6 max-w-md text-sm leading-7 text-stone-400">
+              A cinematic 3D zombie-survival Android game set in a city that remembers what happened. Built with Godot 4.7.1. Android-first, offline, no ads.
             </p>
-
-            <dl className="mt-9 grid max-w-xl gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3">
-              <div className="bg-black/35 p-4">
-                <dt className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-stone-400">Development</dt>
-                <dd className="mt-2 flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-orange-100">
-                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400" aria-hidden />Active
-                </dd>
-              </div>
-              <div className="bg-black/35 p-4">
-                <dt className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-stone-400">Platform</dt>
-                <dd className="mt-2 text-sm font-black uppercase tracking-[0.12em] text-stone-200">Android</dd>
-              </div>
-              <div className="bg-black/35 p-4">
-                <dt className="text-[0.58rem] font-bold uppercase tracking-[0.2em] text-stone-400">Release</dt>
-                <dd className="mt-2 text-sm font-black uppercase tracking-[0.12em] text-stone-200">Coming soon</dd>
-              </div>
-            </dl>
           </div>
 
-          <div className="grid gap-10 sm:grid-cols-3 lg:pt-5">
-            <nav aria-labelledby="footer-explore-heading">
-              <h3 id="footer-explore-heading" className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-orange-100/70">Explore</h3>
-              <ul className="mt-5 grid gap-2.5">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <nav aria-label="Explore">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">Explore</p>
+              <ul className="mt-4 space-y-2">
                 {exploreLinks.map((link) => (
-                  <li key={link.href}><Link className={footerLinkClass} href={link.href}>{link.label}</Link></li>
+                  <li key={link.href}><Link href={link.href} className={footerLinkClass}>{link.label}</Link></li>
                 ))}
               </ul>
             </nav>
-
-            <nav aria-labelledby="footer-project-heading">
-              <h3 id="footer-project-heading" className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-orange-100/70">Project</h3>
-              <ul className="mt-5 grid gap-2.5">
+            <nav aria-label="World">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">World</p>
+              <ul className="mt-4 space-y-2">
+                {worldLinks.map((link) => (
+                  <li key={link.href}><Link href={link.href} className={footerLinkClass}>{link.label}</Link></li>
+                ))}
+              </ul>
+            </nav>
+            <nav aria-label="Project">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">Project</p>
+              <ul className="mt-4 space-y-2">
                 {projectLinks.map((link) => (
-                  <li key={link.href}><Link className={footerLinkClass} href={link.href}>{link.label}</Link></li>
+                  <li key={link.href}><Link href={link.href} className={footerLinkClass}>{link.label}</Link></li>
                 ))}
               </ul>
             </nav>
-
-            <nav aria-labelledby="footer-legal-heading">
-              <h3 id="footer-legal-heading" className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-orange-100/70">Legal</h3>
-              <ul className="mt-5 grid gap-2.5">
+            <nav aria-label="Legal">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-stone-500">Legal</p>
+              <ul className="mt-4 space-y-2">
                 {legalLinks.map((link) => (
-                  <li key={link.href}><Link className={footerLinkClass} href={link.href}>{link.label}</Link></li>
+                  <li key={link.href}><Link href={link.href} className={footerLinkClass}>{link.label}</Link></li>
                 ))}
               </ul>
             </nav>
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 pt-8 text-xs uppercase tracking-[0.16em] text-stone-400 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-3xl leading-6">The Infected is an independent survival game in active development. Features and availability may change before release.</p>
-          <Link
-            href="#main-content"
-            className="inline-flex min-h-11 w-fit shrink-0 items-center rounded-full border border-white/15 px-5 font-bold text-stone-200 transition hover:border-orange-200/40 hover:text-orange-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
-          >
-            Back to the signal <span className="ml-2" aria-hidden>&uarr;</span>
-          </Link>
+        <div className="flex flex-col gap-4 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-stone-500">The Infected is in prototype development. All content is subject to change.</p>
+          <p className="text-xs text-stone-500">Built with Godot 4.7.1 and Next.js.</p>
         </div>
       </div>
     </footer>
