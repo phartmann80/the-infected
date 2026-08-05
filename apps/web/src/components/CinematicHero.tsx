@@ -57,6 +57,8 @@ export function CinematicHero() {
   const [pageVisible, setPageVisible] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [lowBandwidth, setLowBandwidth] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  const trailerVideoRef = useRef<HTMLVideoElement>(null);
 
   const sceneActive = Boolean(!reduceMotion && !lowBandwidth && webglAvailable && heroVisible && pageVisible);
   const videoActive = Boolean(!reduceMotion && !lowBandwidth && !isMobile && heroVisible && pageVisible);
@@ -313,6 +315,14 @@ export function CinematicHero() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setTrailerOpen(true)}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-orange-200/30 bg-orange-100/10 px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur transition hover:bg-orange-100/20 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z"/></svg>
+                  Watch Trailer
+                </button>
+                <button
+                  type="button"
                   onClick={toggleSound}
                   className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/18 bg-black/35 px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white backdrop-blur transition hover:bg-white/14 focus:outline-none focus:ring-2 focus:ring-white/50"
                   aria-pressed={soundEnabled}
@@ -377,6 +387,39 @@ export function CinematicHero() {
           </div>
         )}
       </section>
+
+      {/* Trailer modal */}
+      {trailerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
+          onClick={() => setTrailerOpen(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setTrailerOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cinematic trailer player"
+        >
+          <button
+            type="button"
+            onClick={() => setTrailerOpen(false)}
+            className="absolute right-6 top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition hover:bg-white/20"
+            aria-label="Close trailer"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M6 18L18 6" /></svg>
+          </button>
+          <div className="relative w-full max-w-5xl px-4" onClick={(e) => e.stopPropagation()}>
+            <video
+              ref={trailerVideoRef}
+              className="aspect-video w-full rounded-2xl border border-white/10 bg-black shadow-2xl"
+              controls
+              autoPlay
+              playsInline
+              poster="/assets/cinematic/hero-trailer-poster.jpg"
+            >
+              <source src="/assets/cinematic/hero-trailer.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
+      )}
 
     </>
   );

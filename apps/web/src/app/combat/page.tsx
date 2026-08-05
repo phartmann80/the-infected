@@ -1,6 +1,14 @@
+import Image from 'next/image';
 import PageShell from '@/components/PageShell';
 import { PageHeader, StatusBadge, SectionMarker } from '@/components/shared';
 import { ScrollReveal } from '@/components/animation/CinematicMotion';
+
+const weaponDemos = [
+  { name: 'Pistol: Firing and Reload', image: '/assets/weapons/warden9-pistol.png', action: 'Firearm', badge: 'Cinematic Demo' },
+  { name: 'Shotgun: Close-Range Blast', image: '/assets/weapons/raven12-shotgun.png', action: 'Firearm', badge: 'Cinematic Demo' },
+  { name: 'Machete: Melee Strike', image: '/assets/weapons/machete.png', action: 'Melee', badge: 'Cinematic Demo' },
+  { name: 'Grenade: Throw and Detonate', image: '/assets/weapons/frag-grenade.png', action: 'Explosive', badge: 'Cinematic Demo' },
+];
 
 const combatActions = [
   { name: 'Machete Attack', type: 'Melee', status: 'planned' as const, desc: 'Wide horizontal slash with readable wind-up. Staggers infected on impact.', icon: 'M', color: 'orange' },
@@ -44,6 +52,29 @@ export default function CombatPage() {
 
       <div className="px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-7xl space-y-12">
+          {/* Weapon demonstrations — visual renders */}
+          <ScrollReveal>
+            <section>
+              <SectionMarker eyebrow="Demonstrations" title="Weapon Demonstrations" headingId="combat-demos" />
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {weaponDemos.map((demo) => (
+                  <div key={demo.name} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] transition hover:border-orange-200/20">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-2xl bg-gradient-to-br from-stone-900 to-black">
+                      <Image src={demo.image} alt={demo.name} fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-contain p-4 transition group-hover:scale-105" />
+                      <div className="absolute right-2 top-2 rounded-full border border-orange-200/20 bg-black/60 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-[0.14em] text-orange-100 backdrop-blur">
+                        {demo.badge}
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100/55">{demo.action}</p>
+                      <h3 className="mt-1 text-sm font-black uppercase tracking-[-0.04em] text-white">{demo.name}</h3>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </ScrollReveal>
+
           {/* Combat actions grid — visual cards */}
           <ScrollReveal>
             <section>

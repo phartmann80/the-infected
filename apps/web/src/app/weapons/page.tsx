@@ -18,16 +18,33 @@ const categoryLabels: Record<string, string> = {
   explosives: 'Explosives',
 };
 
+const weaponThumbnails: Record<string, string> = {
+  'weapon.warden9': '/assets/weapons/warden9-pistol.png',
+  'weapon.raven12': '/assets/weapons/raven12-shotgun.png',
+};
+
+const meleeThumbnails: Record<string, string> = {
+  'Machete': '/assets/weapons/machete.png',
+};
+
+const explosiveThumbnails: Record<string, string> = {
+  'Grenade': '/assets/weapons/frag-grenade.png',
+};
+
 const meleeWeapons = [
   { name: 'Machete', category: 'melee', status: 'planned' as const, damage: 75, speed: 60, range: 'Close', desc: 'Heavy blade for decisive melee strikes. Wide arc, readable wind-up.', icon: 'M' },
   { name: 'Combat Knife', category: 'melee', status: 'planned' as const, damage: 45, speed: 90, range: 'Close', desc: 'Fast stabbing weapon. Low damage but rapid recovery between strikes.', icon: 'K' },
-  { name: 'Axe', category: 'melee', status: 'planned' as const, damage: 85, speed: 35, range: 'Close', desc: 'Heavy overhead chop. Highest melee damage with slowest recovery.', icon: 'A' },
+  { name: 'Fire Axe', category: 'melee', status: 'planned' as const, damage: 85, speed: 35, range: 'Close', desc: 'Heavy overhead chop. Highest melee damage with slowest recovery.', icon: 'A' },
+  { name: 'Baseball Bat', category: 'melee', status: 'planned' as const, damage: 55, speed: 70, range: 'Close', desc: 'Reinforced bat with wide swing arc. Balanced damage and speed.', icon: 'B' },
+  { name: 'Crowbar', category: 'melee', status: 'planned' as const, damage: 65, speed: 50, range: 'Close', desc: 'Pry tool turned weapon. Hooked end for armor penetration.', icon: 'C' },
 ];
 
 const explosiveWeapons = [
   { name: 'Grenade', category: 'throwable', status: 'planned' as const, damage: 95, radius: '4m', desc: 'Fragmentation grenade. Timed fuse with area denial.', icon: 'G' },
+  { name: 'Smoke Grenade', category: 'throwable', status: 'planned' as const, damage: 0, radius: '6m', desc: 'Tactical smoke screen for stealth movement and extraction.', icon: 'S' },
   { name: 'Dynamite', category: 'explosives', status: 'planned' as const, damage: 90, radius: '5m', desc: 'Placeable explosive charge. Manual detonation or fuse timer.', icon: 'D' },
-  { name: 'Explosive Trap', category: 'explosives', status: 'planned' as const, damage: 80, radius: '3m', desc: 'Proximity-triggered trap. Ambush defense for choke points.', icon: 'T' },
+  { name: 'Explosive Charge', category: 'explosives', status: 'planned' as const, damage: 100, radius: '6m', desc: 'Heavy breaching charge. Destroys barricades and walls.', icon: 'E' },
+  { name: 'Tripwire Trap', category: 'explosives', status: 'planned' as const, damage: 75, radius: '2m', desc: 'Proximity-triggered trap. Ambush defense for choke points.', icon: 'T' },
 ];
 
 function WeaponStatBar({ label, value, max, unit }: { label: string; value: number; max: number; unit?: string }) {
@@ -77,13 +94,20 @@ export default function WeaponsPage() {
                     <article key={weapon.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] p-5 transition hover:border-orange-200/15 sm:p-6">
                       <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-orange-500/6 blur-2xl transition group-hover:bg-orange-500/12" />
                       <div className="relative">
-                        {/* Weapon visual — large render area with category icon */}
+                        {/* Weapon visual — real render or category icon */}
                         <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-stone-900 via-[#0d0d0c] to-black">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-5xl font-black text-stone-700/40 transition group-hover:text-orange-500/20 group-hover:scale-110">
-                              {weapon.subCategory.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          {weaponThumbnails[weapon.id] ? (
+                            <Image src={weaponThumbnails[weapon.id]} alt={weapon.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-contain p-4 transition group-hover:scale-105" />
+                          ) : (
+                            <>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-5xl font-black text-stone-700/40 transition group-hover:text-orange-500/20 group-hover:scale-110">
+                                  {weapon.subCategory.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-[0.1em] text-stone-500">Render coming</div>
+                            </>
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-br from-orange-950/5 to-transparent" />
                         </div>
 
@@ -130,13 +154,20 @@ export default function WeaponsPage() {
                   <article key={weapon.name} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] p-5 transition hover:border-orange-200/15 sm:p-6">
                     <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-orange-500/6 blur-2xl transition group-hover:bg-orange-500/12" />
                     <div className="relative">
-                      {/* Large icon visual */}
+                      {/* Melee weapon visual — real render or icon */}
                       <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-stone-900 via-[#0d0d0c] to-black">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-6xl font-black text-stone-700/40 transition group-hover:text-orange-500/20 group-hover:scale-110">
-                            {weapon.icon}
-                          </span>
-                        </div>
+                        {meleeThumbnails[weapon.name] ? (
+                          <Image src={meleeThumbnails[weapon.name]} alt={weapon.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-contain p-4 transition group-hover:scale-105" />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-6xl font-black text-stone-700/40 transition group-hover:text-orange-500/20 group-hover:scale-110">
+                                {weapon.icon}
+                              </span>
+                            </div>
+                            <div className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-[0.1em] text-stone-500">Render coming</div>
+                          </>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-br from-orange-950/5 to-transparent" />
                       </div>
                       <div className="flex items-start justify-between gap-3">
@@ -173,11 +204,18 @@ export default function WeaponsPage() {
                     <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-red-500/6 blur-2xl transition group-hover:bg-red-500/12" />
                     <div className="relative">
                       <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-stone-900 via-[#0d0d0c] to-black">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-6xl font-black text-stone-700/40 transition group-hover:text-red-500/20 group-hover:scale-110">
-                            {weapon.icon}
-                          </span>
-                        </div>
+                        {explosiveThumbnails[weapon.name] ? (
+                          <Image src={explosiveThumbnails[weapon.name]} alt={weapon.name} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-contain p-4 transition group-hover:scale-105" />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-6xl font-black text-stone-700/40 transition group-hover:text-red-500/20 group-hover:scale-110">
+                                {weapon.icon}
+                              </span>
+                            </div>
+                            <div className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-[0.1em] text-stone-500">Render coming</div>
+                          </>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-br from-red-950/5 to-transparent" />
                       </div>
                       <div className="flex items-start justify-between gap-3">

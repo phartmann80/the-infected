@@ -45,6 +45,11 @@ const slotIcons: Record<string, string> = {
   'knee-guards': 'K', 'map-case': 'C', scanner: 'S', 'survival-kit': 'K', 'utility-belt': 'U',
 };
 
+const gearThumbnails: Record<string, string> = {
+  'gear.sentinel-helmet': '/assets/gear/tactical-helmet.png',
+  'gear.relay-radio': '/assets/gear/field-radio.png',
+};
+
 export default function GearPage() {
   const [selectedItem, setSelectedItem] = useState<typeof GEAR[0] | null>(null);
 
@@ -77,8 +82,14 @@ export default function GearPage() {
                         : 'border-white/10 bg-[#0a0a09] hover:border-white/20'
                     }`}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-sm font-black text-orange-100/60">
-                      {slotIcons[slotKey] ?? '?'}
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                      {item && gearThumbnails[item.id] ? (
+                        <Image src={gearThumbnails[item.id]} alt={item.name} fill sizes="32px" className="object-contain p-0.5" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-black text-orange-100/60">
+                          {slotIcons[slotKey] ?? '?'}
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{slotMap[slotKey] ?? slotKey}</p>
@@ -141,8 +152,14 @@ export default function GearPage() {
                         : 'border-white/10 bg-[#0a0a09] hover:border-white/20'
                     }`}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-sm font-black text-orange-100/60">
-                      {slotIcons[slotKey] ?? '?'}
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                      {item && gearThumbnails[item.id] ? (
+                        <Image src={gearThumbnails[item.id]} alt={item.name} fill sizes="32px" className="object-contain p-0.5" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-black text-orange-100/60">
+                          {slotIcons[slotKey] ?? '?'}
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{slotMap[slotKey] ?? slotKey}</p>

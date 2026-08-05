@@ -112,6 +112,38 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Featured weapons — real renders */}
+        <section className="border-t border-white/8 px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
+          <div className="mx-auto max-w-7xl">
+            <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65">
+              <span className="h-px w-8 bg-orange-300/70" aria-hidden />
+              Arsenal
+            </p>
+            <h2 className="mt-4 text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl lg:text-5xl">
+              Weapons at the ready.
+            </h2>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { name: 'Warden-9 Pistol', src: '/assets/weapons/warden9-pistol.png' },
+                { name: 'Raven-12 Shotgun', src: '/assets/weapons/raven12-shotgun.png' },
+                { name: 'Machete', src: '/assets/weapons/machete.png' },
+                { name: 'Frag Grenade', src: '/assets/weapons/frag-grenade.png' },
+              ].map((w) => (
+                <Link
+                  key={w.name}
+                  href="/weapons"
+                  className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] transition hover:border-orange-200/20"
+                >
+                  <Image src={w.src} alt={w.name} fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-contain p-6 transition group-hover:scale-105" />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#060606] to-transparent p-4">
+                    <h3 className="text-sm font-black uppercase tracking-[-0.04em] text-white">{w.name}</h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Environment video showcase */}
         <section className="border-t border-white/8 px-5 py-16 sm:px-8 lg:px-12">
           <div className="mx-auto max-w-7xl">
