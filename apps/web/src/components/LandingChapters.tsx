@@ -43,19 +43,19 @@ const registryEntries: RegistryEntry[] = [
     code: 'SURVIVOR / 001',
     label: 'Human presentation',
     title: 'Survivor 001 is ready for review.',
-    description: 'Generated as a 3D game-ready model via Meshy AI. The GLB export is Godot-compatible for direct use in the Android game. This preview model anchors the first shared visual reference for web and game. No final name, backstory, or roster implication until creative approval.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This preview model anchors the first shared visual reference for web and game. No final name, backstory, or roster implication until creative approval.',
     status: 'internal-review',
     image: '/assets/cinematic/survivor-001-production-candidate-internal-review.jpg',
-    imageAlt: 'Meshy 3D model preview of Survivor 001, game-ready character for The Infected',
+    imageAlt: '3D model preview of Survivor 001, generated via Meshy AI. Game-ready GLB for Godot, realistic tactical survivor with vest, cargo pants, and combat boots.',
   },
   {
     code: 'INFECTED / 001',
     label: 'Threat presentation',
     title: 'Infected 001 is ready for review.',
-    description: 'Generated as a 3D game-ready model via Meshy AI. The GLB export is Godot-compatible for direct use in the Android game. This preview model establishes the first shared threat reference for web and game. No creature roster, final behavior, or lore is implied.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This preview model establishes the first shared threat reference for web and game. No creature roster, final behavior, or lore is implied.',
     status: 'internal-review',
     image: '/assets/cinematic/infected-001-production-candidate-internal-review.jpg',
-    imageAlt: 'Meshy 3D model preview of Infected 001, game-ready character for The Infected',
+    imageAlt: '3D model preview of Infected 001, generated via Meshy AI. Game-ready GLB for Godot, skeletal infected with decayed features and threatening posture.',
   },
 ];
 
