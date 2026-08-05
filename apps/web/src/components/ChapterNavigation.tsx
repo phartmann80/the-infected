@@ -9,8 +9,12 @@ const chapters = [
   { id: 'survivors', label: 'Survivor' },
   { id: 'infected', label: 'Infected' },
   { id: 'arsenal', label: 'Arsenal' },
-  { id: 'mission', label: 'Mission' },
+  { id: 'gear', label: 'Gear' },
+  { id: 'combat', label: 'Combat' },
+  { id: 'mission', label: 'Levels' },
   { id: 'loot', label: 'Loot' },
+  { id: 'audio', label: 'Audio' },
+  { id: 'android', label: 'Android' },
   { id: 'review', label: 'Review gates' },
   { id: 'join', label: 'Join' },
 ] as const;

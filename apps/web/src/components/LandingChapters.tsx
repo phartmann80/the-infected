@@ -2,8 +2,10 @@ import Image from 'next/image';
 import { ChapterNavigation } from './ChapterNavigation';
 import { EarlyAccessForm } from './EarlyAccessForm';
 import { ProductionFooter } from './ProductionFooter';
+import { WEAPONS, GEAR } from '@/lib/catalog-data';
+import { NARRATION_CUES, SURFACES, AMBIENCE_STATES } from '@/lib/audio-data';
 
-type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review';
+type RegistryStatus = 'approved' | 'prototype' | 'placeholder' | 'blocked' | 'internal-review' | 'planned' | 'in-development';
 
 type RegistryEntry = {
   code: string;
@@ -184,6 +186,8 @@ const statusStyles: Record<RegistryStatus, string> = {
   placeholder: 'border-sky-200/20 bg-sky-100/5 text-sky-100/80',
   blocked: 'border-red-200/20 bg-red-100/5 text-red-100/80',
   'internal-review': 'border-orange-200/30 bg-orange-100/10 text-orange-100',
+  planned: 'border-slate-200/20 bg-slate-100/5 text-slate-100/80',
+  'in-development': 'border-amber-200/20 bg-amber-100/5 text-amber-100/80',
 };
 
 function StatusBadge({ status }: { status: RegistryStatus }) {
@@ -386,28 +390,111 @@ export function LandingChapters() {
 
       <section id="arsenal" aria-labelledby="arsenal-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-            <SectionMarker
-              chapter="Chapter 05"
-              eyebrow="Arsenal"
-              title="What still works in your hands."
-              description="Equipment is practical, scarce, and readable at a glance. These are prototype loadout placeholders, not final balance or item canon."
-              headingId="arsenal-heading"
-            />
+          <SectionMarker
+            chapter="Chapter 05"
+            eyebrow="Weapons and arsenal"
+            title="Ten weapons. One choice at a time."
+            description="Every weapon in the arsenal is defined by the shared game-data catalog, not marketing copy. Stats, ammo types, and reload behavior come from the same JSON that drives the Android game."
+            headingId="arsenal-heading"
+          />
+          <div className="mt-8 flex items-center gap-3 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400">
             <StatusBadge status="prototype" />
+            <span>All weapons are prototype concepts. Stats may change before release.</span>
           </div>
-          <div className="mt-14 divide-y divide-white/10 border-y border-white/10">
-            {arsenal.map((item) => (
-              <article key={item.code} className="grid gap-4 py-7 sm:grid-cols-[100px_1fr_auto] sm:items-center">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-100/55">{item.code}</p>
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-2xl font-black uppercase tracking-[-0.05em] text-white">{item.name}</h3>
-                    <span className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400">{item.role}</span>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {WEAPONS.map((weapon) => (
+              <article key={weapon.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0a] p-5 transition hover:border-orange-200/20 sm:p-6">
+                <div aria-hidden className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-orange-500/8 blur-2xl transition group-hover:bg-orange-500/15" />
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-orange-100/55">{weapon.subCategory}</p>
+                      <h3 className="mt-2 text-xl font-black uppercase leading-tight tracking-[-0.04em] text-white">{weapon.name}</h3>
+                    </div>
+                    <StatusBadge status="prototype" />
                   </div>
-                  <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-400">{item.description}</p>
+                  <p className="mt-4 text-xs leading-5 text-stone-400">{weapon.purpose}</p>
+                  <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-[0.62rem]">
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Damage</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.damage}</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Fire Rate</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.fireRateRpm} rpm</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Range</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.rangeMeters}m</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Magazine</dt><dd className="mt-1 text-sm font-bold text-orange-100">{weapon.stats.magazineCapacity} rounds</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Ammo</dt><dd className="mt-1 text-sm font-bold text-stone-200">{weapon.ammo.type}</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.18em] text-stone-500">Reload</dt><dd className="mt-1 text-sm font-bold text-stone-200">{weapon.reload.behavior} ({weapon.reload.durationSeconds}s)</dd></div>
+                  </dl>
                 </div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-stone-400 sm:text-right">{item.detail}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="gear" aria-labelledby="gear-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <SectionMarker
+            chapter="Chapter 06"
+            eyebrow="Gear and equipment"
+            title="Twenty pieces of gear. Every slot matters."
+            description="The gear catalog defines armor, storage, medical, utility, and survival equipment. Each item has protection, utility, mobility, and capacity stats from the shared game-data catalog."
+            headingId="gear-heading"
+          />
+          <div className="mt-8 flex items-center gap-3 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <StatusBadge status="prototype" />
+            <span>All gear items are prototype concepts. Effects and stats may change before release.</span>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {GEAR.map((item) => (
+              <article key={item.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09] p-5 transition hover:border-orange-200/15 sm:p-6">
+                <div aria-hidden className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-orange-500/6 blur-2xl transition group-hover:bg-orange-500/12" />
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-orange-100/55">{item.subCategory}</p>
+                      <h3 className="mt-2 text-lg font-black uppercase leading-tight tracking-[-0.04em] text-white">{item.name}</h3>
+                    </div>
+                    <StatusBadge status="prototype" />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-stone-400">{item.purpose}</p>
+                  <dl className="mt-4 grid grid-cols-4 gap-x-2 gap-y-2 text-[0.58rem]">
+                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Prot</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.protection}</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Util</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.utility}</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Mob</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.mobility}</dd></div>
+                    <div><dt className="font-bold uppercase tracking-[0.14em] text-stone-500">Cap</dt><dd className="mt-0.5 text-xs font-bold text-orange-100">{item.stats.capacity}</dd></div>
+                  </dl>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="combat" aria-labelledby="combat-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <SectionMarker
+            chapter="Chapter 07"
+            eyebrow="Combat system"
+            title="Read the fight before it reads you."
+            description="Combat is built on readable timing, catalog-driven stats, and clear feedback. Every system below is implemented in the current prototype."
+            headingId="combat-heading"
+          />
+          <div className="mt-14 grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: 'Melee', title: 'Read the distance.', description: 'Melee attacks have a clear wind-up, impact frame, and recovery. The timing is readable enough to use as a tactical interrupt, not just a fallback.' },
+              { label: 'Firearms', title: 'Every shot is a decision.', description: 'Weapons fire with catalog-driven damage, fire rate, and range. Muzzle flash, shell ejection, and procedural audio make each shot legible.' },
+              { label: 'Reloading', title: 'Magazine and per-round.', description: 'Some weapons reload by swapping a magazine. Others load round by round. The reload type and duration come from the shared item catalog.' },
+              { label: 'Weapon switching', title: 'Two slots, one choice.', description: 'The player carries a primary and a sidearm. Switching is fast but not instant. The catalog defines which weapons fit each slot class.' },
+              { label: 'Hit feedback', title: 'Impact you can feel.', description: 'Hit markers, damage overlays, and screen shake communicate the weight of every connection, yours and theirs.' },
+              { label: 'Infected telegraph', title: 'The wind-up is the warning.', description: 'Every infected attack shows a wind-up animation before impact. Reading it is the difference between a dodge and a down.' },
+              { label: 'Player health', title: 'A bar you can read.', description: 'A visible health bar with damage flash, vignette, and audio cue. Medkits restore health on demand when available.' },
+              { label: 'Defeat and recovery', title: 'Down is not the end.', description: 'When health reaches zero, the run ends. The local save preserves progress up to the last checkpoint. RESET RUN returns to the opening state.' },
+            ].map((system) => (
+              <article key={system.label} className="bg-[#0b0b0a] p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-black uppercase leading-none tracking-[-0.04em] text-white">{system.label}</h3>
+                  <StatusBadge status="prototype" />
+                </div>
+                <p className="mt-4 text-sm font-bold uppercase tracking-[-0.02em] text-orange-100/80">{system.title}</p>
+                <p className="mt-3 text-sm leading-6 text-stone-400">{system.description}</p>
               </article>
             ))}
           </div>
@@ -501,7 +588,103 @@ export function LandingChapters() {
         </div>
       </section>
 
-      <section id="review" aria-labelledby="review-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-32">
+      <section id="audio" aria-labelledby="audio-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <SectionMarker
+            chapter="Chapter 10"
+            eyebrow="Audio and atmosphere"
+            title="The city has a voice."
+            description="Spatial audio, surface-aware foley, procedural ambience, and narration cues create a soundscape that is built from the same data the Android game uses."
+            headingId="audio-heading"
+          />
+          <div className="mt-14 grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: 'Spatial environment sound', description: 'Ambient audio is positioned in 3D space. Beacon pulses, wind, and debris movement come from where they belong.' },
+              { label: 'Weapon sound', description: 'Each weapon has catalog-linked fire and reload audio. Procedural synthesis covers the prototype layer.' },
+              { label: 'Footsteps and foley', description: 'Surface-aware footstep synthesis for concrete, metal, and gravel. Survivor and infected footsteps are separated.' },
+              { label: 'Infected audio', description: 'Spatial infected foley: movement, attack wind-up, and defeat feedback. Each cue is routed through the infected bus.' },
+              { label: 'Music', description: 'Main-menu and shop atmosphere tracks. Music ducks under voice and narration automatically.' },
+              { label: 'Ambience', description: 'Three ambience states: route (calm), threat (engaged), and secured (post-combat). States transition with gameplay.' },
+              { label: 'Narration', description: 'Six narration cues guide the player through route events. Subtitles are synchronized and routed through the UI.' },
+              { label: 'Voice system', description: 'A server-side AI gateway will deliver packaged, approved voice assets. The Android client stays offline with cached audio.' },
+            ].map((feature, i) => (
+              <article key={feature.label} className="bg-[#0b0b0a] p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-black uppercase leading-none tracking-[-0.04em] text-white">{feature.label}</h3>
+                  <StatusBadge status={i < 7 ? 'prototype' : 'planned'} />
+                </div>
+                <p className="mt-4 text-sm leading-6 text-stone-400">{feature.description}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-10 rounded-[2rem] border border-white/10 bg-[#0b0b0a] p-6 sm:p-8">
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Narration cues</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {NARRATION_CUES.map((cue) => (
+                <div key={cue.event} className="rounded-xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100/60">{cue.event}</p>
+                  <p className="mt-2 text-sm leading-6 text-stone-300">{cue.subtitle}</p>
+                  <p className="mt-2 text-[0.58rem] uppercase tracking-[0.14em] text-stone-500">{cue.speaker}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 rounded-[2rem] border border-white/10 bg-[#0a0a09] p-6 sm:p-8">
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/65">Surface-aware foley</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {SURFACES.map((surface) => (
+                <div key={surface.id} className="rounded-xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-sm font-bold text-white">{surface.displayName}</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="h-4 w-4 rounded-sm border border-white/20" style={{ backgroundColor: `#${surface.visualColor}` }} aria-hidden />
+                    <span className="text-[0.58rem] uppercase tracking-[0.14em] text-stone-500">{surface.id}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-6 text-xs leading-6 text-stone-500">Placeholder synthesized sounds are not final production audio. The narration and foley systems are prototype hooks for replaceable runtime audio.</p>
+        </div>
+      </section>
+
+      <section id="android" aria-labelledby="android-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <SectionMarker
+            chapter="Chapter 11"
+            eyebrow="Android game presentation"
+            title="Built for touch. Designed for mobile."
+            description="The Infected is an Android-first game. Touch controls, offline play, and a mobile renderer are built into the foundation, not bolted on later."
+            headingId="android-heading"
+          />
+          <div className="mt-14 grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: 'Touch movement', description: 'Analog virtual joystick with dead-zone calibration and state recovery. Smooth, responsive, optimized for touch screens.' },
+              { label: 'Drag-to-look', description: 'Drag anywhere on the right side of the screen to rotate the camera. Look-ahead smoothing keeps movement and aiming readable.' },
+              { label: 'Combat HUD', description: 'Health bar, ammo counter, weapon indicator, and objective beacon. Minimal, readable, no clutter.' },
+              { label: 'Save and load', description: 'Local save preserves inventory, equipped gear, weapons, and player state. Load restores everything after a full restart.' },
+              { label: 'Offline play', description: 'No internet connection required after installation. No login, no account, no cloud sync.' },
+              { label: 'Performance', description: 'Targets 60 FPS on mid-range devices. ARM64 native libraries, mobile renderer, optimized draw calls.' },
+            ].map((feature) => (
+              <article key={feature.label} className="bg-[#0b0b0a] p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-black uppercase leading-none tracking-[-0.04em] text-white">{feature.label}</h3>
+                  <StatusBadge status="prototype" />
+                </div>
+                <p className="mt-4 text-sm leading-6 text-stone-400">{feature.description}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-4">
+            <div className="bg-[#0a0a09] p-5"><p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Package</p><p className="mt-2 text-sm font-bold text-stone-200">app.theinfected.game</p></div>
+            <div className="bg-[#0a0a09] p-5"><p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Version</p><p className="mt-2 text-sm font-bold text-stone-200">0.1.0-prototype</p></div>
+            <div className="bg-[#0a0a09] p-5"><p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Min SDK</p><p className="mt-2 text-sm font-bold text-stone-200">Android 9 (API 28)</p></div>
+            <div className="bg-[#0a0a09] p-5"><p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Target SDK</p><p className="mt-2 text-sm font-bold text-stone-200">API 36</p></div>
+          </div>
+          <p className="mt-6 text-xs leading-6 text-stone-500">Screenshots shown on this page are from internal-review candidates, not final production builds. No fabricated gameplay screenshots are used.</p>
+        </div>
+      </section>
+
+      <section id="review"  aria-labelledby="review-heading" className="border-t border-white/8 px-5 py-24 sm:px-8 lg:px-12 lg:py-32">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.75fr_1.25fr]">
           <SectionMarker chapter="Build discipline" eyebrow="Review gates" title="The atmosphere has a budget." description="These targets keep the cinematic surface usable on the devices that need the most care. They are gates to measure, not results to imply." headingId="review-heading" />
           <div className="grid gap-px overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 sm:grid-cols-2">
