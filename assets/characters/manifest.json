@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "generator": "meshy",
+  "characters": [
+    {
+      "id": "infected-001",
+      "name": "Infected 001",
+      "meshyTaskId": "019fcf87-03cd-75b4-9dd8-01f2cf6a7af6",
+      "meshySeed": 42,
+      "prompt": "A zombie infected character for a post-apocalyptic survival horror game. Gaunt male figure with decayed pale grey skin, sunken dead-white eyes, tattered dark clothing, hunched posture, mouth slightly open showing teeth. Realistic, dark atmosphere. Full body character, T-pose, game-ready.",
+      "artStyle": "realistic",
+      "modelFile": "infected-001.glb",
+      "previewImage": "infected-001-preview.png",
+      "formats": ["glb", "fbx", "usdz", "obj", "stl"],
+      "status": "preview",
+      "gameReady": true,
+      "godotCompatible": true,
+      "notes": "Preview model. Refine step pending for higher quality textures."
+    },
+    {
+      "id": "survivor-001",
+      "name": "Survivor 001",
+      "meshyTaskId": "019fcf87-0f83-78ac-b7f6-1f7994dbd741",
+      "meshySeed": 100,
+      "prompt": "A rugged male survivor character for a post-apocalyptic survival horror game. Wearing olive-green hooded jacket, tactical vest, cargo pants, boots, carrying a backpack and assault rifle. Weathered face, determined expression, practical survival gear. Realistic, dark atmosphere. Full body character, T-pose, game-ready.",
+      "artStyle": "realistic",
+      "modelFile": "survivor-001.glb",
+      "previewImage": "survivor-001-preview.png",
+      "formats": ["glb", "fbx", "usdz", "obj", "stl"],
+      "status": "preview",
+      "gameReady": true,
+      "godotCompatible": true,
+      "notes": "Preview model. Refine step pending for higher quality textures."
+    }
+  ]
+}
