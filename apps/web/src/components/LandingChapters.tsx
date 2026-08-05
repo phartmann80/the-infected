@@ -52,15 +52,25 @@ const registryEntries: RegistryEntry[] = [
     code: 'INFECTED / 001',
     label: 'Threat presentation',
     title: 'Infected 001 is ready for review.',
-    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This preview model establishes the first shared threat reference for web and game. No creature roster, final behavior, or lore is implied.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This revised model features a rotting human body with flesh still attached, torn bloody skin, exposed bone through gaping wounds, and torn civilian clothing. Clearly a once-human body in advanced decay, not a skeleton creature. No creature roster, final behavior, or lore is implied.',
     status: 'internal-review',
-    image: '/assets/cinematic/infected-001-production-candidate-internal-review.jpg',
-    imageAlt: '3D model preview of Infected 001, generated via Meshy AI. Game-ready GLB for Godot, skeletal infected with decayed features and threatening posture.',
+    image: '/assets/cinematic/infected-001-v2-meshy.png',
+    imageAlt: '3D model preview of Infected 001 (revised), generated via Meshy AI. Game-ready GLB for Godot. Rotting human zombie with flesh still attached, torn bloody skin, exposed bone, and torn civilian clothing. Half-human half-skeletal design.',
+  },
+  {
+    code: 'INFECTED / 002',
+    label: 'Threat presentation',
+    title: 'Infected 002 is ready for review.',
+    description: 'Generated as a 3D game-ready model via Meshy AI (meshy-6, 2K PBR, A-pose). The GLB export is Godot-compatible for direct use in the Android game. This revised model is a bulkier mutated infected with swollen distorted muscles visible through torn skin, torn military vest remnants, partial skull exposure on one side with flesh on the other, and milky white eyes. Clearly a once-human body mutated and rotting, not a skeleton.',
+    status: 'internal-review',
+    image: '/assets/cinematic/infected-002-v2-meshy.png',
+    imageAlt: '3D model preview of Infected 002 (revised), generated via Meshy AI. Game-ready GLB for Godot. Bulky mutated zombie with flesh still attached, torn skin showing swollen muscle, military vest remnants, partial skull exposure. Half-human half-skeletal design.',
   },
 ];
 
 const survivorEntry = registryEntries[0];
 const infectedEntry = registryEntries[1];
+const infected002Entry = registryEntries[2];
 
 const levels = [
   {
@@ -348,17 +358,18 @@ export function LandingChapters() {
             description="The first infected design will define how tension moves through the world. Until a candidate is approved, the threat language stays intentionally focused on one prototype enemy."
             headingId="infected-heading"
           />
-          <div className="mt-14 grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+          <div className="mt-14 grid gap-5 lg:grid-cols-2 lg:items-stretch">
             <RegistryCard entry={infectedEntry} />
-            <div className="rounded-[2rem] border border-red-200/15 bg-red-100/[0.035] p-6 sm:p-8">
-              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-red-100/65">Threat boundary / prototype</p>
-              <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">One infected. No roster.</h3>
-              <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">The Android slice proves one readable enemy encounter. This page will not imply additional variants, names, abilities, or final lore until the first infected candidate passes creative review.</p>
-              <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">One enemy</p></div>
-                <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Behavior + Android review</p></div>
-              </div>
+            <RegistryCard entry={infected002Entry} />
+          </div>
+          <div className="mt-5 rounded-[2rem] border border-red-200/15 bg-red-100/[0.035] p-6 sm:p-8">
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-red-100/65">Threat boundary / prototype</p>
+            <h3 className="mt-12 text-3xl font-black uppercase leading-none tracking-[-0.06em] text-white">Two infected designs in review.</h3>
+            <p className="mt-5 max-w-xl text-sm leading-7 text-stone-400">Both infected designs are revised to read as rotting human bodies with flesh still attached, torn bloody skin, exposed bone, and torn clothing. Not skeletons. Clearly once-human. These are creative review candidates, not final roster.</p>
+            <div className="mt-10 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
+              <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Current state</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-orange-100/80">Internal review</p></div>
+              <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Playable scope</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Two enemies</p></div>
+              <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-stone-400">Next gate</p><p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-stone-300">Creative approval</p></div>
             </div>
           </div>
         </div>
