@@ -1,1 +1,13 @@
-{"name":"@the-infected/game-data","version":"0.1.0","private":true,"type":"module","main":"src/index.ts","types":"src/index.ts","scripts":{"typecheck":"tsc --noEmit","build":"tsc --noEmit"}}
+{
+  "name": "@the-infected/game-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "validate": "node ../../scripts/validate-game-data.mjs",
+    "typecheck": "npm run validate && tsc --noEmit",
+    "build": "npm run validate && tsc --noEmit"
+  }
+}

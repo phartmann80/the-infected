@@ -5,6 +5,11 @@ import { useMemo, useRef } from 'react';
 import type { Mesh, Points } from 'three';
 import * as THREE from 'three';
 
+function seededUnit(index: number, axis: number) {
+  const value = Math.sin((index + 1) * 12.9898 + axis * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
 function RuinedSignalTower() {
   const tower = useRef<Mesh>(null);
   useFrame(({ clock }) => {
@@ -34,9 +39,9 @@ function EmberField() {
     const count = 420;
     const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i += 1) {
-      positions[i * 3] = (Math.random() - 0.5) * 8;
-      positions[i * 3 + 1] = Math.random() * 4 - 1.5;
-      positions[i * 3 + 2] = Math.random() * -5;
+      positions[i * 3] = (seededUnit(i, 0) - 0.5) * 8;
+      positions[i * 3 + 1] = seededUnit(i, 1) * 4 - 1.5;
+      positions[i * 3 + 2] = seededUnit(i, 2) * -5;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));

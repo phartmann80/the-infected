@@ -23,6 +23,7 @@ coverage/
 *.crt
 secrets/
 apps/android/.gradle/
+apps/android/.godot/
 apps/android/build/
 apps/android/local.properties
 .DS_Store
