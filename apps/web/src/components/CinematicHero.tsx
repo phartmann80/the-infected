@@ -378,11 +378,28 @@ export function CinematicHero() {
     ];
   }, [heroDebug, selectedSource, mounted, isMobile]);
 
+  // Force video to reload when source changes (React swaps <source> tags but video element keeps old src)
+  useEffect(() => {
+    if (!mounted) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.load();
+    if (videoActive) {
+      video.play().then(() => {
+        setHasPlayed(true);
+        if (heroDebug) logDebugEvent('source changed, play() succeeded');
+      }).catch((err) => {
+        if (heroDebug) logDebugEvent(`source changed, play() rejected: ${err.name}`);
+      });
+    }
+  }, [selectedSource, mounted]);
+
   return (
     <>
       <section ref={heroRef} aria-labelledby="hero-heading" className="relative min-h-[100svh] w-full overflow-hidden bg-[#030405]">
         <video
           ref={videoRef}
+          key={heroDebug ? `video-${selectedSource}` : 'video'}
           className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-90 saturate-[0.74] contrast-[1.08]"
           autoPlay={videoAutoPlay}
           muted
