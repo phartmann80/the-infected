@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Gear | The Infected',
+  description: 'Explore the gear in The Infected, a cinematic 3D zombie-survival Android game.',
+};
+
 'use client';
 
 import Image from 'next/image';
