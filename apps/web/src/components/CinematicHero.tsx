@@ -143,18 +143,53 @@ export function CinematicHero() {
     };
   }, [closeSignup, signupOpen]);
 
-  // --- Video playback effect: only attempt play after mount ---
+  // --- Video playback effect: aggressive autoplay with retry ---
   useEffect(() => {
     if (!mounted) return;
     const video = videoRef.current;
     if (!video) return;
     if (videoActive) {
-      void video.play().catch(() => {
-        setAutoplayFailed(true);
-      });
+      // Try to play immediately
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise.catch(() => {
+          // Autoplay was blocked. Retry with muted=true (already muted but some browsers need it set again)
+          video.muted = true;
+          video.volume = 0;
+          video.play().catch(() => {
+            // Still blocked. Try again after a short delay (some browsers need a tick)
+            setTimeout(() => {
+              video.play().catch(() => {
+                setAutoplayFailed(true);
+              });
+            }, 100);
+          });
+        });
+      }
     } else {
       video.pause();
     }
+  }, [mounted, videoActive]);
+
+  // Additional retry: listen for first user interaction to start video
+  useEffect(() => {
+    if (!mounted || !videoActive) return;
+    const video = videoRef.current;
+    if (!video || !video.paused) return;
+    
+    const tryPlayOnInteraction = () => {
+      if (video.paused) {
+        video.play().then(() => setAutoplayFailed(false)).catch(() => undefined);
+      }
+    };
+    
+    // Listen for any user interaction
+    const events = ["click", "touchstart", "keydown", "mousemove", "scroll"];
+    events.forEach(e => document.addEventListener(e, tryPlayOnInteraction, { once: true, passive: true }));
+    
+    return () => {
+      events.forEach(e => document.removeEventListener(e, tryPlayOnInteraction));
+    };
   }, [mounted, videoActive]);
 
   const manuallyPlayVideo = useCallback(() => {
@@ -224,7 +259,6 @@ export function CinematicHero() {
           loop
           playsInline
           preload={videoPreload}
-          poster="/assets/cinematic/hero-poster-light.jpg"
           aria-hidden
           onPlaying={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: playing'); setAutoplayFailed(false); }}
           onPause={() => { if (process.env.NODE_ENV !== 'production') console.log('[CinematicHero] video: paused'); }}
@@ -425,27 +459,8 @@ export function CinematicHero() {
               </button>
             </motion.div>
 
-            <motion.div
-              className="relative hidden md:block"
-              initial={false}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.0, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="relative aspect-[3/4] w-full max-w-md overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
-                <Image
-                  src="/assets/screenshots/gameplay-screenshot-01.jpg"
-                  alt="The Infected gameplay screenshot"
-                  fill
-                  sizes="(min-width: 768px) 448px, 100vw"
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-white/80">Quarantine Zone</p>
-                  <p className="text-sm text-white/60">Level 1: The Outbreak</p>
-                </div>
-              </div>
-            </motion.div>
+            {/* Right column removed: the gameplay screenshot image was broken (file does not exist)
+                and was covering the zombie video. The video itself is the hero visual. */}
           </div>
 
           <motion.div
