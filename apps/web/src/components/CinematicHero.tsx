@@ -198,7 +198,7 @@ export function CinematicHero() {
           poster="/assets/cinematic/hero-poster-v1.jpg"
           aria-hidden
         >
-          <source src="/assets/cinematic/hero-cinematic-v1.mp4" type="video/mp4" />
+          <source src="/assets/cinematic/hero-cinematic-v2.mp4" type="video/mp4" />
         </video>
         {(reduceMotion || lowBandwidth) && (
           <Image
