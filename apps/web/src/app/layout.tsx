@@ -3,7 +3,7 @@ import './globals.css';
 
 const siteUrl = 'https://theinfected.app';
 const description = 'The Infected is a cinematic 3D zombie-survival Android game set in a city that remembers what happened.';
-const socialImage = '/assets/cinematic/temporary-cinematic-poster-noncanonical.jpg';
+const socialImage = '/assets/branding/og-image.jpg';
 
 const structuredData = {
   '@context': 'https://schema.org',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: 'The Infected',
     title: 'The Infected | Coming Soon',
     description,
-    images: [{ url: socialImage, width: 1280, height: 720, alt: 'The Infected ruined city cinematic scene' }],
+    images: [{ url: socialImage, width: 1200, height: 630, alt: 'The Infected' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -66,7 +66,8 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: '/assets/branding/the-infected-logo.png',
+    icon: '/assets/branding/favicon.png',
+    apple: '/assets/branding/apple-touch-icon.png',
   },
 };
 
