@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 type NavItem = {
   label: string;
@@ -96,9 +97,14 @@ export function NavHeader() {
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
           <Link href="/" className="flex items-center gap-3 py-4" onClick={() => setMobileOpen(false)}>
-            <span className="text-lg font-black uppercase tracking-[-0.04em] text-white sm:text-xl">
-              THE INFECTED
-            </span>
+            <Image
+              src="/assets/branding/header-logo.png"
+              alt="The Infected"
+              width={48}
+              height={48}
+              className="h-10 w-auto sm:h-12"
+              priority
+            />
             <span className="hidden rounded-full border border-orange-200/20 bg-orange-100/10 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-[0.2em] text-orange-100/70 sm:inline">
               Survival Horror
             </span>
