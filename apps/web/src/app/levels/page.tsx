@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import PageShell from '@/components/PageShell';
 import { PageHeader, StatusBadge, SectionMarker } from '@/components/shared';
-import { LazyVideo } from '@/components/animation/CinematicMotion';
+import { LazyVideo, ScrollReveal } from '@/components/animation/CinematicMotion';
 
 const levels = [
   {
@@ -92,78 +92,81 @@ export default function LevelsPage() {
       />
 
       <div className="px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
-        <div className="mx-auto max-w-7xl space-y-12">
-          {levels.map((level) => (
-            <article key={level.index} className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09]">
-              {/* Environment visual */}
-              <div className="relative aspect-[21/9] overflow-hidden sm:aspect-[16/6]">
-                {level.status === 'prototype' ? (
-                  <LazyVideo
-                    srcMp4={`/assets/cinematic/env/${level.env}.mp4`}
-                    srcWebm={`/assets/cinematic/env/${level.env}.webm`}
-                    poster={`/assets/cinematic/env/${level.env}.jpg`}
-                    className="absolute inset-0 h-full w-full"
-                    overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40"
-                  />
-                ) : (
-                  <Image
-                    src={`/assets/cinematic/env/${level.env}.jpg`}
-                    alt={level.name}
-                    fill
-                    sizes="100vw"
-                    className="object-cover saturate-[0.7]"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between sm:bottom-6 sm:left-8">
-                  <div>
-                    <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Level {level.index} / {level.location}</p>
-                    <h2 className="mt-1 text-2xl font-black uppercase tracking-[-0.04em] text-white sm:text-3xl">{level.name}</h2>
+        <div className="mx-auto max-w-7xl space-y-8">
+          {levels.map((level, i) => (
+            <ScrollReveal key={level.index} delay={i * 0.05}>
+              <article className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09]">
+                {/* Environment visual — large video or image */}
+                <div className="relative aspect-[21/9] overflow-hidden sm:aspect-[16/6]">
+                  {level.status === 'prototype' ? (
+                    <LazyVideo
+                      srcMp4={`/assets/cinematic/env/${level.env}.mp4`}
+                      srcWebm={`/assets/cinematic/env/${level.env}.webm`}
+                      poster={`/assets/cinematic/env/${level.env}.jpg`}
+                      className="absolute inset-0 h-full w-full"
+                      overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-[#060606]/40"
+                    />
+                  ) : (
+                    <Image
+                      src={`/assets/cinematic/env/${level.env}.jpg`}
+                      alt={level.name}
+                      fill
+                      sizes="100vw"
+                      className="object-cover saturate-[0.7]"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-transparent" />
+                  <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between sm:bottom-6 sm:left-8">
+                    <div>
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">Level {level.index} / {level.location}</p>
+                      <h2 className="mt-1 text-2xl font-black uppercase tracking-[-0.04em] text-white sm:text-3xl">{level.name}</h2>
+                    </div>
+                    <StatusBadge status={level.status} />
                   </div>
-                  <StatusBadge status={level.status} />
                 </div>
-              </div>
 
-              {/* Details */}
-              <div className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-4 sm:p-8">
-                <div>
-                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Objective</p>
-                  <p className="mt-2 text-sm leading-6 text-stone-300">{level.objective}</p>
+                {/* Details — visual info grid */}
+                <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4 sm:p-8">
+                  {[
+                    { label: 'Objective', value: level.objective, icon: 'O' },
+                    { label: 'Threats', value: level.threats, icon: 'T' },
+                    { label: 'Expected Loot', value: level.loot, icon: 'L' },
+                    { label: 'Hazards', value: level.hazards, icon: 'H' },
+                  ].map((detail) => (
+                    <div key={detail.label} className="rounded-xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-orange-200/20 bg-orange-100/5 text-[0.58rem] font-black text-orange-100/60">
+                          {detail.icon}
+                        </span>
+                        <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">{detail.label}</p>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-stone-300">{detail.value}</p>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Threats</p>
-                  <p className="mt-2 text-sm leading-6 text-stone-300">{level.threats}</p>
-                </div>
-                <div>
-                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Expected Loot</p>
-                  <p className="mt-2 text-sm leading-6 text-stone-300">{level.loot}</p>
-                </div>
-                <div>
-                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-stone-500">Hazards</p>
-                  <p className="mt-2 text-sm leading-6 text-stone-300">{level.hazards}</p>
-                </div>
-              </div>
-
-              <div className="border-t border-white/8 px-6 py-4 sm:px-8">
-                <p className="text-xs leading-6 text-stone-500">{level.description}</p>
-              </div>
-            </article>
+              </article>
+            </ScrollReveal>
           ))}
 
           {/* Planned levels */}
-          <div className="rounded-2xl border border-white/10 bg-[#0a0a09] p-6 sm:p-8">
-            <SectionMarker eyebrow="Planned environments" title="More areas in development." description="Additional levels are being designed with unique environments, objectives, and infected types." />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {['Rooftops', 'Subway System', 'Hospital', 'Power Plant'].map((name) => (
-                <div key={name} className="rounded-xl border border-white/10 bg-black/30 p-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-black uppercase tracking-[-0.04em] text-white">{name}</h3>
-                    <StatusBadge status="planned" />
+          <ScrollReveal>
+            <div className="rounded-2xl border border-white/10 bg-[#0a0a09] p-6 sm:p-8">
+              <SectionMarker eyebrow="Planned" title="More environments coming." description="Additional levels are being designed with unique environments, objectives, and infected types." />
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {['Rooftops', 'Subway System', 'Hospital', 'Power Plant'].map((name) => (
+                  <div key={name} className="group rounded-xl border border-white/10 bg-black/30 p-5 transition hover:border-orange-200/15">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-xl font-black text-stone-600 transition group-hover:text-orange-500/30">
+                      ?
+                    </div>
+                    <h3 className="mt-3 text-base font-black uppercase tracking-[-0.04em] text-white">{name}</h3>
+                    <div className="mt-3">
+                      <StatusBadge status="planned" />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </div>
     </PageShell>

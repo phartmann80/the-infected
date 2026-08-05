@@ -48,7 +48,7 @@ export default function InventoryPage() {
 
       <div className="px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr_1fr] lg:gap-4">
+          <div className="grid gap-6 lg:grid-cols-[280px_1fr_280px] lg:gap-4">
             {/* Left: Survivor + stats */}
             <div className="space-y-4">
               <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">Survivor Status</p>
@@ -58,9 +58,12 @@ export default function InventoryPage() {
                   alt="Survivor preview"
                   fill
                   sizes="(min-width: 1024px) 25vw, 100vw"
-                  className="object-cover object-center saturate-[0.85]"
+                  className="object-cover object-top saturate-[0.85]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#060606]/60 to-transparent" />
+                <div className="absolute bottom-3 left-3 rounded-full border border-white/15 bg-black/55 px-3 py-1 text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100 backdrop-blur">
+                  Survivor 001
+                </div>
               </div>
               {/* Health & status bars */}
               <div className="space-y-3 rounded-xl border border-white/10 bg-[#0a0a09] p-4">
@@ -94,7 +97,7 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            {/* Center: Inventory grid */}
+            {/* Center: Inventory grid — game-style */}
             <div>
               <p className="mb-3 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">Backpack Grid</p>
               <div className="grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-[#0a0a09] p-4 sm:grid-cols-6">
@@ -102,7 +105,7 @@ export default function InventoryPage() {
                   <button
                     key={i}
                     onClick={() => item.type !== 'empty' && setSelectedItem(item)}
-                    className={`relative aspect-square rounded-lg border p-2 transition ${
+                    className={`group relative aspect-square rounded-lg border p-2 transition hover:scale-105 ${
                       selectedItem?.id === item.id
                         ? 'border-orange-200/40 bg-orange-100/10'
                         : typeColors[item.type]
@@ -120,57 +123,70 @@ export default function InventoryPage() {
                 ))}
               </div>
 
-              {/* Item detail */}
+              {/* Item detail panel */}
               {selectedItem && (
                 <div className="mt-4 rounded-xl border border-orange-200/15 bg-[#0a0a09] p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-black uppercase tracking-[-0.04em] text-white">{selectedItem.name}</h3>
-                    <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-stone-300">
-                      Qty: {selectedItem.qty}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg border text-xl font-black ${typeColors[selectedItem.type]}`}>
+                      {selectedItem.icon}
+                    </div>
+                    <div>
+                      <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{selectedItem.type}</p>
+                      <h3 className="text-sm font-bold text-white">{selectedItem.name}</h3>
+                      <p className="text-xs text-stone-500">Quantity: {selectedItem.qty}</p>
+                    </div>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <button className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-bold uppercase tracking-[0.1em] text-black transition hover:bg-orange-400">Use</button>
-                    <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.1em] text-stone-300 transition hover:bg-white/10">Equip</button>
-                    <button className="rounded-lg border border-red-200/20 bg-red-100/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.1em] text-red-100 transition hover:bg-red-100/10">Discard</button>
+                  <div className="mt-4 flex gap-2">
+                    <button className="rounded-lg border border-green-200/20 bg-green-100/10 px-4 py-2 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-green-100 transition hover:bg-green-100/20">Use</button>
+                    <button className="rounded-lg border border-blue-200/20 bg-blue-100/10 px-4 py-2 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-blue-100 transition hover:bg-blue-100/20">Equip</button>
+                    <button className="rounded-lg border border-red-200/20 bg-red-100/10 px-4 py-2 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-red-100 transition hover:bg-red-100/20">Discard</button>
                   </div>
                 </div>
               )}
 
-              {/* Save/load */}
+              {/* Save/Load state */}
               <div className="mt-4 flex gap-2">
-                <button className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.1em] text-stone-300 transition hover:bg-white/10">
-                  Save State
-                </button>
-                <button className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.1em] text-stone-300 transition hover:bg-white/10">
-                  Load State
-                </button>
+                <button className="flex-1 rounded-lg border border-white/10 bg-[#0a0a09] px-4 py-2.5 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-stone-300 transition hover:border-orange-200/20 hover:text-white">Save State</button>
+                <button className="flex-1 rounded-lg border border-white/10 bg-[#0a0a09] px-4 py-2.5 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-stone-300 transition hover:border-orange-200/20 hover:text-white">Load State</button>
               </div>
             </div>
 
             {/* Right: Equipment slots */}
-            <div className="space-y-2">
-              <p className="mb-3 text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">Equipped</p>
+            <div className="space-y-3">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.28em] text-orange-100/60">Equipped</p>
               {/* Weapon slot */}
               <div className="rounded-xl border border-white/10 bg-[#0a0a09] p-3">
                 <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">Weapon</p>
-                <p className="mt-1 text-sm font-bold text-white">{equippedWeapon.name}</p>
-                <div className="mt-2 flex gap-2 text-[0.58rem]">
-                  <span className="text-stone-500">DMG: <span className="text-orange-100">{equippedWeapon.stats.damage}</span></span>
-                  <span className="text-stone-500">MAG: <span className="text-orange-100">{equippedWeapon.stats.magazineCapacity}</span></span>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-orange-200/20 bg-orange-100/5 text-lg font-black text-orange-100/60">
+                    W
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{equippedWeapon.name}</p>
+                    <div className="mt-1 flex gap-2 text-[0.58rem]">
+                      <span className="text-stone-500">DMG: <span className="text-orange-100">{equippedWeapon.stats.damage}</span></span>
+                      <span className="text-stone-500">MAG: <span className="text-orange-100">{equippedWeapon.stats.magazineCapacity}</span></span>
+                    </div>
+                  </div>
                 </div>
               </div>
               {/* Gear slots */}
-              {equippedGear.map((item) => (
-                <div key={item.id} className="rounded-xl border border-white/10 bg-[#0a0a09] p-3">
-                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{item.subCategory}</p>
-                  <p className="mt-1 text-sm font-bold text-white">{item.name}</p>
+              {equippedGear.map((gear) => (
+                <div key={gear.id} className="rounded-xl border border-white/10 bg-[#0a0a09] p-3">
+                  <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{gear.subCategory}</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-lg font-black text-orange-100/50">
+                      {gear.subCategory.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{gear.name}</p>
+                      <StatusBadge status={gear.status as any} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-
-          <p className="mt-8 text-center text-xs text-stone-500">This is an interactive web demonstration synced with the real game catalog data. Not all actions are functional in this preview.</p>
         </div>
       </div>
     </PageShell>

@@ -7,7 +7,7 @@ export default function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <NavHeader />
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="page-enter">
         {children}
       </main>
       <ProductionFooter />

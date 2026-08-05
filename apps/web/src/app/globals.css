@@ -7,8 +7,26 @@ body { margin: 0; min-width: 320px; background: #030405; color: #f7f4ef; text-re
 section[id] { scroll-margin-top: 5.5rem; }
 ::selection { background: rgba(255, 92, 38, 0.85); color: #080706; }
 :focus-visible { outline: 2px solid rgba(255, 210, 174, 0.95); outline-offset: 4px; }
-.chapter-link-scroll { scrollbar-width: none; }
-.chapter-link-scroll::-webkit-scrollbar { display: none; }
+.chapter-links-scroll { scrollbar-width: none; }
+.chapter-links-scroll::-webkit-scrollbar { display: none; }
+
+/* ===== DARK SCROLLBAR STYLING ===== */
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: rgba(255, 100, 30, 0.35) #1a1a18; }
+
+/* WebKit / Chrome / Safari */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0d0d0c; border-radius: 0; }
+::-webkit-scrollbar-thumb { background: rgba(255, 100, 30, 0.25); border-radius: 5px; border: 2px solid #0d0d0c; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 100, 30, 0.45); }
+::-webkit-scrollbar-corner { background: #0d0d0c; }
+
+/* ===== PAGE TRANSITIONS ===== */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: page-enter 0.4s ease-out; }
 
 /* ===== CINEMATIC MOTION SYSTEM ===== */
 
@@ -138,6 +156,18 @@ section[id] { scroll-margin-top: 5.5rem; }
   50% { box-shadow: 0 0 20px 4px rgba(255, 100, 30, 0.15); }
 }
 
+/* Card hover lift */
+@keyframes card-lift {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+/* Glow pulse for featured items */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px 0 rgba(255, 100, 30, 0.1); }
+  50% { box-shadow: 0 0 40px 4px rgba(255, 100, 30, 0.2); }
+}
+
 /* Utility classes */
 .anim-smoke { animation: smoke-drift 20s ease-in-out infinite; }
 .anim-ember { animation: ember-float 4s ease-out infinite; }
@@ -155,6 +185,7 @@ section[id] { scroll-margin-top: 5.5rem; }
 .anim-muzzle-flash { animation: muzzle-flash 5s ease-in-out infinite; }
 .anim-divider-glow { animation: divider-glow 4s ease-in-out infinite; }
 .anim-loop-pulse { animation: loop-pulse 3s ease-in-out infinite; }
+.anim-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
 
 /* Staggered animation delays */
 .delay-1 { animation-delay: 0.5s; }

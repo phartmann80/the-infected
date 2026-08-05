@@ -1,40 +1,39 @@
 import PageShell from '@/components/PageShell';
 import { PageHeader, StatusBadge, SectionMarker } from '@/components/shared';
+import { ScrollReveal } from '@/components/animation/CinematicMotion';
 
-const missions = [
-  { id: 'M01', name: 'Reach the checkpoint', level: '01', status: 'completed' as const, unlocks: 'Service District Access' },
-  { id: 'M02', name: 'Find the maintenance key', level: '02', status: 'completed' as const, unlocks: 'Quarantine Breach' },
-  { id: 'M03', name: 'Breach the quarantine line', level: '03', status: 'active' as const, unlocks: 'City Access' },
-  { id: 'M04', name: 'Search the residential building', level: '04', status: 'locked' as const, unlocks: 'Signal Relay Part' },
-  { id: 'M05', name: 'Reach the factory control room', level: '05', status: 'locked' as const, unlocks: 'Industrial Materials' },
-  { id: 'M06', name: 'Find the signal source', level: '06', status: 'locked' as const, unlocks: 'Endgame' },
+const missionNodes = [
+  { id: 'arrival', name: 'The Arrival', level: '01', status: 'completed' as const, x: 10, y: 50 },
+  { id: 'service', name: 'Service District', level: '02', status: 'completed' as const, x: 25, y: 30 },
+  { id: 'quarantine', name: 'Quarantine Checkpoint', level: '03', status: 'active' as const, x: 40, y: 55 },
+  { id: 'building', name: 'Abandoned Building', level: '04', status: 'locked' as const, x: 55, y: 35 },
+  { id: 'industrial', name: 'Industrial Zone', level: '05', status: 'locked' as const, x: 70, y: 50 },
+  { id: 'source', name: 'The Source Room', level: '06', status: 'locked' as const, x: 85, y: 30 },
 ];
 
+const nodeColors: Record<string, string> = {
+  completed: 'border-green-200/40 bg-green-100/15 text-green-100',
+  active: 'border-orange-200/50 bg-orange-100/20 text-orange-100 anim-glow-pulse',
+  locked: 'border-stone-200/10 bg-stone-100/5 text-stone-500',
+};
+
 const achievements = [
-  { name: 'First Contact', desc: 'Encounter your first infected', status: 'unlocked' as const },
-  { name: 'Survivor', desc: 'Survive 10 minutes without taking damage', status: 'unlocked' as const },
-  { name: 'Scavenger', desc: 'Collect 50 items', status: 'progress' as const },
-  { name: 'Marksman', desc: '50 headshot kills', status: 'locked' as const },
-  { name: 'Untouchable', desc: 'Complete a level without damage', status: 'locked' as const },
-  { name: 'Signal Hunter', desc: 'Reach the signal source', status: 'locked' as const },
+  { name: 'First Contact', desc: 'Encounter your first infected', icon: '!', status: 'completed' as const },
+  { name: 'Signal Hunter', desc: 'Reach the quarantine checkpoint', icon: 'S', status: 'completed' as const },
+  { name: 'Pack Rat', desc: 'Fill your backpack to capacity', icon: 'P', status: 'completed' as const },
+  { name: 'Marksman', desc: 'Land 50 headshots', icon: 'M', status: 'active' as const },
+  { name: 'Survivor', desc: 'Survive 10 levels without dying', icon: 'V', status: 'locked' as const },
+  { name: 'The Truth', desc: 'Reach the source room', icon: 'T', status: 'locked' as const },
 ];
 
 const unlocks = [
-  { name: 'Warden-9 Pistol', type: 'Weapon', level: 'Level 1', status: 'unlocked' as const },
-  { name: 'Raven-12 Shotgun', type: 'Weapon', level: 'Level 4', status: 'locked' as const },
-  { name: 'Bastion Vest', type: 'Gear', level: 'Level 2', status: 'unlocked' as const },
-  { name: 'Sentinel Helmet', type: 'Gear', level: 'Level 3', status: 'locked' as const },
-  { name: 'Cinder-5 Carbine', type: 'Weapon', level: 'Level 5', status: 'locked' as const },
-  { name: 'Nightglass NVG', type: 'Gear', level: 'Level 6', status: 'locked' as const },
+  { name: 'Warden-9 Pistol', type: 'Weapon', level: '01', icon: 'W' },
+  { name: 'Raven-12 Shotgun', type: 'Weapon', level: '03', icon: 'S' },
+  { name: 'Bastion Vest', type: 'Gear', level: '02', icon: 'A' },
+  { name: 'Sentinel Helmet', type: 'Gear', level: '03', icon: 'H' },
+  { name: 'Cinder-5 Carbine', type: 'Weapon', level: '04', icon: 'C' },
+  { name: 'Field Pack 45', type: 'Gear', level: '01', icon: 'B' },
 ];
-
-const statusConfig = {
-  completed: { color: 'border-green-200/30 bg-green-100/10 text-green-100', dot: 'bg-green-400', label: 'Completed' },
-  active: { color: 'border-orange-200/30 bg-orange-100/10 text-orange-100', dot: 'bg-orange-400 animate-pulse', label: 'Active' },
-  locked: { color: 'border-stone-200/20 bg-stone-100/5 text-stone-500', dot: 'bg-stone-600', label: 'Locked' },
-  unlocked: { color: 'border-green-200/30 bg-green-100/10 text-green-100', dot: 'bg-green-400', label: 'Unlocked' },
-  progress: { color: 'border-amber-200/20 bg-amber-100/5 text-amber-100', dot: 'bg-amber-400', label: 'In Progress' },
-};
 
 export const metadata = { title: 'Progression — Mission Map' };
 
@@ -44,108 +43,151 @@ export default function ProgressionPage() {
       <PageHeader
         eyebrow="Progression"
         title="Mission Map"
-        description="Track your path through the outbreak. Every mission unlocks new areas, weapons, and gear."
+        description="The path through the outbreak. Every level unlocks new weapons, gear, and challenges."
         image="/assets/cinematic/env/env-quarantine-checkpoint.jpg"
-        imageAlt="Quarantine checkpoint"
+        imageAlt="Quarantine checkpoint environment"
       />
 
       <div className="px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-7xl space-y-12">
+          {/* Visual mission map */}
+          <ScrollReveal>
+            <section>
+              <SectionMarker eyebrow="World Map" title="The path through the city." headingId="mission-map" />
+              <div className="mt-8 relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-stone-900 via-[#0a0a09] to-black p-6 sm:p-10">
+                {/* Map background — stylized city grid */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="h-full w-full" style={{ backgroundImage: 'linear-gradient(rgba(255,100,30,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,100,30,0.15) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                </div>
 
-          {/* Mission path */}
-          <section>
-            <SectionMarker eyebrow="Mission Path" title="The route through the city." headingId="mission-path" />
-            <div className="mt-8 space-y-3">
-              {missions.map((mission, i) => {
-                const cfg = statusConfig[mission.status];
-                return (
-                  <div key={mission.id} className="flex items-center gap-4">
-                    {/* Connector line */}
-                    <div className="flex flex-col items-center">
-                      <span className={`h-3 w-3 rounded-full ${cfg.dot}`} />
-                      {i < missions.length - 1 && <span className="mt-1 h-8 w-px bg-white/10" />}
-                    </div>
-                    {/* Mission card */}
-                    <div className={`flex flex-1 items-center justify-between rounded-xl border p-4 ${cfg.color}`}>
-                      <div>
-                        <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] opacity-60">{mission.id} / Level {mission.level}</p>
-                        <h3 className="mt-1 text-sm font-black uppercase tracking-[-0.03em]">{mission.name}</h3>
-                        <p className="mt-1 text-xs opacity-70">Unlocks: {mission.unlocks}</p>
+                {/* Mission nodes with connector lines */}
+                <div className="relative aspect-[2/1] sm:aspect-[3/1]">
+                  <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                    {missionNodes.slice(0, -1).map((node, i) => {
+                      const next = missionNodes[i + 1];
+                      const isUnlocked = node.status === 'completed' || node.status === 'active';
+                      return (
+                        <line
+                          key={i}
+                          x1={node.x}
+                          y1={node.y}
+                          x2={next.x}
+                          y2={next.y}
+                          stroke={isUnlocked ? 'rgba(255,100,30,0.4)' : 'rgba(120,113,108,0.2)'}
+                          strokeWidth="0.5"
+                          strokeDasharray={isUnlocked ? '0' : '2,2'}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {missionNodes.map((node) => (
+                    <div
+                      key={node.id}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    >
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-full border-2 ${nodeColors[node.status]} sm:h-14 sm:w-14`}>
+                        <span className="text-sm font-black sm:text-base">{node.level}</span>
                       </div>
-                      <span className="text-[0.58rem] font-bold uppercase tracking-[0.14em]">{cfg.label}</span>
+                      <p className="mt-2 max-w-[100px] text-center text-[0.58rem] font-bold uppercase tracking-[0.1em] text-stone-400">
+                        {node.name}
+                      </p>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                  ))}
+                </div>
 
-          {/* World map zones */}
-          <section>
-            <SectionMarker eyebrow="World Map" title="Safe zones and danger areas." headingId="world-map" />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                { name: 'Safe House Alpha', type: 'Safe Zone', status: 'completed' as const, desc: 'First safe room. Save point and basic supplies.' },
-                { name: 'Quarantine Perimeter', type: 'Danger Zone', status: 'active' as const, desc: 'High infected density. Military remnants.' },
-                { name: 'Residential Sector', type: 'Contested', status: 'locked' as const, desc: 'Mixed threat. Good loot opportunities.' },
-                { name: 'Industrial District', type: 'High Risk', status: 'locked' as const, desc: 'Brute territory. Best weapon parts.' },
-                { name: 'Extraction Point', type: 'Objective', status: 'locked' as const, desc: 'Final extraction. Signal source location.' },
-                { name: 'Underground Tunnels', type: 'Danger Zone', status: 'locked' as const, desc: 'Low visibility. Runner packs.' },
-              ].map((zone) => {
-                const cfg = statusConfig[zone.status];
-                return (
-                  <div key={zone.name} className={`rounded-xl border p-5 ${cfg.color}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[0.58rem] font-bold uppercase tracking-[0.18em] opacity-60">{zone.type}</span>
-                      <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
-                    </div>
-                    <h3 className="mt-2 text-base font-black uppercase tracking-[-0.04em]">{zone.name}</h3>
-                    <p className="mt-2 text-xs leading-5 opacity-70">{zone.desc}</p>
+                {/* Map legend */}
+                <div className="mt-6 flex flex-wrap gap-4 border-t border-white/10 pt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full border-2 border-green-200/40 bg-green-100/15" />
+                    <span className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-400">Completed</span>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full border-2 border-orange-200/50 bg-orange-100/20" />
+                    <span className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-400">Active</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full border-2 border-stone-200/10 bg-stone-100/5" />
+                    <span className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-400">Locked</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </ScrollReveal>
 
           {/* Achievements */}
-          <section>
-            <SectionMarker eyebrow="Achievements" title="Milestones." headingId="achievements" />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {achievements.map((ach) => {
-                const cfg = statusConfig[ach.status];
-                return (
-                  <div key={ach.name} className={`rounded-xl border p-5 ${cfg.color}`}>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-black uppercase tracking-[-0.04em]">{ach.name}</h3>
-                      <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
+          <ScrollReveal>
+            <section>
+              <SectionMarker eyebrow="Achievements" title="Milestones" headingId="achievements" />
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {achievements.map((ach) => (
+                  <div key={ach.name} className={`group rounded-xl border p-5 transition ${
+                    ach.status === 'completed'
+                      ? 'border-green-200/20 bg-green-100/5'
+                      : ach.status === 'active'
+                      ? 'border-orange-200/20 bg-orange-100/5'
+                      : 'border-white/10 bg-[#0a0a09]'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg font-black ${
+                        ach.status === 'completed'
+                          ? 'border-green-200/30 bg-green-100/10 text-green-100'
+                          : ach.status === 'active'
+                          ? 'border-orange-200/30 bg-orange-100/10 text-orange-100'
+                          : 'border-white/10 bg-black/30 text-stone-600'
+                      }`}>
+                        {ach.icon}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-[-0.04em] text-white">{ach.name}</h3>
+                        <p className="mt-0.5 text-xs text-stone-400">{ach.desc}</p>
+                      </div>
                     </div>
-                    <p className="mt-2 text-xs leading-5 opacity-70">{ach.desc}</p>
-                    <p className="mt-3 text-[0.58rem] font-bold uppercase tracking-[0.14em]">{cfg.label}</p>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          </ScrollReveal>
 
           {/* Unlocks */}
-          <section>
-            <SectionMarker eyebrow="Unlocks" title="Weapons and gear by progression." headingId="unlocks" />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {unlocks.map((item) => {
-                const cfg = statusConfig[item.status];
-                return (
-                  <div key={item.name} className={`rounded-xl border p-5 ${cfg.color}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[0.58rem] font-bold uppercase tracking-[0.18em] opacity-60">{item.type}</span>
-                      <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
+          <ScrollReveal>
+            <section>
+              <SectionMarker eyebrow="Unlocks" title="What you earn." headingId="unlocks" />
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {unlocks.map((unlock) => (
+                  <div key={unlock.name} className="group rounded-xl border border-white/10 bg-[#0a0a09] p-4 transition hover:border-orange-200/15">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-orange-200/20 bg-orange-100/5 text-lg font-black text-orange-100/60">
+                        {unlock.icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[0.58rem] font-bold uppercase tracking-[0.14em] text-stone-500">{unlock.type}</p>
+                        <h3 className="text-sm font-bold text-white">{unlock.name}</h3>
+                      </div>
+                      <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-stone-400">
+                        Lv {unlock.level}
+                      </span>
                     </div>
-                    <h3 className="mt-2 text-base font-black uppercase tracking-[-0.04em]">{item.name}</h3>
-                    <p className="mt-1 text-xs opacity-70">{item.level}</p>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          </ScrollReveal>
+
+          {/* Zone info */}
+          <ScrollReveal>
+            <section className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-green-200/15 bg-green-100/[0.03] p-6">
+                <SectionMarker eyebrow="Safe Zones" title="Where you breathe." />
+                <p className="mt-4 text-sm leading-7 text-stone-400">Safe rooms between levels. Save your progress, manage inventory, and prepare for the next push.</p>
+              </div>
+              <div className="rounded-2xl border border-red-200/15 bg-red-100/[0.03] p-6">
+                <SectionMarker eyebrow="High-Risk Areas" title="Where you gamble." />
+                <p className="mt-4 text-sm leading-7 text-stone-400">Optional high-threat zones with rare loot. The risk is real. The rewards are worth it.</p>
+              </div>
+            </section>
+          </ScrollReveal>
         </div>
       </div>
     </PageShell>

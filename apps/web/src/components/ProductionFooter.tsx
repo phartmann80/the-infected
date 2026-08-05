@@ -98,7 +98,7 @@ export function ProductionFooter() {
         </div>
 
         <div className="flex flex-col gap-4 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-stone-500">The Infected is in prototype development. All content is subject to change.</p>
+          <p className="text-xs text-stone-500">The Infected is in development. All content is subject to change.</p>
           <p className="text-xs text-stone-500">Built with Godot 4.7.1 and Next.js.</p>
         </div>
       </div>

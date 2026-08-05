@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CinematicHero } from '@/components/CinematicHero';
 import { ProductionFooter } from '@/components/ProductionFooter';
 import { NavHeader } from '@/components/NavHeader';
-import { StatusBadge } from '@/components/shared';
+import { LazyVideo } from '@/components/animation/CinematicMotion';
 
 const featuredCards = [
   {
@@ -12,7 +12,6 @@ const featuredCards = [
     title: 'They were us.',
     image: '/assets/cinematic/infected-001-v3-portrait.png',
     alt: 'Photorealistic infected zombie portrait',
-    status: 'prototype' as const,
   },
   {
     href: '/survivors',
@@ -20,7 +19,6 @@ const featuredCards = [
     title: 'Stay alive. Stay human.',
     image: '/assets/cinematic/survivor-001-production-candidate-internal-review.jpg',
     alt: 'Survivor 001 3D model preview',
-    status: 'internal-review' as const,
   },
   {
     href: '/weapons',
@@ -28,7 +26,6 @@ const featuredCards = [
     title: 'Every shell is a decision.',
     image: '/assets/cinematic/env/env-ruined-street.jpg',
     alt: 'Weapons arsenal preview',
-    status: 'prototype' as const,
   },
   {
     href: '/gear',
@@ -36,7 +33,6 @@ const featuredCards = [
     title: 'Every slot matters.',
     image: '/assets/cinematic/env/env-quarantine-checkpoint.jpg',
     alt: 'Gear loadout preview',
-    status: 'prototype' as const,
   },
   {
     href: '/levels',
@@ -44,7 +40,6 @@ const featuredCards = [
     title: 'The city stopped answering.',
     image: '/assets/cinematic/env/env-abandoned-building.jpg',
     alt: 'Level environment preview',
-    status: 'prototype' as const,
   },
   {
     href: '/combat',
@@ -52,7 +47,6 @@ const featuredCards = [
     title: 'Read the fight.',
     image: '/assets/cinematic/env/env-industrial-zone.jpg',
     alt: 'Combat preview',
-    status: 'prototype' as const,
   },
 ];
 
@@ -65,11 +59,17 @@ const screenshots = [
   { src: '/assets/cinematic/env/env-industrial-zone.jpg', alt: 'Industrial zone', label: 'Industrial Zone' },
 ];
 
+const envVideos = [
+  { mp4: '/assets/cinematic/env/env-ruined-street.mp4', webm: '/assets/cinematic/env/env-ruined-street.webm', poster: '/assets/cinematic/env/env-ruined-street.jpg', label: 'Ruined Streets' },
+  { mp4: '/assets/cinematic/env/env-quarantine-checkpoint.mp4', webm: '/assets/cinematic/env/env-quarantine-checkpoint.webm', poster: '/assets/cinematic/env/env-quarantine-checkpoint.jpg', label: 'Quarantine Zone' },
+  { mp4: '/assets/cinematic/env/env-industrial-zone.mp4', webm: '/assets/cinematic/env/env-industrial-zone.webm', poster: '/assets/cinematic/env/env-industrial-zone.jpg', label: 'Industrial Zone' },
+];
+
 export default function Home() {
   return (
     <>
       <NavHeader />
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="page-enter">
         {/* Cinematic hero */}
         <CinematicHero />
 
@@ -100,16 +100,42 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#060606] via-[#060606]/30 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[0.6rem] font-bold uppercase tracking-[0.28em] text-orange-100/70">{card.label}</p>
-                      <StatusBadge status={card.status} />
-                    </div>
+                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.28em] text-orange-100/70">{card.label}</p>
                     <h3 className="mt-2 text-xl font-black uppercase leading-tight tracking-[-0.04em] text-white">{card.title}</h3>
                     <p className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-orange-100/80 transition group-hover:text-orange-100">
                       Explore <span aria-hidden className="transition group-hover:translate-x-1">→</span>
                     </p>
                   </div>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Environment video showcase */}
+        <section className="border-t border-white/8 px-5 py-16 sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65">
+              <span className="h-px w-8 bg-orange-300/70" aria-hidden />
+              The world
+            </p>
+            <h2 className="mt-4 text-2xl font-black uppercase tracking-[-0.05em] text-white sm:text-3xl">
+              Where it happens.
+            </h2>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              {envVideos.map((v) => (
+                <div key={v.label} className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a09]">
+                  <LazyVideo
+                    srcMp4={v.mp4}
+                    srcWebm={v.webm}
+                    poster={v.poster}
+                    className="absolute inset-0 h-full w-full"
+                    overlayClassName="absolute inset-0 bg-gradient-to-t from-[#060606] via-transparent to-transparent"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100/70">{v.label}</p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -128,7 +154,7 @@ export default function Home() {
             <div className="mt-8 flex gap-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin' }}>
               {screenshots.map((shot) => (
                 <div key={shot.src} className="relative aspect-[16/10] w-72 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 sm:w-80">
-                  <Image src={shot.src} alt={shot.alt} fill sizes="320px" className="object-cover saturate-[0.85]" />
+                  <Image src={shot.src} alt={shot.alt} fill sizes="320px" className="object-cover saturate-[0.85] transition group-hover:scale-105" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#060606] to-transparent p-3">
                     <p className="text-[0.58rem] font-bold uppercase tracking-[0.18em] text-orange-100/70">{shot.label}</p>
                   </div>
@@ -141,22 +167,20 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Early access CTA */}
-        <section className="border-t border-white/8 px-5 py-20 sm:px-8 lg:px-12 lg:py-32">
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-orange-200/20 bg-[radial-gradient(circle_at_80%_20%,rgba(255,78,25,.18),transparent_34%),#0d0b0a] p-8 sm:p-12 lg:p-16">
-            <div aria-hidden className="absolute -right-20 -top-20 h-72 w-72 rounded-full border border-orange-200/10" />
-            <div aria-hidden className="absolute -right-8 -top-8 h-48 w-48 rounded-full border border-orange-200/10" />
-            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div className="max-w-2xl">
+        {/* CTA */}
+        <section className="border-t border-white/8 px-5 py-20 sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col items-start justify-between gap-8 rounded-[2rem] border border-orange-200/15 bg-gradient-to-br from-orange-950/10 to-transparent p-8 sm:p-12 lg:flex-row lg:items-center">
+              <div>
                 <p className="flex items-center gap-3 text-[0.65rem] font-bold uppercase tracking-[0.38em] text-orange-100/65">
                   <span className="h-px w-8 bg-orange-300/70" aria-hidden />
                   Early Access
                 </p>
-                <h2 className="mt-5 text-4xl font-black uppercase leading-[0.95] tracking-[-0.06em] text-white sm:text-5xl lg:text-6xl">
-                  The city is waiting.
+                <h2 className="mt-4 text-3xl font-black uppercase tracking-[-0.05em] text-white sm:text-4xl">
+                  Join the outbreak.
                 </h2>
-                <p className="mt-5 max-w-lg text-base leading-7 text-stone-300">
-                  Join early access to follow the outbreak. Get build updates, new infected reveals, and the first playable prototype.
+                <p className="mt-4 max-w-lg text-base leading-7 text-stone-300">
+                  Follow the development. Get build updates, new infected reveals, and the first playable build.
                 </p>
               </div>
               <Link

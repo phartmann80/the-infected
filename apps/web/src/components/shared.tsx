@@ -13,10 +13,20 @@ const statusStyles: Record<RegistryStatus, string> = {
   'in-development': 'border-amber-200/20 bg-amber-100/5 text-amber-100/80',
 };
 
+const statusLabels: Record<RegistryStatus, string> = {
+  approved: 'Available',
+  prototype: 'Playable',
+  placeholder: 'Coming Soon',
+  blocked: 'Coming Soon',
+  'internal-review': 'In Development',
+  planned: 'Planned',
+  'in-development': 'In Development',
+};
+
 export function StatusBadge({ status }: { status: RegistryStatus }) {
   return (
     <span className={`inline-flex rounded-full border px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] ${statusStyles[status]}`}>
-      {status}
+      {statusLabels[status]}
     </span>
   );
 }

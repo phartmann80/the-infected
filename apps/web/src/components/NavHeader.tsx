@@ -2,27 +2,64 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-const navLinks = [
-  { href: '/story', label: 'Story' },
-  { href: '/infected', label: 'Infected' },
-  { href: '/survivors', label: 'Survivors' },
-  { href: '/weapons', label: 'Weapons' },
-  { href: '/gear', label: 'Gear' },
-  { href: '/combat', label: 'Combat' },
-  { href: '/levels', label: 'Levels' },
-  { href: '/inventory', label: 'Inventory' },
-  { href: '/progression', label: 'Progression' },
-  { href: '/media', label: 'Media' },
-  { href: '/android', label: 'Android' },
-  { href: '/early-access', label: 'Early Access' },
+type NavItem = {
+  label: string;
+  href: string;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Game',
+    items: [
+      { href: '/story', label: 'Story' },
+      { href: '/survivors', label: 'Survivors' },
+      { href: '/infected', label: 'Infected' },
+      { href: '/levels', label: 'Levels' },
+      { href: '/combat', label: 'Combat' },
+    ],
+  },
+  {
+    label: 'Loadout',
+    items: [
+      { href: '/weapons', label: 'Weapons' },
+      { href: '/gear', label: 'Gear' },
+      { href: '/inventory', label: 'Inventory' },
+      { href: '/progression', label: 'Progression' },
+    ],
+  },
+  {
+    label: 'Media',
+    items: [
+      { href: '/media', label: 'Gallery' },
+      { href: '/media', label: 'Videos' },
+      { href: '/media', label: 'Screenshots' },
+      { href: '/media', label: '3D Characters' },
+    ],
+  },
+  {
+    label: 'Platform',
+    items: [
+      { href: '/android', label: 'Android' },
+      { href: '/early-access', label: 'Early Access' },
+    ],
+  },
 ];
+
+const allLinks = navGroups.flatMap((g) => g.items.map((i) => i.href));
 
 export function NavHeader() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -30,15 +67,23 @@ export function NavHeader() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Close mobile menu on navigation by listening to popstate
   useEffect(() => {
     const close = () => setMobileOpen(false);
     window.addEventListener('popstate', close);
     return () => window.removeEventListener('popstate', close);
   }, []);
 
-  // Close on link click via onClick handler in the mobile menu
-  const handleNavClick = () => setMobileOpen(false);
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isActive = (href: string) => pathname === href;
 
   return (
     <>
@@ -50,7 +95,7 @@ export function NavHeader() {
         }`}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
-          <Link href="/" className="flex items-center gap-3 py-4" onClick={handleNavClick}>
+          <Link href="/" className="flex items-center gap-3 py-4" onClick={() => setMobileOpen(false)}>
             <span className="text-lg font-black uppercase tracking-[-0.04em] text-white sm:text-xl">
               THE INFECTED
             </span>
@@ -59,25 +104,62 @@ export function NavHeader() {
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((link) => {
-              const active = pathname === link.href;
+          {/* Desktop nav with dropdowns */}
+          <div ref={dropdownRef} className="hidden items-center gap-1 lg:flex">
+            {navGroups.map((group) => {
+              const hasActive = group.items.some((i) => isActive(i.href));
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative rounded-md px-3 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] transition ${
-                    active
-                      ? 'text-orange-100'
-                      : 'text-stone-400 hover:text-white'
-                  }`}
+                <div
+                  key={group.label}
+                  className="relative"
+                  onMouseEnter={() => setOpenDropdown(group.label)}
+                  onMouseLeave={() => setOpenDropdown(null)}
                 >
-                  {link.label}
-                  {active && (
-                    <span className="absolute inset-x-3 -bottom-px h-px bg-orange-300/70" aria-hidden />
+                  <button
+                    onClick={() => setOpenDropdown(openDropdown === group.label ? null : group.label)}
+                    className={`relative rounded-md px-3 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] transition ${
+                      hasActive || openDropdown === group.label
+                        ? 'text-orange-100'
+                        : 'text-stone-400 hover:text-white'
+                    }`}
+                  >
+                    {group.label}
+                    <svg
+                      className={`ml-1 inline-block h-2 w-2 transition-transform ${openDropdown === group.label ? 'rotate-180' : ''}`}
+                      viewBox="0 0 8 8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M2 3l2 2 2-2" />
+                    </svg>
+                    {hasActive && (
+                      <span className="absolute inset-x-3 -bottom-px h-px bg-orange-300/70" aria-hidden />
+                    )}
+                  </button>
+
+                  {/* Dropdown panel */}
+                  {openDropdown === group.label && (
+                    <div className="absolute left-0 top-full pt-1">
+                      <div className="min-w-[160px] overflow-hidden rounded-xl border border-white/10 bg-[#0a0a09]/95 py-1 shadow-2xl backdrop-blur-xl">
+                        {group.items.map((item, i) => (
+                          <Link
+                            key={`${item.href}-${i}`}
+                            href={item.href}
+                            onClick={() => setOpenDropdown(null)}
+                            className={`block px-4 py-2 text-[0.7rem] font-bold uppercase tracking-[0.1em] transition ${
+                              isActive(item.href)
+                                ? 'bg-orange-100/10 text-orange-100'
+                                : 'text-stone-400 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -99,27 +181,31 @@ export function NavHeader() {
           </button>
         </nav>
 
-        {/* Mobile menu */}
+        {/* Mobile menu with grouped sections */}
         {mobileOpen && (
           <div className="border-t border-white/10 bg-[#060606]/95 backdrop-blur-xl lg:hidden">
-            <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-5 py-4 sm:grid-cols-3">
-              {navLinks.map((link) => {
-                const active = pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={handleNavClick}
-                    className={`rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-[0.1em] transition ${
-                      active
-                        ? 'bg-orange-100/10 text-orange-100'
-                        : 'text-stone-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
+            <div className="mx-auto max-w-7xl px-5 py-4">
+              {navGroups.map((group) => (
+                <div key={group.label} className="mb-4">
+                  <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.28em] text-orange-100/50">{group.label}</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {group.items.map((item, i) => (
+                      <Link
+                        key={`${item.href}-${i}`}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-[0.1em] transition ${
+                          isActive(item.href)
+                            ? 'bg-orange-100/10 text-orange-100'
+                            : 'text-stone-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
