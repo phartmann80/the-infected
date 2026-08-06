@@ -4,7 +4,7 @@
 **Engine:** Godot 4.7.1 (Android-first)  
 **Audit Date:** Phase 0 v3 - Repository-authoritative version  
 **Branch:** `integration/android-apk-production-v1`  
-**Head SHA:** `62fdff13283feefa53b514042dcd1bc66662f70e`  
+**Audited Android code baseline SHA:** `62fdff13283feefa53b514042dcd1bc66662f70e`  
 **PR:** [#66](https://github.com/phartmann80/the-infected/pull/66) (Draft, unmerged)
 
 > This document supersedes all previous Scribe-based audit versions. It is the final authoritative Phase 0 audit, committed to the repository for durable version control.
@@ -30,7 +30,7 @@ The following categories are used consistently throughout this document:
 | Branch | `integration/android-apk-production-v1` |
 | Created from | `integration/android-vertical-slice-v1` |
 | Parent SHA | `aa04fa3e7714d46bf8d3d4eda9b671c1d34b9390` |
-| Head SHA | `62fdff13283feefa53b514042dcd1bc66662f70e` |
+| Audited Android code baseline SHA | `62fdff13283feefa53b514042dcd1bc66662f70e` |
 | Working tree | Clean (audit-only, no game code changes) |
 | Audit commit message | `phase0: audit-only marker - no refactoring, no new systems, no signing keys` |
 
@@ -605,7 +605,7 @@ See `ai-media-generation-architecture.md` for the complete centralized AI media 
 - Open-Generative-AI as the standardized media generation interface
 - No-local-GPU infrastructure decision
 - Backend orchestration responsibilities
-- Provider stack (Langdock, Anymize, Logicc, Meshy)
+- Provider stack (Langdock, Logicc, Anymize, Meshy). Default failover order: pending explicit approval and provider-capability benchmarking.
 - Credential-security boundary
 - Offline-gameplay boundary
 - Relationship to the cinematic pipeline
