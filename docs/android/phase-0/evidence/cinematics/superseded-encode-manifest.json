@@ -1,0 +1,37 @@
+{
+  "encode": "superseded",
+  "filename": "level_01_representative_test.ogv",
+  "mp4_review_filename": "level_01_representative_test.mp4",
+  "purpose": "Superseded preliminary encode (yuv444p inflates file size)",
+  "duration_seconds": 15.0,
+  "resolution": { "width": 1280, "height": 720 },
+  "frame_rate": 24,
+  "total_frames": 360,
+  "pixel_format": "yuv444p",
+  "video_codec": "theora",
+  "video_encoder": "libtheora",
+  "video_quality": "q:v 7",
+  "video_bitrate": 2184000,
+  "audio_codec": "vorbis",
+  "audio_encoder": "libvorbis",
+  "audio_sample_rate": 44100,
+  "audio_channels": 2,
+  "audio_channel_layout": "stereo",
+  "audio_bitrate": 160000,
+  "file_size_bytes": 4095673,
+  "file_size_human": "3.9 MB",
+  "sha256": "6dd8b5b1977af87a465e2c9d0a124ace2700745218273dd60db12f2b205198ab",
+  "mp4_review": {
+    "filename": "level_01_representative_test.mp4",
+    "size_bytes": 2984796,
+    "sha256": "4907f90a31a65a187f758ac90621989ffd785a89dab5e3d5f9782a3389a1562a"
+  },
+  "source_assets": [
+    { "name": "asset_combat_scene.png", "purpose": "Combat scene" },
+    { "name": "asset_character_medic.png", "purpose": "Character medic" },
+    { "name": "asset_weapon_crowbar.png", "purpose": "Weapon crowbar" }
+  ],
+  "narration_source": "FFmpeg lavfi flite (temporary)",
+  "music_source": "FFmpeg lavfi sine + aecho (temporary)",
+  "status": "SUPERSEDED — yuv444p inflates size, 15s at minimum of target range. Retained in evidence record, not deleted."
+}
