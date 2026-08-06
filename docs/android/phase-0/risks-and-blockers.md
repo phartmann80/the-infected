@@ -1,0 +1,20 @@
+# Risks and Blockers
+
+| # | Risk | Severity | Status | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | main.gd monolith (106 KB, 2,635 lines) | High | [Implemented but physical-device-unverified] | Any change risks breaking multiple systems. Extraction must be incremental and behavior-preserving. |
+| 2 | No 3D assets committed | High | [Asset exists but not Android-ready] | All characters, weapons, and environments are placeholder geometry. Meshy pipeline must be established before game-ready visuals. Survivor 001 and Infected 001 GLBs exist externally but are not Android-ready (665K and 459K triangles respectively, not rigged, not animated). Infected 002 has no GLB at all. |
+| 3 | No audio assets | Medium | [Missing] | Audio system is fully coded with procedural placeholder audio but has no production audio files. Voicebox pipeline must be established. |
+| 4 | No backend server | High | [Missing] | Google login, cloud save, and purchase validation all require a backend. Server at 87.106.48.96 currently runs the landing page only. |
+| 5 | Save file I/O device persistence | Medium | [Pending external evidence] | Save system uses FileAccess to `user://save_v1.json` with auto-save every 2s. Headless-tested but physical-device persistence unverified. Must verify on a real ARM64 phone. |
+| 6 | No release keystore | Medium | [Missing] | Must create and securely store before any signed APK. Phase 1 task. |
+| 7 | Fresh baseline APK produced, device validation pending | High | [Pending external evidence] | Fresh baseline APK from `62fdff1` successfully produced via CI (run 31101247866, conclusion: success). APK is 80.1 MB, arm64-v8a, signed with development JKS. NOT validated on physical Android hardware. Device testing required before Phase 0 full approval. |
+| 8 | Godot 4.7.1 availability | Medium | [Implemented and CI-tested] | Godot 4.7.1 is available and used in CI. Verified by successful APK build. |
+| 9 | No cinematic system | Medium | [Architecture approved but not implemented] | VideoStreamPlayer, .ogv import, and cinematic scene need to be built. Architecture is approved. Build pipeline uses CPU-only FFmpeg/Python tools. Level 1 cinematic is the gate for per-video size budget. Representative quality test performed on server (2.2 MB .ogv, 18s). |
+| 10 | No level structure | Medium | [Missing] | No level data format, no level loading system, no reusable objective definitions. Single-route objective and completion loop exist but multi-level loading is missing. Must be designed and built for Phase 2. |
+| 11 | No Google OAuth configuration | Medium | [Missing] | Requires Google Cloud Console setup, OAuth consent screen, Android and web client IDs. Phase 1 task. |
+| 12 | No physical device for testing | High | [Pending external evidence] | Phase 0 acceptance gate requires installation on a physical ARM64 phone. Requires Paul's device. |
+| 13 | Orientation mismatch | Medium | [Implemented but physical-device-unverified] | Viewport is 1280x720 (landscape) but `window/handheld/orientation=1` (SCREEN_PORTRAIT). The exported APK will lock to portrait while game content is designed for landscape. Likely a bug but needs physical device testing to confirm behavior. |
+| 14 | Meshy generation model unverified | Low | [Pending external evidence] | The meshy-6 and text-to-3D claims are unverified until Meshy API response metadata is documented. |
+| 15 | Voicebox TTS engine unverified | Medium | [Pending external evidence] | Voicebox repository and commit are identified (jamiepine/voicebox, 51f49dea, MIT). TTS engine, model, RAM, CPU, language support, and generation speed are all pending benchmark. Do not install during Phase 0. |
+| 16 | AI media generation platform not deployed | Low | [Architecture approved but not implemented] | Open-Generative-AI architecture decision documented. No deployment or implementation during Phase 0. |
