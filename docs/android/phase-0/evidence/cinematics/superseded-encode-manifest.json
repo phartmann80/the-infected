@@ -26,6 +26,16 @@
     "size_bytes": 2984796,
     "sha256": "4907f90a31a65a187f758ac90621989ffd785a89dab5e3d5f9782a3389a1562a"
   },
+  "execution_host": {
+    "host_purpose": "CPU-only cloud build-machine benchmark (NOT production server)",
+    "hostname": "eu-prod-cvn-b8d7d8a036d64df5",
+    "operating_system": "Ubuntu 26.04 LTS (Resolute Raccoon)",
+    "cpu_model": "AMD EPYC",
+    "logical_cpu_count": 8,
+    "ram": "15 GiB",
+    "ffmpeg_version": "8.0.1-3ubuntu2",
+    "was_this_87_106_48_96": "no"
+  },
   "source_assets": [
     { "name": "asset_combat_scene.png", "purpose": "Combat scene" },
     { "name": "asset_character_medic.png", "purpose": "Character medic" },
@@ -33,5 +43,23 @@
   ],
   "narration_source": "FFmpeg lavfi flite (temporary)",
   "music_source": "FFmpeg lavfi sine + aecho (temporary)",
-  "status": "SUPERSEDED — yuv444p inflates size, 15s at minimum of target range. Retained in evidence record, not deleted."
+  "status": "SUPERSEDED — yuv444p inflates size, 15s at minimum of target range. Retained in evidence record, not deleted.",
+  "storage_references": [
+    {
+      "item": "superseded .ogv",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "level_01_representative_test.ogv",
+      "sha256": "6dd8b5b1977af87a465e2c9d0a124ace2700745218273dd60db12f2b205198ab",
+      "review_status": "superseded — retained for evidence, not for use"
+    },
+    {
+      "item": "superseded MP4 review",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "level_01_representative_test.mp4",
+      "sha256": "4907f90a31a65a187f758ac90621989ffd785a89dab5e3d5f9782a3389a1562a",
+      "review_status": "superseded — retained for evidence, not for use"
+    }
+  ]
 }
