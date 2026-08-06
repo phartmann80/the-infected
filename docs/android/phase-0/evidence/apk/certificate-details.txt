@@ -1,0 +1,22 @@
+Certificate Details — Development Signing Certificate
+=====================================================
+
+Source: apksigner verify --verbose --print-certs the-infected-debug.apk
+Date: 2026-08-06
+
+This is the DEVELOPMENT signing certificate, NOT the future Google Play production signing identity.
+
+Certificate Subject DN: CN=The Infected Development, O=The Infected, C=US
+Certificate Issuer DN:  CN=The Infected Development, O=The Infected, C=US
+Certificate Serial:      18A8E0
+Certificate SHA-1:       10a6508f9373d09280122688fac115d7449efa10
+Certificate SHA-256:     fa71008890aff510f054507409788c9b0b81643d1f694877d7be3cf40bcf1a46
+Not Before:              Jul 16 23:47:24 2026 GMT
+Not After:               Jul 13 23:47:24 2036 GMT
+Key Algorithm:           RSA
+Key Size:                2048 bits
+Signing Schemes:         v3=true, v1=false, v2=false, v3.1=false, v4=false
+Number of Signers:       1
+
+Command used to extract:
+  apksigner verify --verbose --print-certs the-infected-debug.apk
