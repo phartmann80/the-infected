@@ -1,0 +1,55 @@
+# FFmpeg Package Evidence
+
+## Package Version
+
+```
+ffmpeg 7:8.0.1-3ubuntu2
+```
+
+## apt-cache policy ffmpeg
+
+```
+ffmpeg:
+  Installed: 7:8.0.1-3ubuntu2
+  Candidate: 7:8.0.1-3ubuntu2
+  Version table:
+ *** 7:8.0.1-3ubuntu2 500
+        500 http://archive.ubuntu.com/ubuntu resolute/universe amd64 Packages
+        100 /var/lib/dpkg/status
+```
+
+## dpkg-query
+
+```
+ffmpeg 7:8.0.1-3ubuntu2
+```
+
+## ffprobe version
+
+```
+ffprobe version 8.0.1-3ubuntu2 Copyright (c) 2007-2025 the FFmpeg developers
+built with gcc 15 (Ubuntu 15.2.0-13ubuntu3)
+```
+
+## Binary SHA-256
+
+```
+bdf6aabffdba7411edff8d36c389d695257fcdf823d196020176e117612862f6  /usr/bin/ffmpeg
+```
+
+## --enable-nonfree Check
+
+`--enable-nonfree` is **absent** from the build configuration. Confirmed by:
+
+```bash
+ffmpeg -buildconf 2>&1 | grep -i "nonfree"
+# Output: (no match — nonfree NOT found in build config)
+```
+
+## Licensing Statement
+
+The server's installed FFmpeg binary is built with `--enable-gpl` and GPL components such as libx264; therefore this specific binary is subject to GPL v2+ terms. FFmpeg without GPL components is generally LGPL v2.1+.
+
+`--enable-nonfree` is absent from the build configuration.
+
+FFmpeg remains server-side only and is **not** included in the APK.
