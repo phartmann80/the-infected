@@ -1,0 +1,61 @@
+{
+  "canonical_encode_source_assets": [
+    {
+      "name": "asset1_logo.png",
+      "purpose": "Logo overlay",
+      "sha256": "725b06699152dbbe7efef7dc82f27ca4356e22a1e55a0ae771d0f6dabb313362"
+    },
+    {
+      "name": "asset2_weapon.png",
+      "purpose": "Weapon reveal",
+      "sha256": "08314a721fbf9f062781ea116472f21b095efc07e9d2344cd66b4dffc223c234"
+    },
+    {
+      "name": "asset3_gear.png",
+      "purpose": "Gear display",
+      "sha256": "a46c9552d2151b67e94f2924d6cc19e79fadc208f4c2469dde8e91664f971b3a"
+    }
+  ],
+  "superseded_encode_source_assets": [
+    {
+      "name": "asset_combat_scene.png",
+      "purpose": "Combat scene"
+    },
+    {
+      "name": "asset_character_medic.png",
+      "purpose": "Character medic"
+    },
+    {
+      "name": "asset_weapon_crowbar.png",
+      "purpose": "Weapon crowbar"
+    }
+  ],
+  "representative_frames": [
+    {
+      "timestamp": "1s",
+      "filename": "frame_t1s.png",
+      "sha256": "3550b8e75649c2949f1cd8c57a0ef6fb6609bb664d91970bb06830e5e420d646"
+    },
+    {
+      "timestamp": "5s",
+      "filename": "frame_t5s.png",
+      "sha256": "492650682f3684ecaa09d16e87b29cfe9b2be975c14b43dcb57cf36f0b96763c"
+    },
+    {
+      "timestamp": "9s",
+      "filename": "frame_t9s.png",
+      "sha256": "893546d5e27cbed57d3cb886f696a6e15299e84beaca839cfb73ed509366df70"
+    },
+    {
+      "timestamp": "13s",
+      "filename": "frame_t13s.png",
+      "sha256": "d00041e9a889ea561668be607b906f77f865416b9a59bf38b7e8f078fbe26620"
+    },
+    {
+      "timestamp": "17s",
+      "filename": "frame_t17s.png",
+      "sha256": "ec68de05e2056919d74905a7d600bb44b99cdb6e32027e78d318bc828e70e17e"
+    }
+  ],
+  "frame_storage_note": "Representative frames are stored in Drive as canonical_frame_t13s.png and canonical_frame_t17s.png. All five frames are documented here with their SHA-256 hashes."
+}
