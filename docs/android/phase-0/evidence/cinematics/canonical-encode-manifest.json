@@ -27,11 +27,110 @@
     "size_bytes": 1480062,
     "sha256": "17059b7c756d536596fe8ffb9e921077710ee76166c3dccf7d9348dcc695002d"
   },
+  "execution_host": {
+    "host_purpose": "CPU-only cloud build-machine benchmark (NOT production server)",
+    "hostname": "eu-prod-cvn-b8d7d8a036d64df5",
+    "operating_system": "Ubuntu 26.04 LTS (Resolute Raccoon)",
+    "cpu_model": "AMD EPYC",
+    "logical_cpu_count": 8,
+    "ram": "15 GiB",
+    "ffmpeg_version": "8.0.1-3ubuntu2",
+    "was_this_87_106_48_96": "no"
+  },
   "encode_time_seconds": 45,
-  "server_cpu": "AMD EPYC, 8 cores",
   "gpu_required": false,
   "narration_source": "FFmpeg lavfi flite (temporary, to be replaced by Voicebox)",
   "music_source": "FFmpeg lavfi sine + aecho (temporary ambient drone)",
   "subtitle_text": "Equip. Survive. Escape.",
-  "status": "Pipeline proven on server. Visual quality awaiting Paul's approval. Godot playback and Android performance not yet validated."
+  "status": "CPU-only composition pipeline demonstrated. Not yet a production Arrival Route cinematic. Not yet reviewed visually by Paul. Not yet played through Godot. Not yet tested on Android hardware.",
+  "storage_references": [
+    {
+      "item": "canonical .ogv",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "cinematic_representative.ogv",
+      "sha256": "77499d95b04f7873c3e8b979fe6c7bfadc2d6c0c2a5aab7a1c6c46e1989ba73a",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "MP4 review copy",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "cinematic_review.mp4",
+      "sha256": "17059b7c756d536596fe8ffb9e921077710ee76166c3dccf7d9348dcc695002d",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "frame at 1 second",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "frame_t1s.png",
+      "sha256": "3550b8e75649c2949f1cd8c57a0ef6fb6609bb664d91970bb06830e5e420d646",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "frame at 5 seconds",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "frame_t5s.png",
+      "sha256": "492650682f3684ecaa09d16e87b29cfe9b2be975c14b43dcb57cf36f0b96763c",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "frame at 9 seconds",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "frame_t9s.png",
+      "sha256": "893546d5e27cbed57d3cb886f696a6e15299e84beaca839cfb73ed509366df70",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "frame at 13 seconds",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "frame_t13s.png",
+      "sha256": "d00041e9a889ea561668be607b906f77f865416b9a59bf38b7e8f078fbe26620",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "frame at 17 seconds",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "frame_t17s.png",
+      "sha256": "ec68de05e2056919d74905a7d600bb44b99cdb6e32027e78d318bc828e70e17",
+      "review_status": "awaiting Paul review"
+    },
+    {
+      "item": "superseded encode (.ogv)",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "level_01_representative_test.ogv",
+      "sha256": "6dd8b5b1977af87a465e2c9d0a124ace2700745218273dd60db12f2b205198ab",
+      "review_status": "superseded — retained for evidence, not for use"
+    },
+    {
+      "item": "superseded encode MP4 review",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "level_01_representative_test.mp4",
+      "sha256": "4907f90a31a65a187f758ac90621989ffd785a89dab5e3d5f9782a3389a1562a",
+      "review_status": "superseded — retained for evidence, not for use"
+    },
+    {
+      "item": "source image package (logo, weapon, gear)",
+      "storage_provider": "Drive",
+      "storage_reference": "Delos Drive — worker vault (Alex Carter)",
+      "filename": "asset1_logo.png + asset2_weapon.png + asset3_gear.png",
+      "sha256": "see source-assets-manifest.json for individual hashes",
+      "review_status": "awaiting Paul review"
+    }
+  ],
+  "classification": {
+    "pipeline_type": "CPU-only composition pipeline demonstrated",
+    "is_production_arrival_route_cinematic": false,
+    "reviewed_visually_by_paul": false,
+    "played_through_godot": false,
+    "tested_on_android_hardware": false,
+    "source_package_contents": "logo, weapon render, gear render — demonstrates encoding and composition, NOT the full level introduction containing environment, Survivor 001 and infected characters"
+  }
 }
