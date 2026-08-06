@@ -23,7 +23,7 @@ Open-Generative-AI will **not** become the foundation of The Infected or any of 
 
 - It is **not** our game engine
 - It is **not** our backend
-- It is **not** our gameplay systems
+- It is **not** our gameplay system
 - It is **not** embedded in the Android APK or web frontend
 - It does **not** replace FFmpeg, Python/Pillow/Cairo, Voicebox, Godot VideoStreamPlayer, or our cinematic manifests
 
@@ -31,7 +31,7 @@ Our applications and backend architecture remain independent from this repositor
 
 ## 3. No-Local-GPU Decision
 
-Effective immediately:
+Effectively immediately:
 
 - We will **not** deploy or maintain local GPU infrastructure
 - We will use our existing backend servers as the orchestration layer
@@ -56,16 +56,37 @@ Our backend will handle:
 - Normalized provider responses
 - Cost and quota enforcement
 
-## 5. Provider Order
+## 5. Provider Set
 
-Our current AI provider stack:
+Our current AI provider set:
 
-| Priority | Provider | Use |
-| --- | --- | --- |
-| Primary | Langdock | General AI inference |
-| Secondary | Anymize | General AI inference (failover) |
-| Tertiary | Logicc | General AI inference (failover) |
-| Specialized | Meshy | 3D character generation, infected models, survivors, weapons, gear, environmental objects, promotional 3D assets |
+| Provider | Use |
+| --- | --- |
+| Langdock | General AI inference |
+| Logicc | General AI inference |
+| Anymize | General AI inference |
+| Meshy | Specialized: 3D character generation, infected models, survivors, weapons, gear, environmental objects, promotional 3D assets |
+
+**Configured provider set:**
+- Langdock
+- Logicc
+- Anymize
+
+**Default failover order:**
+Pending explicit approval and provider-capability benchmarking.
+
+The provider router should eventually support configurable routing based on:
+
+- capability
+- model availability
+- cost
+- quota remaining
+- latency
+- request type
+- provider health
+- commercial terms
+
+Meshy remains a specialized provider rather than part of the general text/image/video failover order.
 
 Additional cloud services may be integrated for specialized tasks.
 
@@ -75,27 +96,27 @@ The backend must remain the source of truth for provider routing.
 
 ```
 Internal tool / approved application request
-        ↓
+        →
 Our backend API
-        ↓
+        →
 Authentication and authorization
-        ↓
+        →
 Media-generation request normalization
-        ↓
+        →
 Provider router
-        ↓
+        →
 Langdock / Anymize / Logicc / Meshy
-        ↓
+        →
 Generated asset validation
-        ↓
+        →
 Secure storage
-        ↓
+        →
 Asset manifest and provenance record
-        ↓
+        →
 Approved project pipeline
 ```
 
-If the primary provider (Langdock) fails or is unavailable, the backend routes to the secondary (Anymize), then tertiary (Logicc). Meshy is used for specialized 3D generation tasks independently of the general failover chain.
+The provider router selects among the configured provider set based on the routing criteria above. No fixed failover priority is hardcoded until Paul explicitly approves a specific routing order.
 
 Open-Generative-AI must **not** bypass our backend and communicate directly with providers from a public client.
 
@@ -159,15 +180,15 @@ The approved level-cinematic pipeline remains:
 
 ```
 Open-Generative-AI / provider-generated source assets
-        ↓
+        →
 Approved artwork and renders
-        ↓
+        →
 Voicebox narration
-        ↓
+        →
 FFmpeg + Python/Pillow/Cairo
-        ↓
+        →
 Godot-compatible .ogv
-        ↓
+        →
 APK integration
 ```
 
@@ -194,13 +215,13 @@ When approved later, use a separate service or repository rather than embedding 
 
 ```
 Open-Generative-AI service
-        ↓
+        →
 Private backend network/API
-        ↓
+        →
 Provider adapters
-        ↓
+        →
 Secure generated-asset storage
-        ↓
+        →
 Project asset pipelines
 ```
 
@@ -275,20 +296,15 @@ All licensing must be reviewed and verified before implementation begins.
 
 **CRITICAL:** Open-Generative-AI must not be deployed unchanged.
 
-The upstream project is currently strongly MuAPI-centered. Its README describes it as
-"powered by MuAPI," and the source contains a MuAPI client.
+The upstream project is currently strongly MuAPI-centered. Its README describes it as "powered by MuAPI," and the source contains a MuAPI client.
 
-The inspected client reads a MuAPI key from `window.__MUAPI_KEY__` or browser local
-storage and sends requests directly to `api.muapi.ai`. That behavior directly conflicts
-with our backend-only credential boundary.
+The inspected client reads a MuAPI key from `window.__MUAPI_KEY__` or browser local storage and sends requests directly to `api.muapi.ai`. That behavior directly conflicts with our backend-only credential boundary.
 
 ### Required Security Adaptation
 
-- The stock client-side provider-key and direct-provider request flow must be
-  removed or disabled.
+- The stock client-side provider-key and direct-provider request flow must be removed or disabled.
 - All generation requests must instead call our authenticated backend.
-- Langdock, Anymize, and Logicc adapters are custom integrations and are not
-  yet verified as built-in upstream capabilities.
+- Langdock, Anymize, and Logicc adapters are custom integrations and are not yet verified as built-in upstream capabilities.
 
 ### Pinned Upstream Commit Reviewed
 
@@ -305,8 +321,7 @@ with our backend-only credential boundary.
 | Security-review status | **WARNING** — stock MuAPI client-side key flow must be replaced before deployment |
 | Stock MuAPI code paths that must be replaced | `window.__MUAPI_KEY__` read, `localStorage` MuAPI key read, direct `api.muapi.ai` requests |
 
-The MIT license permits customization, but the application architecture still requires
-a security adaptation layer before any deployment.
+The MIT license permits customization, but the application architecture still requires a security adaptation layer before any deployment.
 
 ## 15. Risks and Blockers
 
@@ -323,7 +338,6 @@ a security adaptation layer before any deployment.
 This is currently an architecture and documentation decision only.
 
 **Do not yet:**
-
 - Clone Open-Generative-AI into the application repository
 - Deploy it
 - Modify its code
@@ -335,7 +349,6 @@ This is currently an architecture and documentation decision only.
 - Expose it directly to the frontend
 
 **During Phase 0, only document:**
-
 - Proposed integration
 - Security boundaries
 - Provider adapters
