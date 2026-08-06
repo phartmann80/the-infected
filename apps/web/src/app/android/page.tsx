@@ -56,30 +56,17 @@ export default function AndroidPage() {
               </div>
 
               {/* Phone mockup */}
-              <div className="relative mx-auto aspect-[9/19] w-64 overflow-hidden rounded-[2.5rem] border-[6px] border-stone-700 bg-black shadow-2xl">
-                <Image
-                  src="/assets/cinematic/infected-001-v3-portrait.png"
-                  alt="Game preview on phone"
-                  fill
-                  sizes="256px"
-                  className="object-cover saturate-[0.85]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                {/* HUD overlay */}
-                <div className="absolute left-3 top-3 right-3 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-2 w-16 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full w-[85%] rounded-full bg-red-500" />
-                    </div>
-                    <span className="text-[0.5rem] font-bold text-white/80">85</span>
-                  </div>
-                  <div className="rounded-full border border-white/15 bg-black/40 px-2 py-0.5 text-[0.5rem] font-bold text-white/60 backdrop-blur">
-                    Lv 03
-                  </div>
+              <div className="relative mx-auto w-64 sm:w-72">
+                <div className="relative aspect-[9/16] overflow-hidden rounded-[2rem] border-[3px] border-stone-700 bg-black shadow-2xl">
+                  <Image
+                    src="/assets/android/android-phone-mockup.png"
+                    alt="Android game preview"
+                    fill
+                    sizes="288px"
+                    className="object-cover"
+                    priority
+                  />
                 </div>
-                {/* Touch control indicators */}
-                <div className="absolute bottom-6 left-4 h-12 w-12 rounded-full border-2 border-white/20 bg-white/5" />
-                <div className="absolute bottom-6 right-4 h-12 w-12 rounded-full border-2 border-white/20 bg-white/5" />
               </div>
             </section>
           </ScrollReveal>
