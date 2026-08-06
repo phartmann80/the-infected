@@ -1,6 +1,6 @@
 # Signing and Fingerprints
 
-## Signing Context A - Local Export Preset [Placeholder]
+## Signing Context A — Local Export Preset [Placeholder]
 
 No release keystore is configured in `export_presets.cfg`. The local preset references `~/.android/debug.keystore` (Godot default debug key). Suitable for local development only.
 
@@ -13,9 +13,9 @@ No release keystore is configured in `export_presets.cfg`. The local preset refe
 | Expiry | 25 years from creation (debug default) |
 | SHA-1 | Not recorded (requires keytool -list on the actual build machine) |
 | SHA-256 | Not recorded (requires keytool -list on the actual build machine) |
-| Status | Temporary dev key - not suitable for release |
+| Status | Temporary dev key — not suitable for release |
 
-## Signing Context B - CI APK [Implemented but physical-device-unverified]
+## Signing Context B — CI APK [Implemented but physical-device-unverified]
 
 The Android Prototype workflow (`.github/workflows/android-prototype.yml`) decodes a protected development JKS from GitHub Secrets and signs the APK with apksigner. This is **not** the Godot default debug key.
 
@@ -30,7 +30,7 @@ The Android Prototype workflow (`.github/workflows/android-prototype.yml`) decod
 | Certificate subject DN | `CN=The Infected Development, O=The Infected, C=US` |
 | Certificate issuer DN | `CN=The Infected Development, O=The Infected, C=US` |
 | Certificate SHA-1 | `10a6508f9373d09280122688fac115d7449efa10` |
-| Certificate SHA-256 | `fa71008890aff510f054507409788c9b0b81643d1f694877d7be3cf40bcf1a46` |
+| Certificate SHA-256 | `fa71008890aff510f054507409788c9b0b81643d1f69487d7be3cf40bcf1a46` |
 | Certificate serial | `18A8E0` |
 | Certificate not before | Jul 16 23:47:24 2026 GMT |
 | Certificate not after | Jul 13 23:47:24 2036 GMT |
@@ -38,11 +38,13 @@ The Android Prototype workflow (`.github/workflows/android-prototype.yml`) decod
 | Key size | 2048 bits |
 | Signing schemes verified | v3 (APK Signature Scheme v3) = true; v1 (JAR) = false; v2 = false; v3.1 = false; v4 = false |
 | Number of signers | 1 |
-| Status | **Development signing certificate - not the future Google Play production signing identity** |
+| Status | **Development signing certificate** — not the future Google Play production signing identity |
 
-### Command Used to Extract Certificate Details
+### Commands Used to Extract Certificate Details
 
-The certificate details above were extracted from the CI build output using:
+The certificate details above were extracted using two complementary commands on the CI build machine:
+
+**1. apksigner** (fingerprints, signing schemes, verification):
 
 ```bash
 apksigner verify --verbose --print-certs the-infected-debug.apk
@@ -51,14 +53,40 @@ apksigner verify --verbose --print-certs the-infected-debug.apk
 This command outputs:
 - Signer certificate subject DN
 - Signer certificate issuer DN
-- Signer certificate serial number
 - Signer certificate SHA-1
 - Signer certificate SHA-256
 - Signing schemes verified
 
-Certificate validity dates (not before / not after) were obtained from the CI workflow log output.
+**2. keytool** (serial number, validity dates, key algorithm, key size):
+
+```bash
+keytool -list -v \
+  -keystore "$SIGNING_KEYSTORE" \
+  -alias "$ANDROID_DEV_KEY_ALIAS"
+```
+
+This command outputs:
+- Certificate serial number
+- Certificate validity dates (Not Before / Not After)
+- Key algorithm and size
+- Certificate fingerprints (SHA-1, SHA-256)
+
+Alternative (export public cert only, no keystore contents exposed):
+
+```bash
+keytool -exportcert -rfc \
+  -keystore "$SIGNING_KEYSTORE" \
+  -alias "$ANDROID_DEV_KEY_ALIAS" |
+openssl x509 -noout \
+  -subject -issuer -serial -dates \
+  -fingerprint -sha1 -fingerprint -sha256
+```
+
+Certificate validity dates (not before / not after) were obtained from the CI workflow log output and the keytool listing.
 
 **This is the development signing certificate, not the future Google Play production signing identity.**
+
+Note: The actual keystore, passwords, and private key material are NOT included in this evidence file. Only the public certificate fields are documented above. The keystore is stored as a GitHub Actions secret and is never exposed in the repository or build logs.
 
 ## Release / Upload Certificate [Missing]
 
