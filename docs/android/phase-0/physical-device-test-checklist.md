@@ -2,187 +2,237 @@
 
 **Status:** Phase 0 remains UNAPPROVED until this checklist is completed on Paul's actual Android phone and results are recorded.
 
-**APK Artifact Reference:** GitHub Actions Run #31101247866, Artifact: `the-infected-android`
-**APK SHA-256:** `458e36d57d641596fbc7061814cc744fe183fb8b7ac73d0f5c222181f7d7a34a`
-**APK Size:** 83,949,287 bytes (80.1 MB)
-**Source SHA:** `62fdff13283feefa53b514042dcd1bc66662f70e`
+**APK Artifact Reference:**
+- GitHub Actions run: 31101247866
+- Artifact ID: 8967642530
+- Artifact name: the-infected-android-debug
+- Artifact ZIP contains: the-infected-debug.apk
+- APK SHA-256: `458e36d57d641596fbc7061814cc744fe183fb8b7ac73d0f5c222181f7d7a34a`
+- APK Size: 83,949,287 bytes (80.1 MB)
+- Source SHA: `62fdff13283feefa53b514042dcd1bc66662f70e`
 
 ---
 
-## Installation
+## Device Information
 
-1. Download the APK artifact from the CI run.
-2. Enable "Install from unknown sources" on your Android device if not already enabled.
-3. Install the APK.
-4. Verify the app appears in the app drawer as "The Infected".
+Record the following before starting the test:
 
-**Expected:** Installation completes without error. App icon appears in launcher.
+- Phone manufacturer: ________
+- Phone model: ________
+- Android version: ________
+- Screen resolution: ________
+- Available storage before installation: ________
+- RAM, when known: ________
+- APK SHA-256 verified: Yes / No
+- Test start time: ________
+- Test end time: ________
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+---
+
+## APK Installation
+
+1. Download the artifact ZIP from GitHub Actions run 31101247866 (artifact name: the-infected-android-debug).
+2. Extract the ZIP.
+3. Locate `the-infected-debug.apk` inside the extracted ZIP.
+4. Verify the APK SHA-256: `458e36d57d641596fbc7061814cc744fe183fb8b7ac73d0f5c222181f7d7a34a`
+5. Transfer the APK to the phone.
+6. Allow installation from the selected source.
+7. Install the APK.
+
+Do not install the ZIP. Install only the APK inside it.
+
+**Expected:** The application installs and a launcher entry appears.
+Record whether Android displays a default Godot icon, generic icon, missing icon or branded The Infected icon.
+
+A placeholder icon alone is not an installation failure.
+
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## First Launch
 
-5. Tap the app icon to launch.
-6. Observe the initial load behavior.
+1. Tap the app icon to launch.
+2. Observe the initial load behavior.
 
 **Expected:** Game launches to the main scene. No crash on startup.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
-## Portrait vs Landscape Behavior
+## Orientation Test
 
-7. Launch the game in portrait orientation.
-8. Rotate the device to landscape.
-9. Observe behavior in both orientations.
+The viewport and HUD were designed for 1280×720 landscape, but the
+current Godot setting uses orientation=1, which maps to SCREEN_PORTRAIT.
 
-**Expected:** The game is designed for landscape (orientation=1, SCREEN_PORTRAIT in Godot). Portrait may show incorrect layout. Document what happens.
+Record whether the application:
+- locks to portrait
+- rotates to landscape
+- crops the HUD
+- stretches the viewport
+- shows black bars
+- hides or blocks controls
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+Fail the test only when required controls or important gameplay content
+are inaccessible or unusable.
+
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Touch Movement and Camera
 
-10. Touch and drag on the screen to move the player character.
-11. Observe camera follow behavior.
-12. Test drag-to-move virtual joystick responsiveness.
+1. Touch and drag on the screen to move the player character.
+2. Observe camera follow behavior.
+3. Test drag-to-move virtual joystick responsiveness.
 
 **Expected:** Player moves in response to touch input. Camera follows the player.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Firearm and Melee Controls
 
-13. Test firearm shooting (tap or hold fire button).
-14. Test melee attack.
-15. Observe combat feedback (hit markers, damage numbers).
+1. Test firearm shooting (tap or hold fire button).
+2. Test melee attack.
+3. Observe combat feedback (hit markers, damage numbers).
 
 **Expected:** Both firearm and melee attacks register and produce visual feedback.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Audio
 
-16. Listen for background audio (ambient tones).
-17. Listen for combat audio (firearm, melee sounds).
-18. Test volume behavior when switching apps.
+1. Listen for background audio (ambient tones).
+2. Listen for combat audio (firearm, melee sounds).
+3. Test volume behavior when switching apps.
 
 **Expected:** Procedural placeholder audio plays. No silence or distortion.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
-## Pause and Resume
+## Lifecycle and Persistence Tests
 
-19. Tap the pause button during gameplay.
-20. Verify the pause menu appears.
-21. Tap resume and verify gameplay continues.
+### Background and Resume
 
-**Expected:** Pause works, resume returns to active gameplay without issues.
+1. Press Home.
+2. Wait 15 seconds.
+3. Reopen the game.
+4. Confirm it resumes without crashing or corrupting controls/audio.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
+
+### Remove from Recents
+
+1. Swipe the game away from Recents.
+2. Relaunch it.
+3. Confirm it starts normally and the save remains available.
+
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
+
+### Android Force-Stop
+
+1. Open Settings → Apps → The Infected.
+2. Select Force stop.
+3. Relaunch.
+4. Confirm the persisted save loads.
+
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Inventory
 
-22. Open the inventory screen.
-23. Verify the 30-item catalog loads.
-24. Check that items display correctly.
+1. Open the inventory screen.
+2. Verify the 30-item catalog loads.
+3. Check that items display correctly.
 
 **Expected:** Inventory opens and shows item slots. All 30 items defined.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Equipment
 
-25. Open the equipment/loadout screen.
-26. Verify currently equipped items display (Warden-9 pistol, Fieldpack 45).
-27. Try selecting a different weapon if available.
+1. Open the equipment/loadout screen.
+2. Verify currently equipped items display (Warden-9 pistol, Fieldpack 45).
+3. Try selecting a different weapon if available.
 
 **Expected:** Equipment screen shows current loadout. Items can be selected.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Save
 
-28. Play for a few seconds to trigger auto-save (every 2.0s).
-29. Check that no save errors appear.
+1. Play for a few seconds to trigger auto-save (every 2.0s).
+2. Check that no save errors appear.
 
 **Expected:** Auto-save triggers without errors. Save file created at user://save_v1.json.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
-## Force-Close
+## Level-Completion Test
 
-30. Force-close the app from the Android app switcher.
-31. Verify the app terminates cleanly.
+Play through the single-level loop and record each condition separately:
 
-**Expected:** App closes without error dialogs.
+- [ ] Reached beacon
+- [ ] Neutralized required infected
+- [ ] Collected salvage
+- [ ] Completion feedback appeared
+- [ ] run_complete behavior occurred
+- [ ] Save occurred after completion
+- [ ] Replay/retry option worked
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+Do not say reaching the extraction zone alone completes the route.
 
----
-
-## Relaunch and Load
-
-32. Relaunch the app after force-close.
-33. Verify the game starts normally.
-34. Check if save data persists (if save was completed before force-close).
-
-**Expected:** Game relaunches successfully. Save data persists if a save was completed.
-
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
-
----
-
-## Level Completion
-
-35. Play through the single-level loop.
-36. Reach the extraction point (beacon).
-37. Verify level completion triggers (reach extraction zone, collect salvage, neutralize infected, mark complete).
-
-**Expected:** Level completion sequence triggers when reaching the extraction zone.
-
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Retry / Checkpoint Behavior
 
-38. After level completion (or death), test the retry button.
-39. Verify the game restarts the level correctly.
+1. After level completion (or death), test the retry button.
+2. Verify the game restarts the level correctly.
 
 **Expected:** Retry restarts the level. No crash or stuck state.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
 
 ---
 
 ## Stability (15 Minutes)
 
-40. Play continuously for at least 15 minutes.
-41. Monitor for crashes, freezes, or memory issues.
-42. Note any performance degradation over time.
+1. Play continuously for at least 15 minutes.
+2. Monitor for crashes, freezes, or memory issues.
+3. Note any performance degradation over time.
 
 **Expected:** Game remains stable for 15+ minutes of continuous play.
 
-**Result:** [ ] Pass  [ ] Fail  [ ] Notes: _________
+**Result:** [ ] Pass  [ ] Fail  [ ] Notes: __________
+
+---
+
+## Device Observations
+
+Record the following after testing:
+
+- Observed orientation: ________
+- Frame-rate impression: Smooth / Minor stutter / Severe stutter
+- Device temperature: Normal / Warm / Hot
+- Audio synchronization: Pass / Fail
+- Touch-control accessibility: Pass / Fail
+- Controls clipped or hidden: Yes / No
 
 ---
 
@@ -213,23 +263,23 @@ Only collect logcat if a crash occurs. Normal operation does not require log col
 | --- | --- | --- |
 | Installation | | |
 | First launch | | |
-| Portrait vs landscape | | |
+| Orientation | | |
 | Touch movement and camera | | |
 | Firearm and melee controls | | |
 | Audio | | |
-| Pause and resume | | |
+| Background and resume | | |
+| Remove from Recents | | |
+| Android force-stop | | |
 | Inventory | | |
 | Equipment | | |
 | Save | | |
-| Force-close | | |
-| Relaunch and load | | |
 | Level completion | | |
 | Retry / checkpoint | | |
 | Stability (15 min) | | |
 
 **Overall Result:** [ ] All passed  [ ] Issues found (describe above)
 
-**Tester:** _________________  **Date:** _________________
+**Tester:** _____________  **Date:** ____________
 
 ---
 
