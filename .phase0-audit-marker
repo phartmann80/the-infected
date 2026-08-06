@@ -1,0 +1,37 @@
+# Phase 0 Audit Marker
+
+This branch is audit-only. No refactoring, no new systems, no signing keys.
+
+## Audit Scope
+1. Branch and SHA
+2. Draft PR URL
+3. Current project architecture
+4. Scene map
+5. main.gd responsibility map
+6. Systems that can be preserved
+7. Placeholder and missing systems
+8. Character readiness
+9. Weapon and gear readiness
+10. Audio and narration readiness
+11. Cinematic readiness
+12. Save/load readiness
+13. Android export configuration
+14. Signing and fingerprint status
+15. Fresh baseline APK evidence
+16. Proposed Level 1 vertical slice
+17. Phase 1 and Phase 2 task breakdown
+18. Risks and blockers
+19. Recommended first implementation commit
+
+## Truthfulness Categories
+- Implemented and tested
+- Implemented but device-unverified
+- Placeholder
+- Partially implemented
+- Planned only
+- Missing
+
+## Boundary
+Do NOT add: Google login, Stripe, Google Play Billing, backend auth,
+new Meshy characters, cinematics, Voicebox files, shop purchases,
+new levels, or signing keys.

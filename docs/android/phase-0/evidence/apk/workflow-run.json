@@ -1,0 +1,15 @@
+{
+  "workflow_run_id": "31101247866",
+  "workflow_attempt": 1,
+  "job_id": "92615083108",
+  "job_name": "export-debug-apk",
+  "job_conclusion": "success",
+  "source_sha": "62fdff13283feefa53b514042dcd1bc66662f70e",
+  "branch": "integration/android-apk-production-v1",
+  "workflow_event": "workflow_dispatch",
+  "run_started": "2026-08-06T12:24:22Z",
+  "run_completed": "2026-08-06T12:27:35Z",
+  "build_duration_seconds": 193,
+  "run_conclusion": "success",
+  "workflow_url": "https://github.com/phartmann80/the-infected/actions/runs/31101247866"
+}
