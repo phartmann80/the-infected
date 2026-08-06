@@ -46,9 +46,9 @@ export function ProductionFooter() {
               <Image
                 src="/assets/branding/the-infected-logo-approved-v2.png"
                 alt="The Infected logo"
-                width={48}
-                height={48}
-                className="h-12 w-12 rounded-lg"
+                width={96}
+                height={96}
+                className="h-20 w-20 rounded-xl"
                 priority={false}
               />
               <div>
