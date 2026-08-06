@@ -211,9 +211,9 @@ The service must support provider abstraction so a project is not permanently ti
 Each provider adapter must implement:
 
 - `generate(request: GenerationRequest) -> GenerationJob`
-- `get_job_status(job_id: string) -> JobStatus`
-- `get_result(job_id: string) -> GenerationResult`
-- `cancel_job(job_id: string) -> bool`
+- `get_job_status(job_id: str) -> JobStatus`
+- `get_result(job_id: str) -> GenerationResult`
+- `cancel_job(job_id: str) -> bool`
 - `list_capabilities() -> Capability[]`
 
 ### Proposed Backend Endpoints
@@ -263,25 +263,62 @@ Each provider adapter must implement:
 
 | Component | License | Commercial Use | Review Status |
 | --- | --- | --- | --- |
-| Open-Generative-AI | To be verified from repository | To be verified | [Pending external evidence] |
+| Open-Generative-AI | MIT | Permitted without attribution | **Confirmed** — LICENSE is MIT, verified from repository |
 | Langdock | Per provider agreement | Per provider agreement | [Pending external evidence] |
 | Anymize | Per provider agreement | Per provider agreement | [Pending external evidence] |
 | Logicc | Per provider agreement | Per provider agreement | [Pending external evidence] |
-| Meshy | Per Meshy ToS | Paid plan: permitted without attribution. Free plan: CC BY 4.0 | [Pending external evidence] |
+| Meshy | Paid plan: permitted without attribution. Free plan: CC BY 4.0 | Paid plan: permitted. Free plan: attribution required | [Pending external evidence] |
 
 All licensing must be reviewed and verified before implementation begins.
 
-## 14. Risks and Blockers
+## 14. Upstream Security Review — MuAPI Integration Warning
+
+**CRITICAL:** Open-Generative-AI must not be deployed unchanged.
+
+The upstream project is currently strongly MuAPI-centered. Its README describes it as
+"powered by MuAPI," and the source contains a MuAPI client.
+
+The inspected client reads a MuAPI key from `window.__MUAPI_KEY__` or browser local
+storage and sends requests directly to `api.muapi.ai`. That behavior directly conflicts
+with our backend-only credential boundary.
+
+### Required Security Adaptation
+
+- The stock client-side provider-key and direct-provider request flow must be
+  removed or disabled.
+- All generation requests must instead call our authenticated backend.
+- Langdock, Anymize, and Logicc adapters are custom integrations and are not
+  yet verified as built-in upstream capabilities.
+
+### Pinned Upstream Commit Reviewed
+
+| Field | Value |
+| --- | --- |
+| Repository | https://github.com/anil-matcha/Open-Generative-AI |
+| Commit SHA | `a5b4ca0632129b173714261349943057da350cb7` |
+| Commit date | 2026-08-06 |
+| Commit message | "Revise video links and add new content" |
+| LICENSE blob SHA | `84757c5a0a50431775311bfe496c780d67e87baf` |
+| LICENSE type | MIT |
+| Dependency-lock hash | To be recorded when package-lock.json is inspected |
+| Framework/runtime versions | To be recorded during implementation |
+| Security-review status | **WARNING** — stock MuAPI client-side key flow must be replaced before deployment |
+| Stock MuAPI code paths that must be replaced | `window.__MUAPI_KEY__` read, `localStorage` MuAPI key read, direct `api.muapi.ai` requests |
+
+The MIT license permits customization, but the application architecture still requires
+a security adaptation layer before any deployment.
+
+## 15. Risks and Blockers
 
 | Risk | Severity | Notes |
 | --- | --- | --- |
-| Open-Generative-AI license not yet verified | Medium | Must review repository LICENSE file before integration |
-| Provider availability not guaranteed | Medium | Failover design mitigates but does not eliminate provider downtime |
+| Open-Generative-AI MuAPI client-side key flow | High | Must be removed or disabled before deployment. Direct provider requests from public client violate our credential boundary. |
+| Provider availability not guaranteed | Medium | Failover design mitigates but does not eliminate provider downtime risk |
 | Cost of AI inference at scale | Medium | Quota and rate-limit design needed before production use |
 | Provider API changes | Low | Provider abstraction layer insulates from vendor lock-in |
 | Credential security | High | Credentials must never be exposed in client-side code or public repositories |
 
-## 15. Phase 0 Boundary
+## 16. Phase 0 Boundary
 
 This is currently an architecture and documentation decision only.
 
@@ -309,7 +346,7 @@ This is currently an architecture and documentation decision only.
 
 Implementation begins only after Phase 0 is approved.
 
-## 16. Confirmation
+## 17. Confirmation
 
 - No deployment or implementation occurred
 - PR #66 remains Draft and unmerged
