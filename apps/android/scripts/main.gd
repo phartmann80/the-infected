@@ -214,6 +214,7 @@ func _input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_save_game()
 		held_actions.clear()
 		_reset_touch_controls()
 
@@ -2523,13 +2524,21 @@ func _set_feedback(message: String, duration: float) -> void:
 
 func _load_save() -> bool:
 	if not FileAccess.file_exists(save_path):
+		print("[save] No save file found at %s" % save_path)
 		return false
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
+	var raw_text := FileAccess.get_file_as_string(save_path)
+	if raw_text.is_empty():
+		push_error("[save] Save file exists but is empty: %s" % save_path)
+		return false
+	var parsed = JSON.parse_string(raw_text)
 	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("[save] Save file corrupted (invalid JSON): %s" % save_path)
 		return false
 	var schema_version := int(parsed.get("schema_version", 0))
 	if schema_version < MIN_SUPPORTED_SAVE_SCHEMA or schema_version > SAVE_SCHEMA_VERSION:
+		push_error("[save] Schema version %d rejected (supported: %d-%d)" % [schema_version, MIN_SUPPORTED_SAVE_SCHEMA, SAVE_SCHEMA_VERSION])
 		return false
+	print("[save] Load succeeded: schema_version=%d, health=%d" % [schema_version, int(parsed.get("health", -1))])
 	run_failed = false
 	is_paused = false
 	fire_buffer_timer = 0.0
@@ -2598,10 +2607,13 @@ func _load_save() -> bool:
 
 func _save_game() -> bool:
 	if player == null:
+		print("[save] Save skipped: player is null")
 		return false
 	_sync_ammo_inventory()
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file == null:
+		var err := FileAccess.get_open_error()
+		push_error("[save] FileAccess.open failed for %s (error %d)" % [save_path, err])
 		return false
 	var collected_pickups: Array = []
 	for pickup in pickups:
@@ -2631,5 +2643,10 @@ func _save_game() -> bool:
 		"salvage_drop_position": [salvage_drop_position.x, salvage_drop_position.y, salvage_drop_position.z],
 		"salvage_drop_item_id": salvage_drop_item_id,
 	}))
+	# Explicit flush as a defensive durability measure.
+	# Godot documents that close() performs a flush automatically,
+	# so this is not a proven root cause fix, but it is minimal and harmless.
+	file.flush()
 	file.close()
+	print("[save] Save written to %s (health=%d)" % [save_path, health])
 	return true
