@@ -8,306 +8,291 @@ extends SceneTree
 const TEST_SAVE_PATH := "user://persistence_contract_test.json"
 const MainScene := preload("res://scenes/main.tscn")
 
-var runtime: Node3D
 var failures: Array[String] = []
 var tests_run := 0
 
 
 func _initialize() -> void:
-	_run_test("test_save_file_creation", test_save_file_creation)
-	_run_test("test_save_file_replacement", test_save_file_replacement)
-	_run_test("test_save_serialization_fields", test_save_serialization_fields)
-	_run_test("test_load_after_fresh_init", test_load_after_fresh_init)
-	_run_test("test_schema_version_handling", test_schema_version_handling)
-	_run_test("test_corrupt_save_behavior", test_corrupt_save_behavior)
-	_run_test("test_missing_save_behavior", test_missing_save_behavior)
-	_run_test("test_state_restoration_fields", test_state_restoration_fields)
-	_run_test("test_repeated_save_load_cycles", test_repeated_save_load_cycles)
-	_run_test("test_reset_run_clears_state", test_reset_run_clears_state)
+	# Test 1: Save file creation
+	tests_run += 1
+	_cleanup_files()
+	var r1 = MainScene.instantiate()
+	r1.save_path = TEST_SAVE_PATH
+	root.add_child(r1)
+	await process_frame
+	r1._save_game()
+	if not FileAccess.file_exists(TEST_SAVE_PATH):
+		failures.append("test_save_file_creation: expected file at %s" % TEST_SAVE_PATH)
+	r1.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 2: Save file replacement
+	tests_run += 1
+	_cleanup_files()
+	var r2 = MainScene.instantiate()
+	r2.save_path = TEST_SAVE_PATH
+	root.add_child(r2)
+	await process_frame
+	r2._save_game()
+	var first_content := FileAccess.get_file_as_string(TEST_SAVE_PATH)
+	r2.health = 50
+	r2._save_game()
+	var second_content := FileAccess.get_file_as_string(TEST_SAVE_PATH)
+	if first_content == second_content:
+		failures.append("test_save_file_replacement: content did not change")
+	var parsed2: Variant = JSON.parse_string(second_content)
+	if int(parsed2.get("health", -1)) != 50:
+		failures.append("test_save_file_replacement: expected health 50, got %d" % int(parsed2.get("health", -1)))
+	r2.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 3: Save serialization fields
+	tests_run += 1
+	_cleanup_files()
+	var r3 = MainScene.instantiate()
+	r3.save_path = TEST_SAVE_PATH
+	root.add_child(r3)
+	await process_frame
+	r3._save_game()
+	var parsed3: Variant = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
+	if int(parsed3.get("schema_version", -1)) != r3.SAVE_SCHEMA_VERSION:
+		failures.append("test_save_serialization_fields: schema_version mismatch")
+	for field in ["health", "infected_health", "beacon_reached", "run_complete", "inventory", "position", "camera_yaw", "collected_pickups", "prototype_field_inventory", "prototype_loadout", "prototype_weapon_state"]:
+		if not parsed3.has(field):
+			failures.append("test_save_serialization_fields: missing field %s" % field)
+	r3.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 4: Load after fresh init — validates actual startup autoload contract
+	# Runtime A saves → Runtime B auto-loads via _ready() → _load_save()
+	# We do NOT manually call _load_save() on Runtime B.
+	# We do NOT disable production autoload.
+	tests_run += 1
+	_cleanup_files()
+	var ra = MainScene.instantiate()
+	ra.save_path = TEST_SAVE_PATH
+	root.add_child(ra)
+	await process_frame
+	ra.health = 30
+	ra.beacon_reached = true
+	ra._save_game()
+	if not FileAccess.file_exists(TEST_SAVE_PATH):
+		failures.append("test_load_after_fresh_init: save file not created")
+	ra.queue_free()
+	await process_frame
+	# Runtime B: _ready() will call _load_save() automatically
+	var rb = MainScene.instantiate()
+	rb.save_path = TEST_SAVE_PATH
+	root.add_child(rb)
+	await process_frame
+	await process_frame
+	# Verify auto-restored state (no manual _load_save() call)
+	if rb.health != 30:
+		failures.append("test_load_after_fresh_init: expected auto-restored health 30, got %d" % rb.health)
+	if not rb.beacon_reached:
+		failures.append("test_load_after_fresh_init: expected auto-restored beacon_reached true, got false")
+	rb.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 5: Schema version handling
+	tests_run += 1
+	_cleanup_files()
+	var file := FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"schema_version": 0, "health": 50}))
+	file.close()
+	var r5a = MainScene.instantiate()
+	r5a.save_path = TEST_SAVE_PATH
+	root.add_child(r5a)
+	await process_frame
+	var loaded5a: bool = r5a._load_save()
+	if loaded5a:
+		failures.append("test_schema_version_handling: schema 0 should be rejected")
+	if r5a.health != r5a.STARTING_HEALTH:
+		failures.append("test_schema_version_handling: health should be default after rejecting schema 0")
+	r5a.queue_free()
+	await process_frame
+	_cleanup_files()
+	file = FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"schema_version": 999, "health": 50}))
+	file.close()
+	var r5b = MainScene.instantiate()
+	r5b.save_path = TEST_SAVE_PATH
+	root.add_child(r5b)
+	await process_frame
+	var loaded5b: bool = r5b._load_save()
+	if loaded5b:
+		failures.append("test_schema_version_handling: schema 999 should be rejected")
+	r5b.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 6: Corrupt save behavior
+	tests_run += 1
+	_cleanup_files()
+	file = FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
+	file.store_string("this is not json {{{")
+	file.close()
+	var r6a = MainScene.instantiate()
+	r6a.save_path = TEST_SAVE_PATH
+	root.add_child(r6a)
+	await process_frame
+	var loaded6a: bool = r6a._load_save()
+	if loaded6a:
+		failures.append("test_corrupt_save_behavior: corrupt JSON should be rejected")
+	if r6a.health != r6a.STARTING_HEALTH:
+		failures.append("test_corrupt_save_behavior: health should be default after corrupt save")
+	r6a.queue_free()
+	await process_frame
+	_cleanup_files()
+	file = FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
+	file.store_string("")
+	file.close()
+	var r6b = MainScene.instantiate()
+	r6b.save_path = TEST_SAVE_PATH
+	root.add_child(r6b)
+	await process_frame
+	var loaded6b: bool = r6b._load_save()
+	if loaded6b:
+		failures.append("test_corrupt_save_behavior: empty file should be rejected")
+	r6b.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 7: Missing save behavior
+	tests_run += 1
+	_cleanup_files()
+	var r7 = MainScene.instantiate()
+	r7.save_path = TEST_SAVE_PATH
+	root.add_child(r7)
+	await process_frame
+	var loaded7: bool = r7._load_save()
+	if loaded7:
+		failures.append("test_missing_save_behavior: missing save should return false")
+	if r7.health != r7.STARTING_HEALTH:
+		failures.append("test_missing_save_behavior: health should be default")
+	r7.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 8: State restoration fields
+	tests_run += 1
+	_cleanup_files()
+	var r8a = MainScene.instantiate()
+	r8a.save_path = TEST_SAVE_PATH
+	root.add_child(r8a)
+	await process_frame
+	r8a.health = 45
+	r8a.beacon_reached = true
+	r8a.inventory["ammo"] = 12
+	r8a.inventory["medkits"] = 3
+	r8a.inventory["scrap"] = 7
+	r8a.camera_yaw = 1.5
+	r8a._save_game()
+	r8a.queue_free()
+	await process_frame
+	var r8b = MainScene.instantiate()
+	r8b.save_path = TEST_SAVE_PATH
+	root.add_child(r8b)
+	await process_frame
+	r8b._load_save()
+	if r8b.health != 45:
+		failures.append("test_state_restoration_fields: expected health 45, got %d" % r8b.health)
+	if not r8b.beacon_reached:
+		failures.append("test_state_restoration_fields: expected beacon_reached true")
+	if int(r8b.inventory.get("ammo", -1)) != 12:
+		failures.append("test_state_restoration_fields: expected ammo 12, got %d" % int(r8b.inventory.get("ammo", -1)))
+	if int(r8b.inventory.get("medkits", -1)) != 3:
+		failures.append("test_state_restoration_fields: expected medkits 3, got %d" % int(r8b.inventory.get("medkits", -1)))
+	if int(r8b.inventory.get("scrap", -1)) != 7:
+		failures.append("test_state_restoration_fields: expected scrap 7, got %d" % int(r8b.inventory.get("scrap", -1)))
+	if r8b.camera_yaw != 1.5:
+		failures.append("test_state_restoration_fields: expected camera_yaw 1.5, got %f" % r8b.camera_yaw)
+	r8b.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 9: Repeated save/load cycles
+	tests_run += 1
+	_cleanup_files()
+	var r9a = MainScene.instantiate()
+	r9a.save_path = TEST_SAVE_PATH
+	root.add_child(r9a)
+	await process_frame
+	r9a.health = 80
+	r9a._save_game()
+	r9a.queue_free()
+	await process_frame
+	for i in range(5):
+		var ri = MainScene.instantiate()
+		ri.save_path = TEST_SAVE_PATH
+		root.add_child(ri)
+		await process_frame
+		var loaded9: bool = ri._load_save()
+		if not loaded9:
+			failures.append("test_repeated_save_load_cycles: cycle %d load failed" % i)
+		if ri.health != 80:
+			failures.append("test_repeated_save_load_cycles: cycle %d expected health 80, got %d" % [i, ri.health])
+		ri.health = 80 - (i + 1) * 10
+		ri._save_game()
+		ri.queue_free()
+		await process_frame
+	var r9f = MainScene.instantiate()
+	r9f.save_path = TEST_SAVE_PATH
+	root.add_child(r9f)
+	await process_frame
+	r9f._load_save()
+	if r9f.health != 80 - 5 * 10:
+		failures.append("test_repeated_save_load_cycles: final health expected %d, got %d" % [80 - 5 * 10, r9f.health])
+	r9f.queue_free()
+	await process_frame
+	_cleanup_files()
+
+	# Test 10: RESET RUN clears/overwrites state
+	tests_run += 1
+	_cleanup_files()
+	var r10a = MainScene.instantiate()
+	r10a.save_path = TEST_SAVE_PATH
+	root.add_child(r10a)
+	await process_frame
+	r10a.health = 20
+	r10a.beacon_reached = true
+	r10a._save_game()
+	r10a.queue_free()
+	await process_frame
+	var r10b = MainScene.instantiate()
+	r10b.save_path = TEST_SAVE_PATH
+	root.add_child(r10b)
+	await process_frame
+	r10b._load_save()
+	if r10b.health != 20:
+		failures.append("test_reset_run_clears_state: loaded health expected 20, got %d" % r10b.health)
+	if not r10b.beacon_reached:
+		failures.append("test_reset_run_clears_state: expected beacon_reached true after load")
+	r10b._restart_run()
+	if r10b.health != r10b.STARTING_HEALTH:
+		failures.append("test_reset_run_clears_state: reset health expected %d, got %d" % [r10b.STARTING_HEALTH, r10b.health])
+	if r10b.beacon_reached:
+		failures.append("test_reset_run_clears_state: expected beacon_reached false after reset")
+	var parsed10: Variant = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
+	if int(parsed10.get("health", -1)) != r10b.STARTING_HEALTH:
+		failures.append("test_reset_run_clears_state: saved reset health expected %d, got %d" % [r10b.STARTING_HEALTH, int(parsed10.get("health", -1))])
+	if bool(parsed10.get("beacon_reached", true)):
+		failures.append("test_reset_run_clears_state: saved reset beacon_reached should be false")
+	r10b.queue_free()
+	await process_frame
+	_cleanup_files()
+
 	_report()
 	quit()
 
 
-func _run_test(name: String, fn: Callable) -> void:
-	tests_run += 1
-	# Clean up any previous test save file
-	DirAccess.remove_absolute(TEST_SAVE_PATH)
-	# Clean up the real save file too
-	DirAccess.remove_absolute("user://save_v1.json")
-	fn.call(name)
-	# Clean up after test
-	_destroy_runtime()
-	_process_tree_cleanup()
-	DirAccess.remove_absolute(TEST_SAVE_PATH)
-	DirAccess.remove_absolute("user://save_v1.json")
-
-
-func _process_tree_cleanup() -> void:
-	# Process pending queue_free() calls and deferred deletions
-	# so that freed nodes are actually removed from the tree
-	# before we create a new runtime instance.
-	for i in range(3):
-		process(0.016)
-
-
-func _create_runtime() -> Node3D:
-	# Ensure any previous runtime is fully freed before creating a new one
-	if runtime != null and is_instance_valid(runtime):
-		runtime.queue_free()
-	_process_tree_cleanup()
-	runtime = MainScene.instantiate()
-	runtime.save_path = TEST_SAVE_PATH
-	get_root().add_child(runtime)
-	# Process the tree so _ready() runs on the new runtime
-	process(0.016)
-	return runtime
-
-
-func _destroy_runtime() -> void:
-	if runtime != null and is_instance_valid(runtime):
-		runtime.queue_free()
-	_process_tree_cleanup()
-	runtime = null
-
-
-func _assert_eq(name: String, actual, expected, context: String = "") -> void:
-	if actual != expected:
-		failures.append("%s: expected %s, got %s %s" % [name, str(expected), str(actual), context])
-
-
-func _assert_true(name: String, value: bool, context: String = "") -> void:
-	if not value:
-		failures.append("%s: expected true, got false %s" % [name, context])
-
-
-func _assert_false(name: String, value: bool, context: String = "") -> void:
-	if value:
-		failures.append("%s: expected false, got true %s" % [name, context])
-
-
-func _assert_file_exists(name: String, path: String) -> void:
-	if not FileAccess.file_exists(path):
-		failures.append("%s: expected file at %s" % [name, path])
-
-
-func _assert_file_not_exists(name: String, path: String) -> void:
-	if FileAccess.file_exists(path):
-		failures.append("%s: did not expect file at %s" % [name, path])
-
-
-# Test 1: Save file is created when _save_game() is called
-func test_save_file_creation(name: String) -> void:
-	var r := _create_runtime()
-	r._save_game()
-	_assert_file_exists(name + ".save_created", TEST_SAVE_PATH)
-	_destroy_runtime()
-
-
-# Test 2: Save file is replaced/updated on subsequent saves
-func test_save_file_replacement(name: String) -> void:
-	var r := _create_runtime()
-	r._save_game()
-	var first_content := FileAccess.get_file_as_string(TEST_SAVE_PATH)
-	# Change observable state
-	r.health = 50
-	r._save_game()
-	var second_content := FileAccess.get_file_as_string(TEST_SAVE_PATH)
-	_assert_true(name + ".content_changed", first_content != second_content)
-	# Verify the new content reflects the changed state
-	var parsed = JSON.parse_string(second_content)
-	_assert_eq(name + ".updated_health", int(parsed.get("health", -1)), 50)
-	_destroy_runtime()
-
-
-# Test 3: Save serialization contains all expected fields
-func test_save_serialization_fields(name: String) -> void:
-	var r := _create_runtime()
-	r._save_game()
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
-	_assert_eq(name + ".schema_version", int(parsed.get("schema_version", -1)), r.SAVE_SCHEMA_VERSION)
-	_assert_true(name + ".has_health", parsed.has("health"))
-	_assert_true(name + ".has_infected_health", parsed.has("infected_health"))
-	_assert_true(name + ".has_beacon_reached", parsed.has("beacon_reached"))
-	_assert_true(name + ".has_run_complete", parsed.has("run_complete"))
-	_assert_true(name + ".has_inventory", parsed.has("inventory"))
-	_assert_true(name + ".has_position", parsed.has("position"))
-	_assert_true(name + ".has_camera_yaw", parsed.has("camera_yaw"))
-	_assert_true(name + ".has_collected_pickups", parsed.has("collected_pickups"))
-	_assert_true(name + ".has_prototype_field_inventory", parsed.has("prototype_field_inventory"))
-	_assert_true(name + ".has_prototype_loadout", parsed.has("prototype_loadout"))
-	_assert_true(name + ".has_prototype_weapon_state", parsed.has("prototype_weapon_state"))
-	_destroy_runtime()
-
-
-# Test 4: Load after fresh init validates the actual startup autoload contract.
-#
-# The contract being tested:
-#   1. Runtime A starts, changes state, saves.
-#   2. Runtime A is destroyed completely.
-#   3. Runtime B is instantiated with the same save path.
-#   4. _ready() runs on Runtime B (triggered by add_child + process).
-#   5. _ready() calls _load_save() automatically.
-#   6. Verify Runtime B automatically restored persisted state.
-#
-# This is the behavior we want Android startup to provide.
-# We do NOT disable production autoload. We do NOT manually call _load_save().
-func test_load_after_fresh_init(name: String) -> void:
-	# Phase 1: Runtime A starts, changes state, saves
-	var r := _create_runtime()
-	r.health = 30
-	r.beacon_reached = true
-	r._save_game()
-	_assert_file_exists(name + ".save_file_exists", TEST_SAVE_PATH)
-	_destroy_runtime()
-
-	# Phase 2: Instantiate Runtime B with the same save path.
-	# _create_runtime() calls add_child() then process(), so _ready() runs.
-	# _ready() already calls _load_save() in the production code.
-	var r2 := _create_runtime()
-
-	# Phase 3: Verify Runtime B automatically restored persisted state.
-	# We do NOT call r2._load_save() manually here.
-	# If _ready() auto-loads, r2 should already have health=30 and beacon_reached=true.
-	_assert_eq(name + ".auto_restored_health", r2.health, 30)
-	_assert_true(name + ".auto_restored_beacon", r2.beacon_reached)
-	_destroy_runtime()
-
-
-# Test 5: Schema version handling rejects incompatible versions
-func test_schema_version_handling(name: String) -> void:
-	# Write a save with schema version 0 (below MIN_SUPPORTED)
-	var file := FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"schema_version": 0, "health": 50}))
-	file.close()
-
-	var r := _create_runtime()
-	var loaded := r._load_save()
-	_assert_false(name + ".rejects_schema_0", loaded)
-	# Health should remain at default, not 50
-	_assert_eq(name + ".health_not_restored", r.health, r.STARTING_HEALTH)
-	_destroy_runtime()
-
-	# Write a save with schema version 999 (above current)
-	DirAccess.remove_absolute(TEST_SAVE_PATH)
-	file = FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"schema_version": 999, "health": 50}))
-	file.close()
-
-	r = _create_runtime()
-	loaded = r._load_save()
-	_assert_false(name + ".rejects_schema_999", loaded)
-	_destroy_runtime()
-
-
-# Test 6: Corrupt save file is handled gracefully
-func test_corrupt_save_behavior(name: String) -> void:
-	# Write corrupt JSON
-	var file := FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
-	file.store_string("this is not json {{{")
-	file.close()
-
-	var r := _create_runtime()
-	var loaded := r._load_save()
-	_assert_false(name + ".corrupt_rejected", loaded)
-	# Game should continue with default state
-	_assert_eq(name + ".default_health_after_corrupt", r.health, r.STARTING_HEALTH)
-	_destroy_runtime()
-
-	# Write empty file
-	DirAccess.remove_absolute(TEST_SAVE_PATH)
-	file = FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
-	file.store_string("")
-	file.close()
-
-	r = _create_runtime()
-	loaded = r._load_save()
-	_assert_false(name + ".empty_rejected", loaded)
-	_destroy_runtime()
-
-
-# Test 7: Missing save file returns false gracefully
-func test_missing_save_behavior(name: String) -> void:
-	# Ensure no save file exists
-	DirAccess.remove_absolute(TEST_SAVE_PATH)
-	var r := _create_runtime()
-	var loaded := r._load_save()
-	_assert_false(name + ".missing_returns_false", loaded)
-	# Game should have default state
-	_assert_eq(name + ".default_health", r.health, r.STARTING_HEALTH)
-	_destroy_runtime()
-
-
-# Test 8: State restoration of important persisted fields
-func test_state_restoration_fields(name: String) -> void:
-	var r := _create_runtime()
-	r.health = 45
-	r.beacon_reached = true
-	r.inventory["ammo"] = 12
-	r.inventory["medkits"] = 3
-	r.inventory["scrap"] = 7
-	r.camera_yaw = 1.5
-	r._save_game()
-	_destroy_runtime()
-
-	var r2 := _create_runtime()
-	r2._load_save()
-	_assert_eq(name + ".health", r2.health, 45)
-	_assert_true(name + ".beacon_reached", r2.beacon_reached)
-	_assert_eq(name + ".ammo", int(r2.inventory.get("ammo", -1)), 12)
-	_assert_eq(name + ".medkits", int(r2.inventory.get("medkits", -1)), 3)
-	_assert_eq(name + ".scrap", int(r2.inventory.get("scrap", -1)), 7)
-	_assert_eq(name + ".camera_yaw", r2.camera_yaw, 1.5)
-	_destroy_runtime()
-
-
-# Test 9: Repeated save/load cycles maintain consistency
-func test_repeated_save_load_cycles(name: String) -> void:
-	var r := _create_runtime()
-	r.health = 80
-	r._save_game()
-	_destroy_runtime()
-
-	for i in range(5):
-		var ri := _create_runtime()
-		var loaded := ri._load_save()
-		_assert_true(name + ".cycle_%d_load" % i, loaded)
-		_assert_eq(name + ".cycle_%d_health" % i, ri.health, 80)
-		# Modify state slightly each cycle
-		ri.health = 80 - (i + 1) * 10
-		ri._save_game()
-		_destroy_runtime()
-
-	# Final load should have the last saved value
-	var rf := _create_runtime()
-	rf._load_save()
-	_assert_eq(name + ".final_health", rf.health, 80 - 5 * 10)
-	_destroy_runtime()
-
-
-# Test 10: RESET RUN clears/overwrites saved state
-func test_reset_run_clears_state(name: String) -> void:
-	var r := _create_runtime()
-	r.health = 20
-	r.beacon_reached = true
-	r._save_game()
-	_destroy_runtime()
-
-	# Load the saved state, then reset
-	var r2 := _create_runtime()
-	r2._load_save()
-	_assert_eq(name + ".loaded_health", r2.health, 20)
-	_assert_true(name + ".loaded_beacon", r2.beacon_reached)
-
-	# Reset the run
-	r2._restart_run()
-	_assert_eq(name + ".reset_health", r2.health, r2.STARTING_HEALTH)
-	_assert_false(name + ".reset_beacon", r2.beacon_reached)
-
-	# The save file should now contain the reset state
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(TEST_SAVE_PATH))
-	_assert_eq(name + ".saved_reset_health", int(parsed.get("health", -1)), r2.STARTING_HEALTH)
-	_assert_false(name + ".saved_reset_beacon", bool(parsed.get("beacon_reached", true)))
-	_destroy_runtime()
+func _cleanup_files() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE_PATH))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://save_v1.json"))
 
 
 func _report() -> void:
