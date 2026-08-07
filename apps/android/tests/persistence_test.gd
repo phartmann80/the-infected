@@ -36,22 +36,37 @@ func _run_test(name: String, fn: Callable) -> void:
 	DirAccess.remove_absolute("user://save_v1.json")
 	fn.call(name)
 	# Clean up after test
+	_destroy_runtime()
+	_process_tree_cleanup()
 	DirAccess.remove_absolute(TEST_SAVE_PATH)
 	DirAccess.remove_absolute("user://save_v1.json")
 
 
+func _process_tree_cleanup() -> void:
+	# Process pending queue_free() calls and deferred deletions
+	# so that freed nodes are actually removed from the tree
+	# before we create a new runtime instance.
+	for i in range(3):
+		process(0.016)
+
+
 func _create_runtime() -> Node3D:
+	# Ensure any previous runtime is fully freed before creating a new one
 	if runtime != null and is_instance_valid(runtime):
 		runtime.queue_free()
+	_process_tree_cleanup()
 	runtime = MainScene.instantiate()
 	runtime.save_path = TEST_SAVE_PATH
 	get_root().add_child(runtime)
+	# Process the tree so _ready() runs on the new runtime
+	process(0.016)
 	return runtime
 
 
 func _destroy_runtime() -> void:
 	if runtime != null and is_instance_valid(runtime):
 		runtime.queue_free()
+	_process_tree_cleanup()
 	runtime = null
 
 
@@ -124,25 +139,37 @@ func test_save_serialization_fields(name: String) -> void:
 	_destroy_runtime()
 
 
-# Test 4: Load after fresh game-state initialization restores state
+# Test 4: Load after fresh init validates the actual startup autoload contract.
+#
+# The contract being tested:
+#   1. Runtime A starts, changes state, saves.
+#   2. Runtime A is destroyed completely.
+#   3. Runtime B is instantiated with the same save path.
+#   4. _ready() runs on Runtime B (triggered by add_child + process).
+#   5. _ready() calls _load_save() automatically.
+#   6. Verify Runtime B automatically restored persisted state.
+#
+# This is the behavior we want Android startup to provide.
+# We do NOT disable production autoload. We do NOT manually call _load_save().
 func test_load_after_fresh_init(name: String) -> void:
+	# Phase 1: Runtime A starts, changes state, saves
 	var r := _create_runtime()
 	r.health = 30
 	r.beacon_reached = true
 	r._save_game()
+	_assert_file_exists(name + ".save_file_exists", TEST_SAVE_PATH)
 	_destroy_runtime()
 
-	# Simulate a fresh process by creating a new runtime instance
+	# Phase 2: Instantiate Runtime B with the same save path.
+	# _create_runtime() calls add_child() then process(), so _ready() runs.
+	# _ready() already calls _load_save() in the production code.
 	var r2 := _create_runtime()
-	# The fresh runtime should have default state before load
-	_assert_eq(name + ".default_health_before_load", r2.health, r2.STARTING_HEALTH)
-	_assert_false(name + ".default_beacon_before_load", r2.beacon_reached)
 
-	# Now load the save
-	var loaded := r2._load_save()
-	_assert_true(name + ".load_succeeded", loaded)
-	_assert_eq(name + ".restored_health", r2.health, 30)
-	_assert_true(name + ".restored_beacon", r2.beacon_reached)
+	# Phase 3: Verify Runtime B automatically restored persisted state.
+	# We do NOT call r2._load_save() manually here.
+	# If _ready() auto-loads, r2 should already have health=30 and beacon_reached=true.
+	_assert_eq(name + ".auto_restored_health", r2.health, 30)
+	_assert_true(name + ".auto_restored_beacon", r2.beacon_reached)
 	_destroy_runtime()
 
 
