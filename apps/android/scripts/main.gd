@@ -214,6 +214,7 @@ func _input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_save_game()
 		held_actions.clear()
 		_reset_touch_controls()
 
@@ -2526,6 +2527,7 @@ func _load_save() -> bool:
 		return false
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("Save file corrupted or empty: %s" % save_path)
 		return false
 	var schema_version := int(parsed.get("schema_version", 0))
 	if schema_version < MIN_SUPPORTED_SAVE_SCHEMA or schema_version > SAVE_SCHEMA_VERSION:
@@ -2631,5 +2633,6 @@ func _save_game() -> bool:
 		"salvage_drop_position": [salvage_drop_position.x, salvage_drop_position.y, salvage_drop_position.z],
 		"salvage_drop_item_id": salvage_drop_item_id,
 	}))
+	file.flush()
 	file.close()
 	return true
