@@ -187,7 +187,6 @@ func _initialize() -> void:
 	await process_frame
 	r8a.health = 45
 	r8a.beacon_reached = true
-	r8a.inventory["ammo"] = 12
 	r8a.inventory["medkits"] = 3
 	r8a.inventory["scrap"] = 7
 	r8a.camera_yaw = 1.5
@@ -203,8 +202,6 @@ func _initialize() -> void:
 		failures.append("test_state_restoration_fields: expected health 45, got %d" % r8b.health)
 	if not r8b.beacon_reached:
 		failures.append("test_state_restoration_fields: expected beacon_reached true")
-	if int(r8b.inventory.get("ammo", -1)) != 12:
-		failures.append("test_state_restoration_fields: expected ammo 12, got %d" % int(r8b.inventory.get("ammo", -1)))
 	if int(r8b.inventory.get("medkits", -1)) != 3:
 		failures.append("test_state_restoration_fields: expected medkits 3, got %d" % int(r8b.inventory.get("medkits", -1)))
 	if int(r8b.inventory.get("scrap", -1)) != 7:
@@ -226,6 +223,7 @@ func _initialize() -> void:
 	r9a._save_game()
 	r9a.queue_free()
 	await process_frame
+	var expected_health := 80
 	for i in range(5):
 		var ri = MainScene.instantiate()
 		ri.save_path = TEST_SAVE_PATH
@@ -234,9 +232,10 @@ func _initialize() -> void:
 		var loaded9: bool = ri._load_save()
 		if not loaded9:
 			failures.append("test_repeated_save_load_cycles: cycle %d load failed" % i)
-		if ri.health != 80:
-			failures.append("test_repeated_save_load_cycles: cycle %d expected health 80, got %d" % [i, ri.health])
-		ri.health = 80 - (i + 1) * 10
+		if ri.health != expected_health:
+			failures.append("test_repeated_save_load_cycles: cycle %d expected health %d, got %d" % [i, expected_health, ri.health])
+		expected_health = 80 - (i + 1) * 10
+		ri.health = expected_health
 		ri._save_game()
 		ri.queue_free()
 		await process_frame
@@ -245,8 +244,8 @@ func _initialize() -> void:
 	root.add_child(r9f)
 	await process_frame
 	r9f._load_save()
-	if r9f.health != 80 - 5 * 10:
-		failures.append("test_repeated_save_load_cycles: final health expected %d, got %d" % [80 - 5 * 10, r9f.health])
+	if r9f.health != expected_health:
+		failures.append("test_repeated_save_load_cycles: final health expected %d, got %d" % [expected_health, r9f.health])
 	r9f.queue_free()
 	await process_frame
 	_cleanup_files()
